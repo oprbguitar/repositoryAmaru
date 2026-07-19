@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AMARU AI Observatory</title>
+<meta name="description" content="Observatorio global de inteligencia artificial: proveedores, modelos, investigación, mercado y un laboratorio de APIs con ejecución real. Local-first sobre Cloudflare Workers." />
+<style>
+  :root {
+    --bg: #06131f;
+    --panel: #0b1f30;
+    --panel-soft: #0e2438;
+    --line: #1d3a52;
+    --text: #dce9f5;
+    --muted: #8fa9c0;
+    --cyan: #4fd1e0;
+    --green: #58d68d;
+    --amber: #f5b041;
+    --radius: 12px;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--cyan); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+
+  header.site {
+    position: sticky; top: 0; z-index: 10;
+    background: rgb(6 19 31 / 92%);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav {
+    display: flex; align-items: center; gap: 16px;
+    padding: 14px 0; flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: 0.4px; }
+  .brand svg { flex: 0 0 auto; }
+  .nav nav { margin-left: auto; display: flex; gap: 14px; flex-wrap: wrap; font-size: 14px; }
+
+  .hero {
+    padding: 72px 0 56px;
+    background:
+      radial-gradient(circle at 20% 0%, rgb(20 68 91 / 45%), transparent 50%),
+      radial-gradient(circle at 85% 20%, rgb(11 84 74 / 30%), transparent 45%);
+    text-align: center;
+  }
+  .hero h1 { font-size: clamp(1.9rem, 5vw, 3.2rem); letter-spacing: 0.5px; }
+  .hero .tag {
+    display: inline-block; margin-bottom: 18px; padding: 5px 14px;
+    border: 1px solid var(--line); border-radius: 999px;
+    color: var(--cyan); font-size: 13px; background: rgb(10 69 82 / 25%);
+  }
+  .hero p.lead {
+    max-width: 720px; margin: 18px auto 0; color: var(--muted);
+    font-size: clamp(0.95rem, 2.5vw, 1.1rem);
+  }
+  .hero .actions { margin-top: 30px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .button {
+    display: inline-block; padding: 11px 22px; border-radius: 8px;
+    font-weight: 600; font-size: 15px; border: 1px solid transparent;
+  }
+  .button.primary { background: var(--cyan); color: #04222a; }
+  .button.primary:hover { filter: brightness(1.1); text-decoration: none; }
+  .button.ghost { border-color: var(--line); color: var(--text); }
+  .button.ghost:hover { border-color: var(--cyan); text-decoration: none; }
+
+  section { padding: 56px 0; }
+  section h2 {
+    font-size: clamp(1.4rem, 3.5vw, 1.9rem);
+    margin-bottom: 8px;
+  }
+  section p.intro { color: var(--muted); max-width: 760px; margin-bottom: 30px; }
+
+  .grid {
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 20px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .card:hover { border-color: #2c567a; }
+  .card .icon { font-size: 24px; }
+  .card h3 { font-size: 1.02rem; }
+  .card p { color: var(--muted); font-size: 0.9rem; }
+  .card .badge {
+    align-self: flex-start; margin-top: auto; padding: 2px 10px;
+    border-radius: 999px; font-size: 11.5px; border: 1px solid var(--line);
+    color: var(--green);
+  }
+  .card .badge.amber { color: var(--amber); }
+
+  .split { display: grid; gap: 24px; grid-template-columns: 1.1fr 0.9fr; align-items: start; }
+  @media (max-width: 780px) { .split { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel-soft); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 22px;
+  }
+  .panel ul { list-style: none; display: grid; gap: 10px; }
+  .panel li { padding-left: 24px; position: relative; color: var(--muted); font-size: 0.93rem; }
+  .panel li::before { content: "✔"; position: absolute; left: 0; color: var(--green); }
+  .panel.warn li::before { content: "🔒"; }
+  .panel h3 { margin-bottom: 14px; }
+
+  .steps { counter-reset: step; display: grid; gap: 14px; }
+  .steps li {
+    list-style: none; counter-increment: step;
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 16px 18px 16px 58px; position: relative;
+    color: var(--muted); font-size: 0.93rem;
+  }
+  .steps li::before {
+    content: counter(step); position: absolute; left: 16px; top: 14px;
+    width: 28px; height: 28px; display: grid; place-items: center;
+    border-radius: 50%; background: rgb(10 69 82 / 45%);
+    color: var(--cyan); font-weight: 700; font-size: 14px;
+  }
+  .steps code, .panel code, .card code {
+    background: #071827; border: 1px solid var(--line); border-radius: 5px;
+    padding: 1px 6px; font-size: 0.85em; color: var(--cyan);
+    font-family: Consolas, "Cascadia Code", monospace;
+    overflow-wrap: anywhere;
+  }
+
+  .stack { display: flex; flex-wrap: wrap; gap: 10px; }
+  .stack span {
+    padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px;
+    font-size: 13px; color: var(--muted); background: var(--panel);
+  }
+
+  .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 560px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  th { color: var(--cyan); font-weight: 600; background: var(--panel); }
+  td { color: var(--muted); }
+  tr:last-child td { border-bottom: none; }
+
+  footer.site {
+    border-top: 1px solid var(--line); padding: 30px 0 40px;
+    color: var(--muted); font-size: 0.88rem; text-align: center;
+  }
+  @media (max-width: 560px) {
+    .hero { padding: 48px 0 40px; }
+    section { padding: 40px 0; }
+    .nav nav { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="wrap nav">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M2 19 9 6l4 7 3-4 6 10Z" stroke="#4fd1e0" stroke-width="1.6" stroke-linejoin="round"/>
+      </svg>
+      AMARU AI Observatory
+    </div>
+    <nav aria-label="Secciones">
+      <a href="#modulos">Módulos</a>
+      <a href="#laboratorio">Laboratorio de APIs</a>
+      <a href="#seguridad">Seguridad</a>
+      <a href="#stack">Stack</a>
+      <a href="#inicio-rapido">Inicio rápido</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <div class="wrap">
+      <span class="tag">Local-first · Datos reales indexados · Sin datos inventados</span>
+      <h1>Observatorio global de inteligencia artificial</h1>
+      <p class="lead">
+        AMARU indexa proveedores, modelos, investigación, repositorios, noticias y mercado de IA
+        en una base local, y suma un laboratorio para ejecutar pruebas reales contra más de 20
+        proveedores con métricas de tokens, latencia y costo.
+      </p>
+      <div class="actions">
+        <a class="button primary" href="https://github.com/oprbguitar/repositoryAmaru">Ver el código en GitHub</a>
+        <a class="button ghost" href="#inicio-rapido">Ejecutar en local</a>
+      </div>
+    </div>
+  </div>
+
+  <section id="modulos">
+    <div class="wrap">
+      <h2>Módulos del observatorio</h2>
+      <p class="intro">
+        Cada módulo consume exclusivamente fuentes registradas y verificables. Cuando falta
+        información, la interfaz lo declara («No informado por la fuente») en lugar de inventarla.
+      </p>
+      <div class="grid">
+        <article class="card"><span class="icon">📅</span><h3>Hoy</h3><p>Resumen diario del ecosistema: novedades de modelos, noticias y actividad reciente de las fuentes.</p><span class="badge">Operativo</span></article>
+        <article class="card"><span class="icon">🏢</span><h3>Proveedores</h3><p>Catálogo de proveedores de IA con categorías, disponibilidad de API y estado de integración.</p><span class="badge">Operativo</span></article>
+        <article class="card"><span class="icon">🧠</span><h3>Modelos</h3><p>Ranking de modelos con contexto, precios por millón de tokens y ofertas por proveedor, indexados desde OpenRouter.</p><span class="badge">Operativo</span></article>
+        <article class="card"><span class="icon">🔌</span><h3>Laboratorio de APIs</h3><p>Banco de pruebas con ejecución real: texto, razonamiento, código, comprensión de imágenes y generación de video.</p><span class="badge">Operativo</span></article>
+        <article class="card"><span class="icon">🔓</span><h3>Open y local</h3><p>Modelos abiertos y ejecución local: Ollama, LM Studio, vLLM y LocalAI detectados automáticamente.</p><span class="badge">Operativo</span></article>
+        <article class="card"><span class="icon">📰</span><h3>Noticias</h3><p>Agregación de noticias de IA desde fuentes oficiales y agencias, con orden y filtros transparentes.</p><span class="badge">Operativo</span></article>
+        <article class="card"><span class="icon">🔬</span><h3>Investigación</h3><p>Papers y publicaciones vía OpenAlex, Semantic Scholar y Crossref, con filtros por país e institución.</p><span class="badge">Operativo</span></article>
+        <article class="card"><span class="icon">⭐</span><h3>GitHub</h3><p>Ranking de repositorios de IA por estrellas y crecimiento, con licencias y temas.</p><span class="badge">Operativo</span></article>
+        <article class="card"><span class="icon">🎬</span><h3>Videos</h3><p>Contenido audiovisual de canales oficiales del ecosistema (YouTube y otras plataformas).</p><span class="badge">Operativo</span></article>
+        <article class="card"><span class="icon">🗺️</span><h3>Mapa</h3><p>Mapa global de actividad en IA: papers, instituciones, proveedores y repositorios por país.</p><span class="badge">Operativo</span></article>
+        <article class="card"><span class="icon">📈</span><h3>Mercado IA</h3><p>Indicadores bursátiles y económicos de empresas de IA desde fuentes financieras registradas.</p><span class="badge">Operativo</span></article>
+        <article class="card"><span class="icon">📚</span><h3>Biblioteca local</h3><p>Ingesta y análisis de documentos propios (PDF, DOCX, XLSX) con resúmenes generados por IA.</p><span class="badge">Operativo</span></article>
+        <article class="card"><span class="icon">⚗️</span><h3>Mi laboratorio</h3><p>Asistente que convierte una necesidad en alternativas de arquitectura con costos calculados desde precios indexados.</p><span class="badge">Operativo</span></article>
+      </div>
+    </div>
+  </section>
+
+  <section id="laboratorio">
+    <div class="wrap">
+      <h2>Laboratorio de APIs</h2>
+      <p class="intro">
+        Conecta credenciales cifradas, descubre modelos en vivo con sus IDs nativos y ejecuta
+        pruebas medibles sin salir de tu máquina.
+      </p>
+      <div class="split">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th>Tipo de prueba</th><th>Entrada</th><th>Salida</th><th>Métricas</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Generación de texto</td><td>Prompt</td><td>Texto</td><td>Tokens · latencia · costo</td></tr>
+              <tr><td>Razonamiento</td><td>Prompt</td><td>Texto</td><td>Tokens · latencia · costo</td></tr>
+              <tr><td>Programación</td><td>Prompt</td><td>Código</td><td>Tokens · latencia · costo</td></tr>
+              <tr><td>Comprensión de imágenes</td><td>Imagen + prompt</td><td>Texto</td><td>Tokens · latencia · costo</td></tr>
+              <tr><td>Generación de video</td><td>Prompt (imagen opcional)</td><td>Video MP4 descargable</td><td>Latencia · nota de costo</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="panel">
+          <h3>Capacidades</h3>
+          <ul>
+            <li>Más de 20 proveedores: OpenAI, Anthropic, Google Gemini, OpenRouter, Groq, Mistral, NVIDIA, DeepSeek y más.</li>
+            <li>Descubrimiento de modelos en vivo con IDs nativos, enriquecidos con precios indexados por 1M de tokens.</li>
+            <li>Servidores locales (Ollama, LM Studio, vLLM, LocalAI) sin costo por token.</li>
+            <li>Video con Google Veo mediante operaciones asíncronas.</li>
+            <li>Descarga de resultados en Markdown o MP4.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="seguridad">
+    <div class="wrap">
+      <h2>Seguridad de credenciales</h2>
+      <p class="intro">
+        Este repositorio no contiene ninguna clave de API. Las credenciales existen solo en tu
+        entorno local y nunca viajan al navegador ni al repositorio.
+      </p>
+      <div class="split">
+        <div class="panel warn">
+          <h3>Cómo se protegen las claves</h3>
+          <ul>
+            <li><code>.dev.vars</code> y <code>.env.local</code> están en <code>.gitignore</code>; solo se versionan plantillas <code>.example</code> vacías.</li>
+            <li>Las claves ingresadas por interfaz se cifran con AES-GCM y se guardan en KV o D1 locales; el navegador solo ve los últimos 4 caracteres.</li>
+            <li>Toda llamada a proveedores sale desde el Worker local, nunca desde el cliente.</li>
+            <li>En producción, los secretos se cargan con <code>wrangler secret put</code>.</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3>Honestidad de datos</h3>
+          <ul>
+            <li>Los precios provienen de fuentes indexadas; si no existen, se muestra «sin datos».</li>
+            <li>Cada recomendación declara sus restricciones, fuentes e información faltante.</li>
+            <li>Las fuentes fallidas o sin credencial se reportan como tales, sin datos de demostración.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="stack">
+    <div class="wrap">
+      <h2>Stack técnico</h2>
+      <p class="intro">Aplicación local-first sobre el ecosistema de Cloudflare, ejecutable íntegramente en una máquina de desarrollo.</p>
+      <div class="stack">
+        <span>React 19</span><span>TypeScript</span><span>Vite 8</span>
+        <span>Cloudflare Workers</span><span>D1 (SQLite)</span><span>KV</span><span>R2</span>
+        <span>TanStack Query</span><span>React Router 7</span><span>Zod</span>
+        <span>Biome</span><span>Vitest</span><span>Playwright</span><span>MapLibre GL</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="inicio-rapido">
+    <div class="wrap">
+      <h2>Inicio rápido</h2>
+      <p class="intro">Requiere Node 24 y pnpm. Todo corre en local; no se necesita cuenta de Cloudflare para desarrollar.</p>
+      <ol class="steps">
+        <li>Clona el repositorio: <code>git clone https://github.com/oprbguitar/repositoryAmaru.git</code></li>
+        <li>Instala dependencias: <code>pnpm install</code></li>
+        <li>Copia las plantillas de entorno: <code>cp .dev.vars.example .dev.vars</code> y <code>cp .env.local.example .env.local</code>, y coloca tus claves solo ahí (permanecen fuera de git).</li>
+        <li>Aplica las migraciones locales: <code>pnpm db:migrate:local</code></li>
+        <li>Levanta el entorno: <code>pnpm dev</code> y abre <code>http://127.0.0.1:5174</code></li>
+      </ol>
+    </div>
+  </section>
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    AMARU AI Observatory · Proyecto local-first de observación del ecosistema de IA ·
+    <a href="https://github.com/oprbguitar/repositoryAmaru">github.com/oprbguitar/repositoryAmaru</a>
+  </div>
+</footer>
+</body>
+</html>

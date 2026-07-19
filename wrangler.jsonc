@@ -1,0 +1,95 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "amaru-ai-observatory",
+  "main": "./worker/index.ts",
+  "compatibility_date": "2026-07-18",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "assets": {
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "vars": {
+    "APP_ENV": "development",
+    "APP_LOCALE": "es-PE",
+    "ENABLE_DEMO_DATA": "false",
+    "ENABLE_WORKERS_AI": "false",
+    "ENABLE_VECTOR_SEARCH": "false",
+    "ENABLE_DEVELOPER_LAB": "true",
+    "ENABLE_PROVIDER_RAW_INSPECTOR": "true",
+    "ENABLE_LOCAL_AI_PROVIDERS": "true",
+    "ENABLE_AGENT_TESTS": "true",
+    "ENABLE_RAG_TESTS": "true",
+    "ENABLE_MEDIA_TESTS": "true",
+    "ENABLE_VIDEO_TESTS": "true",
+    "OLLAMA_BASE_URL": "http://127.0.0.1:11434",
+    "LM_STUDIO_BASE_URL": "http://127.0.0.1:1234/v1",
+    "VLLM_BASE_URL": "http://127.0.0.1:8000/v1",
+    "LOCALAI_BASE_URL": "http://127.0.0.1:8080/v1"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "amaru-observatory",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "RAW_BUCKET",
+      "bucket_name": "amaru-observatory-raw"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      "id": "00000000000000000000000000000000"
+    }
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "INDEX_QUEUE",
+        "queue": "amaru-index-jobs"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "amaru-index-jobs",
+        "max_batch_size": 10,
+        "max_batch_timeout": 30
+      }
+    ]
+  },
+  "ai": {
+    "binding": "AI",
+    "remote": true
+  },
+  "triggers": {
+    "crons": ["*/15 * * * *"]
+  },
+  "env": {
+    "production": {
+      "name": "amaru-ai-observatory-production",
+      "vars": {
+        "APP_ENV": "production",
+        "APP_LOCALE": "es-PE",
+        "ENABLE_DEMO_DATA": "false",
+        "ENABLE_WORKERS_AI": "false",
+        "ENABLE_VECTOR_SEARCH": "false",
+        "ENABLE_DEVELOPER_LAB": "true",
+        "ENABLE_PROVIDER_RAW_INSPECTOR": "true",
+        "ENABLE_LOCAL_AI_PROVIDERS": "true",
+        "ENABLE_AGENT_TESTS": "true",
+        "ENABLE_RAG_TESTS": "true",
+        "ENABLE_MEDIA_TESTS": "true",
+        "ENABLE_VIDEO_TESTS": "true"
+      }
+    }
+  }
+}
