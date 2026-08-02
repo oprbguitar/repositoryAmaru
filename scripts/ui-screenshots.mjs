@@ -51,12 +51,18 @@ async function auditPage(page) {
       const cls = String(el.className?.baseVal ?? el.className ?? "")
         .split(" ")
         .filter(Boolean)[0];
-      return cls ? `${el.tagName.toLowerCase()}.${cls}` : el.tagName.toLowerCase();
+      return cls
+        ? `${el.tagName.toLowerCase()}.${cls}`
+        : el.tagName.toLowerCase();
     };
 
     /** True when an ancestor legitimately clips or scrolls horizontally. */
     const insideScroller = (el) => {
-      for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+      for (
+        let p = el.parentElement;
+        p && p !== document.body;
+        p = p.parentElement
+      ) {
         const s = getComputedStyle(p);
         if (["auto", "scroll", "hidden"].includes(s.overflowX)) return true;
       }
@@ -86,7 +92,9 @@ async function auditPage(page) {
     }
 
     for (const el of document.querySelectorAll("body *")) {
-      if (!el.checkVisibility?.({ checkOpacity: false, checkVisibilityCSS: true }))
+      if (
+        !el.checkVisibility?.({ checkOpacity: false, checkVisibilityCSS: true })
+      )
         continue;
       const r = el.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) continue;
@@ -105,7 +113,9 @@ async function auditPage(page) {
     for (const el of document.querySelectorAll(
       "button, a[href], input, select, [role=button], [role=tab]",
     )) {
-      if (!el.checkVisibility?.({ checkOpacity: false, checkVisibilityCSS: true }))
+      if (
+        !el.checkVisibility?.({ checkOpacity: false, checkVisibilityCSS: true })
+      )
         continue;
       const r = el.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) continue;

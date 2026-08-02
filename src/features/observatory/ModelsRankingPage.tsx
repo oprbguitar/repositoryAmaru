@@ -442,10 +442,7 @@ export function ModelsRankingPage() {
         ))}
       </div>
       {availableTags.length ? (
-        <section
-          className="tag-filter-bar panel"
-          aria-label="Filtrar por etiqueta"
-        >
+        <section className="tag-filter-bar" aria-label="Filtrar por etiqueta">
           <span className="tag-filter-label">
             <Tags /> Etiquetas
           </span>
@@ -533,6 +530,7 @@ export function ModelsRankingPage() {
                         <CapabilityChips
                           tags={entry.capabilities ?? []}
                           compact
+                          max={3}
                         />
                       </td>
                       <td>
