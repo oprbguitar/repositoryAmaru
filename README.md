@@ -302,6 +302,9 @@ Licensed under the Apache License, Version 2.0. The full, unmodified text is in
 [LICENSE](LICENSE); you may also obtain it at
 <https://www.apache.org/licenses/LICENSE-2.0>.
 
+- Repository and documentation: <https://github.com/oprbguitar/repositoryAmaru?tab=readme-ov-file>
+- Demo showcase: <https://oprbguitar.github.io/repositoryAmaru/>
+
 Unless required by applicable law or agreed to in writing, software distributed
 under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 CONDITIONS OF ANY KIND, either express or implied.

@@ -4,6 +4,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./app/App";
 import "./app/styles/global.css";
+import { LanguageProvider } from "./i18n/LanguageProvider";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,9 +18,11 @@ if (!root) throw new Error("No se encontró el contenedor principal de AMARU.");
 ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <LanguageProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </LanguageProvider>
     </QueryClientProvider>
   </React.StrictMode>,
 );

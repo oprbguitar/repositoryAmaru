@@ -353,6 +353,21 @@ export type ProviderModelsResponse = {
   note: string;
 };
 
+export type PriceHistoryPoint = {
+  date: string;
+  medianInputPerMillion: number;
+  minInputPerMillion: number;
+  maxInputPerMillion: number;
+  sampleSize: number;
+};
+
+export type PriceHistoryResponse = {
+  points: PriceHistoryPoint[];
+  available: boolean;
+  reason: string | null;
+  methodology: string;
+};
+
 export type GithubRankingEntry = {
   rank: number;
   id: string;

@@ -43,6 +43,7 @@
 
   /* --- Semantic state (never decorative) ------------------------------ */
   --ok: #3ad894;
+  --ok-text: #3ad894;
   --warn: #f2b754;
   --danger: #f47b7b;
   --info: #58b0f7;
@@ -538,10 +539,12 @@ select:focus-visible {
 .state-badge svg {
   width: 11px;
 }
+/* The green tint plus a light surface dropped this below 4.5:1 in light
+   theme; --ok-text is a darker green reserved for text on tinted chips. */
 .state-badge.verified {
-  background: rgb(14 114 70 / 30%);
-  color: var(--ok);
-  border: 1px solid rgb(42 205 126 / 12%);
+  background: rgb(14 114 70 / 18%);
+  color: var(--ok-text);
+  border: 1px solid rgb(42 205 126 / 22%);
 }
 .state-badge.not-configured {
   background: rgb(89 108 124 / 20%);
@@ -2859,6 +2862,7 @@ html[data-theme="light"] {
   --cyan: var(--accent);
 
   --ok: #0a6b43;
+  --ok-text: #045c37;
   --warn: #8a5a00;
   --danger: #b3383f;
   --info: #14608f;
@@ -4624,4 +4628,431 @@ html[data-theme="light"] .provider-card-select {
 .stat-grid > .panel small {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+/* ===========================================================================
+   Context panel scrolling
+   ---------------------------------------------------------------------------
+   Grid items default to `min-height: auto`, so a long context panel grew the
+   whole row (measured 4135px in a 900px viewport). The workspace then clipped
+   it and the text below the fold was unreachable. Constraining the row and the
+   items lets each region scroll on its own.
+   Scoped to the width where the side-by-side layout actually exists; below it
+   the panel stacks and scrolls with the page.
+   =========================================================================== */
+@media (min-width: 1025px) {
+  .module-layout {
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .module-main,
+  .context-slot,
+  .context-panel,
+  .module-layout > * {
+    min-height: 0;
+  }
+  .context-slot .context-panel {
+    height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  /* Panels rendered directly as the second column (RecordContext). */
+  .module-layout > .context-panel {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+/* ===========================================================================
+   Language switcher
+   =========================================================================== */
+.language-switch {
+  position: relative;
+}
+.language-trigger {
+  width: auto;
+  min-width: var(--control-md);
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  display: inline-flex;
+  align-items: center;
+}
+.language-trigger svg {
+  width: 17px;
+  color: var(--text);
+}
+.language-trigger span {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.language-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  min-width: 168px;
+  display: grid;
+  gap: 2px;
+  padding: var(--space-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  box-shadow: var(--shadow);
+}
+.language-menu button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--control-md);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.language-menu button:hover {
+  background: var(--surface-hover);
+}
+.language-menu button.active {
+  color: var(--accent);
+}
+.language-menu button svg {
+  width: 15px;
+  flex: none;
+}
+
+/* ===========================================================================
+   Hoy — dashboard layout
+   =========================================================================== */
+/* Flex column rather than grid: `.panel` sets `overflow: hidden`, which zeroes
+   a grid item's automatic minimum size and collapsed the modules row to 2px.
+   In a flex column the sections size to their content. */
+.today-page {
+  height: 100%;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.today-page > * {
+  flex: 0 0 auto;
+}
+.today-section {
+  min-width: 0;
+}
+.today-section .panel-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.today-section .panel-heading h2 svg {
+  width: 15px;
+  color: var(--accent);
+}
+.today-section .panel-heading > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.today-section-body {
+  padding: var(--space-3);
+}
+.today-columns {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+}
+.today-columns.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Module tiles */
+.module-grid {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: var(--space-3);
+}
+.module-tile {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: inherit;
+  transition: border-color 140ms ease;
+}
+.module-tile:hover {
+  border-color: var(--accent);
+}
+.module-tile-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  min-width: 0;
+}
+.module-tile-head svg {
+  width: 15px;
+  flex: none;
+  color: var(--accent);
+}
+.module-tile strong {
+  font-size: var(--text-2xl);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.module-tile-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+}
+.module-tile-foot svg {
+  width: 14px;
+  flex: none;
+}
+
+/* Price trend */
+.trend-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  margin-bottom: var(--space-3);
+}
+.trend-summary > div {
+  display: grid;
+  gap: 1px;
+}
+.trend-summary span {
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+}
+.trend-summary strong {
+  font-size: var(--text-xl);
+  font-variant-numeric: tabular-nums;
+}
+.trend-summary small {
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+}
+.delta-down {
+  color: var(--ok);
+}
+.delta-up {
+  color: var(--warn);
+}
+.trend-chart {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.trend-grid {
+  stroke: var(--line-soft);
+  stroke-width: 1;
+}
+.trend-axis {
+  fill: var(--text-subtle);
+  font-size: 10px;
+}
+.trend-area {
+  fill: var(--accent-quiet);
+}
+.trend-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.trend-dot {
+  fill: var(--accent);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+.trend-method,
+.trend-single {
+  margin-top: var(--space-2);
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+.compact-empty {
+  min-height: 0;
+  padding: var(--space-3) 0;
+}
+.compact-empty p {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+/* Models by country */
+.country-bars {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.country-bars li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 100px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+.country-rank {
+  color: var(--text-subtle);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-xs);
+}
+.country-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.country-track {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.country-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+}
+.country-value {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-xs);
+}
+
+/* Health */
+.health-grid {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: var(--space-3);
+}
+.health-grid > div {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+.health-grid small {
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+}
+.health-grid strong {
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Activity */
+.activity-list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.activity-list a {
+  display: grid;
+  gap: 1px;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  min-height: 24px;
+}
+.activity-list a:hover {
+  background: var(--surface-hover);
+}
+.activity-title {
+  font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.activity-meta {
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+}
+
+/* Quick links */
+.quick-links {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.quick-links a {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  min-width: 0;
+}
+.quick-links a:hover {
+  border-color: var(--accent);
+}
+.quick-links svg {
+  width: 16px;
+  flex: none;
+  color: var(--accent);
+}
+.quick-links span {
+  display: grid;
+  gap: 0;
+  min-width: 0;
+}
+.quick-links strong {
+  font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.quick-links small {
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+}
+
+@media (max-width: 1280px) {
+  .module-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 1024px) {
+  .today-columns,
+  .today-columns.three {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 768px) {
+  .today-page {
+    padding: var(--space-3);
+  }
+  .module-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .quick-links {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .country-bars li {
+    grid-template-columns: 16px minmax(0, 84px) minmax(0, 1fr) auto;
+  }
 }

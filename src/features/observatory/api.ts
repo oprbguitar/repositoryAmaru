@@ -82,6 +82,12 @@ export function getProviderModels(providerId: string) {
   );
 }
 
+export function getPriceHistory() {
+  return read<import("../../../types/api").PriceHistoryResponse>(
+    "/api/dashboard/price-history",
+  );
+}
+
 export function getGithubRankings(view: string) {
   return read<import("../../../types/api").GithubRankingResponse>(
     `/api/github/rankings?view=${encodeURIComponent(view)}`,
