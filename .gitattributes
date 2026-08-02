@@ -1,0 +1,20 @@
+# The repository is formatted with LF and Biome enforces LF. Without this,
+# core.autocrlf=true rewrites files to CRLF on checkout and the lint step in the
+# pre-push hook fails on files nobody edited.
+* text=auto eol=lf
+
+# Binary assets must never be line-ending converted.
+*.png binary
+*.webp binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.docx binary
+*.xlsx binary
+*.woff binary
+*.woff2 binary
+*.mp4 binary
+*.sqlite binary
+*.db binary
