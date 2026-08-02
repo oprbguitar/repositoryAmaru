@@ -1643,7 +1643,7 @@ select:focus-visible {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     border-top: 1px solid var(--line);
-    background: #061522;
+    background: var(--bg-deep);
     z-index: 30;
   }
   .mobile-tabs a {
@@ -4412,17 +4412,8 @@ html[data-theme="light"] .provider-card-select {
   box-shadow: none;
 }
 
-/* Respect reduced motion globally, not only per component. */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
+/* Reduced motion is already handled globally by the `html body *` block
+   further up, which wins on specificity without needing !important. */
 
 /* MapLibre's attribution is required by the tile licence; keep it legible and
    tappable without letting it cover the map. */
@@ -4439,10 +4430,14 @@ html[data-theme="light"] .provider-card-select {
    Shell refinements and responsive corrections
    =========================================================================== */
 
-/* Topbar: quieter, shorter, and it stops competing with the workspace. */
-.app-shell {
-  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
-  grid-template-rows: var(--topbar-h) minmax(0, 1fr) auto;
+/* Topbar: quieter, shorter, and it stops competing with the workspace.
+   Guarded above the drawer breakpoint: below it the shell is a single column
+   and that earlier rule must keep winning. */
+@media (min-width: 901px) {
+  .app-shell {
+    grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+    grid-template-rows: var(--topbar-h) minmax(0, 1fr) auto;
+  }
 }
 .topbar {
   gap: var(--space-4);
@@ -4514,10 +4509,13 @@ html[data-theme="light"] .provider-card-select {
   font-variant-numeric: tabular-nums;
 }
 
-@media (max-width: 1280px) {
+@media (min-width: 901px) and (max-width: 1280px) {
   .app-shell {
     grid-template-columns: 196px minmax(0, 1fr);
   }
+}
+
+@media (max-width: 1280px) {
   .dashboard-stats {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -4613,7 +4611,7 @@ html[data-theme="light"] .provider-card-select {
   .mobile-tabs a span {
     max-width: 100%;
     overflow: hidden;
-    font-size: 10px;
+    font-size: var(--text-xs);
     line-height: 1.2;
     text-align: center;
     text-overflow: ellipsis;
