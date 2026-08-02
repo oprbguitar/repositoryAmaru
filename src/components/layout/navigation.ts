@@ -4,6 +4,7 @@ import {
   BookOpen,
   Bot,
   Building2,
+  GitBranch,
   GitFork,
   Globe2,
   Home,
@@ -28,6 +29,12 @@ export const navigation = [
     icon: Building2,
   },
   { label: "Modelos", labelKey: "nav.models", path: "/models", icon: Bot },
+  {
+    label: "Evolución IA",
+    labelKey: "nav.evolution",
+    path: "/evolution",
+    icon: GitBranch,
+  },
   {
     label: "Laboratorio de APIs",
     labelKey: "nav.developerLab",

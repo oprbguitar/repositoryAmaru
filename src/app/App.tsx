@@ -2,16 +2,17 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
 import { PlaceholderWorkspace } from "../features/common/PlaceholderWorkspace";
 import { DeveloperLabPage } from "../features/developer-lab/DeveloperLabPage";
+import { EvolutionPage } from "../features/evolution/EvolutionPage";
 import { LaboratoryPage } from "../features/laboratory/LaboratoryPage";
 import { LocalLibraryPage } from "../features/local-library/LocalLibraryPage";
 import { GlobalMapPage } from "../features/maps/GlobalMapPage";
 import { AdminSourcesPage } from "../features/observatory/AdminSourcesPage";
-import { CatalogPage } from "../features/observatory/CatalogPage";
 import { GitHubPage } from "../features/observatory/GitHubPage";
 import { MarketPage } from "../features/observatory/MarketPage";
 import { ModelsRankingPage } from "../features/observatory/ModelsRankingPage";
 import { NewsPage } from "../features/observatory/NewsPage";
 import { OpenLocalPage } from "../features/observatory/OpenLocalPage";
+import { ProvidersPage } from "../features/observatory/ProvidersPage";
 import { ResearchPage } from "../features/observatory/ResearchPage";
 import { TodayPage } from "../features/today/TodayPage";
 import { VideosPage } from "../features/videos/VideosPage";
@@ -38,8 +39,9 @@ export default function App() {
       <Route element={<AppShell />}>
         <Route path="/" element={<Navigate to="/today" replace />} />
         <Route path="/today" element={<TodayPage />} />
-        <Route path="/providers/*" element={<CatalogPage mode="providers" />} />
+        <Route path="/providers/*" element={<ProvidersPage />} />
         <Route path="/models/*" element={<ModelsRankingPage />} />
+        <Route path="/evolution/*" element={<EvolutionPage />} />
         <Route path="/developer-lab/*" element={<DeveloperLabPage />} />
         <Route path="/map/*" element={<GlobalMapPage />} />
         <Route path="/videos/*" element={<VideosPage />} />

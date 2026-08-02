@@ -11,6 +11,7 @@ const ROUTES = [
   "/today",
   "/providers",
   "/models",
+  "/evolution",
   "/developer-lab",
   "/open-local",
   "/news",
