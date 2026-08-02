@@ -1,0 +1,20 @@
+{
+  "name": "AMARU AI Observatory",
+  "short_name": "AMARU",
+  "description": "Observatorio local de inteligencia artificial, investigación, mercados e innovación.",
+  "start_url": "/today",
+  "display": "standalone",
+  "background_color": "#05121f",
+  "theme_color": "#05121f",
+  "icons": [
+    { "src": "/favicon.svg", "type": "image/svg+xml", "sizes": "any" },
+    { "src": "/favicon-32.png", "type": "image/png", "sizes": "32x32" },
+    { "src": "/favicon-512.png", "type": "image/png", "sizes": "512x512" },
+    {
+      "src": "/apple-touch-icon.png",
+      "type": "image/png",
+      "sizes": "180x180",
+      "purpose": "maskable"
+    }
+  ]
+}
