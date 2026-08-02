@@ -532,6 +532,9 @@ export function normalizeSecSubmissions(
 
 // SEC XBRL companyconcept: fundamentos oficiales reportados (ingresos, utilidad).
 // https://data.sec.gov/api/xbrl/companyconcept/CIK##########/us-gaap/<tag>.json
+/** Ventana de periodos que se conserva por empresa y métrica (≈2 años). */
+const MAX_PERIODS_PER_METRIC = 8;
+
 export function normalizeSecCompanyConcept(
   payload: unknown,
   metric: { tag: string; label: string },
@@ -546,10 +549,25 @@ export function normalizeSecCompanyConcept(
   const relevant = observations
     .map((raw) => raw as Record<string, unknown>)
     .filter((entry) => ["10-K", "10-Q"].includes(String(entry.form ?? "")));
-  // Última observación anual y última trimestral, sin duplicar periodos.
-  const byForm = new Map<string, Record<string, unknown>>();
-  for (const entry of relevant) byForm.set(String(entry.form), entry);
-  return [...byForm.values()].flatMap((entry) => {
+  // Se conservan las últimas observaciones reportadas por periodo (no solo la
+  // más reciente) para poder graficar la evolución real informada a la SEC.
+  // Un mismo periodo puede aparecer repetido en varias presentaciones: se queda
+  // la de fecha de presentación más reciente.
+  const byPeriod = new Map<string, Record<string, unknown>>();
+  for (const entry of relevant) {
+    const end = stringValue(entry.end);
+    if (!end) continue;
+    const key = `${String(entry.form)}:${end}`;
+    const previous = byPeriod.get(key);
+    if (!previous || String(entry.filed ?? "") >= String(previous.filed ?? ""))
+      byPeriod.set(key, entry);
+  }
+  const ordered = [...byPeriod.values()]
+    .sort((left, right) =>
+      String(right.end ?? "").localeCompare(String(left.end ?? "")),
+    )
+    .slice(0, MAX_PERIODS_PER_METRIC);
+  return ordered.flatMap((entry) => {
     const value = numberValue(entry.val);
     const end = stringValue(entry.end);
     if (value === null || !end) return [];
@@ -559,7 +577,7 @@ export function normalizeSecCompanyConcept(
       {
         sourceId: "sec-xbrl",
         recordKind: "economic_indicator" as const,
-        externalId: `${cik}:${metric.tag}:${form}`,
+        externalId: `${cik}:${metric.tag}:${form}:${end}`,
         title: `${entityName} — ${metric.label} (${form}, periodo al ${end})`,
         summary: null,
         originalUrl: conceptUrl,

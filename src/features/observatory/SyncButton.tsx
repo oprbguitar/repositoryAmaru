@@ -1,6 +1,7 @@
-import { AlertTriangle, Check, RefreshCw } from "lucide-react";
+import { AlertTriangle, Check } from "lucide-react";
 import { useState } from "react";
 import type { SynchronizationSummary } from "../../../types/api";
+import { SyncActionButton } from "../../components/common/SyncActionButton";
 import { synchronize } from "./api";
 
 type SyncState =
@@ -67,15 +68,12 @@ export function SyncButton({
 
   return (
     <div className="sync-control">
-      <button
-        type="button"
-        className="secondary-button compact"
+      <SyncActionButton
+        label={label}
+        busyLabel="Actualizando…"
+        busy={state.phase === "running"}
         onClick={run}
-        disabled={state.phase === "running"}
-      >
-        <RefreshCw className={state.phase === "running" ? "spin" : ""} />
-        {state.phase === "running" ? "Actualizando…" : label}
-      </button>
+      />
       {state.phase === "done" ? (
         <small
           className={`sync-result ${state.failed.length ? "warning" : "ok"}`}

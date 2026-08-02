@@ -1,14 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  BadgeCheck,
-  Info,
-  PlaySquare,
-  RefreshCw,
-  Search,
-  Tv,
-} from "lucide-react";
+import { BadgeCheck, Info, PlaySquare, Search, Tv } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import type { VideoItem } from "../../../types/api";
+import { SyncActionButton } from "../../components/common/SyncActionButton";
 import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
 import { getVideos, synchronize } from "../observatory/api";
 import { formatDate, formatNumber, missing } from "../observatory/format";
@@ -22,12 +17,20 @@ function duration(seconds: number | null): string {
     : `${minutes}m ${rest}s`;
 }
 
+type Platform = "" | "youtube" | "facebook";
+
+const PLATFORM_LABEL: Record<string, string> = {
+  youtube: "YouTube",
+  facebook: "Facebook",
+};
+
 export function VideosPage() {
   const [query, setQuery] = useState("");
   const [topic, setTopic] = useState("");
   const [language, setLanguage] = useState("");
   const [officialOnly, setOfficialOnly] = useState(false);
   const [order, setOrder] = useState("newest");
+  const [platform, setPlatform] = useState<Platform>("");
   const [selected, setSelected] = useState<VideoItem | null>(null);
   const [syncing, setSyncing] = useState(false);
 
@@ -37,9 +40,10 @@ export function VideosPage() {
     if (topic) search.set("topic", topic);
     if (language) search.set("language", language);
     if (officialOnly) search.set("official", "1");
+    if (platform) search.set("platform", platform);
     search.set("order", order);
     return search;
-  }, [query, topic, language, officialOnly, order]);
+  }, [query, topic, language, officialOnly, order, platform]);
 
   const videos = useQuery({
     queryKey: ["videos", params.toString()],
@@ -60,6 +64,11 @@ export function VideosPage() {
   }
 
   const topics = [...new Set(items.map((item) => item.topic))];
+  const platformCounts = data?.platforms ?? [];
+  const total = platformCounts.reduce((sum, entry) => sum + entry.count, 0);
+  function platformCount(name: string): number {
+    return platformCounts.find((entry) => entry.platform === name)?.count ?? 0;
+  }
 
   const panel = chosen ? (
     <aside className="context-panel scroll-region">
@@ -75,7 +84,11 @@ export function VideosPage() {
         <h3>Reproducción</h3>
         <div className="video-embed">
           <iframe
-            src={`https://www.youtube-nocookie.com/embed/${chosen.externalId}`}
+            src={
+              chosen.platform === "facebook"
+                ? `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(chosen.watchUrl)}&show_text=false`
+                : `https://www.youtube-nocookie.com/embed/${chosen.externalId}`
+            }
             title={chosen.title}
             allow="encrypted-media; picture-in-picture"
             allowFullScreen
@@ -87,12 +100,14 @@ export function VideosPage() {
           target="_blank"
           rel="noreferrer"
         >
-          Ver en YouTube
+          Ver en {PLATFORM_LABEL[chosen.platform] ?? chosen.platform}
         </a>
       </section>
       <section>
         <h3>Procedencia</h3>
         <dl className="context-facts">
+          <dt>Plataforma</dt>
+          <dd>{PLATFORM_LABEL[chosen.platform] ?? chosen.platform}</dd>
           <dt>Canal</dt>
           <dd>
             {chosen.channelTitle}
@@ -139,28 +154,65 @@ export function VideosPage() {
             <PlaySquare /> Videos técnicos
           </h1>
           <p>
-            Fuente principal: YouTube Data API (canales oficiales y consultas
-            curadas). Sin videos inventados.
+            YouTube Data API (canales oficiales y consultas curadas) y Meta
+            Graph API (videos de las páginas autorizadas). Sin videos
+            inventados.
           </p>
         </div>
-        <button
-          type="button"
-          className="secondary-button compact"
+        <SyncActionButton
+          label="Sincronizar videos"
+          busy={syncing}
           onClick={runSync}
-          disabled={syncing}
-        >
-          <RefreshCw className={syncing ? "spin" : ""} /> Sincronizar videos
-        </button>
+        />
       </header>
       {data && !data.integrations.youtubeConfigured ? (
         <div className="panel status-banner">
           <Info />
           <div>
-            <strong>YOUTUBE_API_KEY no configurada</strong>
-            <p>Agrega la clave en .dev.vars y reinicia para sincronizar.</p>
+            <strong>YouTube no configurado</strong>
+            <p>
+              Falta YOUTUBE_API_KEY.{" "}
+              <Link to="/admin/sources">Configurar integraciones</Link> para
+              indexar canales oficiales y consultas temáticas.
+            </p>
           </div>
         </div>
       ) : null}
+      {data && !data.integrations.metaConfigured ? (
+        <div className="panel status-banner">
+          <Info />
+          <div>
+            <strong>Facebook no configurado</strong>
+            <p>
+              Falta FACEBOOK_PAGE_ACCESS_TOKEN.{" "}
+              <Link to="/admin/sources">Configurar integraciones</Link> para
+              indexar los videos de las páginas que autorice el token.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="segmented-tabs" role="tablist" aria-label="Plataforma">
+        {(
+          [
+            ["", "Todas", total],
+            ["youtube", "YouTube", platformCount("youtube")],
+            ["facebook", "Facebook", platformCount("facebook")],
+          ] as const
+        ).map(([value, label, count]) => (
+          <button
+            key={label}
+            type="button"
+            role="tab"
+            aria-selected={platform === value}
+            className={platform === value ? "active" : ""}
+            onClick={() => setPlatform(value)}
+          >
+            {label} <span className="tab-count">{count}</span>
+          </button>
+        ))}
+      </div>
+
       <div className="library-toolbar video-toolbar">
         <label className="module-search">
           <Search />
@@ -229,6 +281,9 @@ export function VideosPage() {
                 <div className="video-thumbnail placeholder" />
               )}
               <div className="video-card-body">
+                <span className={`platform-chip ${video.platform}`}>
+                  {PLATFORM_LABEL[video.platform] ?? video.platform}
+                </span>
                 <h2>{video.title}</h2>
                 <p className="video-meta">
                   <Tv className="inline-icon" /> {video.channelTitle}
@@ -262,15 +317,22 @@ export function VideosPage() {
       )}
       <section className="panel">
         <div className="panel-heading">
-          <h2>Otras plataformas</h2>
+          <h2>Cobertura por plataforma</h2>
+          <span>{total} videos indexados</span>
         </div>
         <p className="coverage-note">
+          YouTube:{" "}
+          {data?.integrations.youtubeConfigured
+            ? `configurado · ${platformCount("youtube")} videos indexados.`
+            : "no configurado."}{" "}
+          Facebook (Meta Graph API):{" "}
           {data?.integrations.metaConfigured
-            ? "Integración de Meta configurada."
-            : "Integración de Meta no configurada — se requieren credenciales oficiales de Graph API (páginas y cuentas autorizadas)."}{" "}
+            ? `configurado · ${platformCount("facebook")} videos indexados desde las páginas autorizadas por el token.`
+            : "no configurado."}{" "}
+          X:{" "}
           {data?.integrations.xConfigured
-            ? "Integración de X configurada."
-            : "Integración de X no configurada — se requiere X_BEARER_TOKEN para búsqueda reciente oficial."}{" "}
+            ? "configurado."
+            : "no configurado — requiere X_BEARER_TOKEN."}{" "}
           Sin credenciales no se muestra contenido de esas plataformas.
         </p>
       </section>

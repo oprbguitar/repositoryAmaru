@@ -2,13 +2,21 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Archive,
   Beaker,
+  CalendarClock,
+  CheckCircle2,
+  Coins,
   Copy,
+  Crown,
   Dices,
   Download,
   FileJson,
+  FolderOpen,
   Info,
+  Lock,
   RefreshCw,
+  Sparkles,
 } from "lucide-react";
+import type React from "react";
 import { useState } from "react";
 import type {
   Alternative,
@@ -171,27 +179,56 @@ function ArchitectureDiagram({ nodes }: { nodes: string[] }) {
   );
 }
 
+/**
+ * Un icono y un acento por tipo de alternativa. El texto descriptivo ya viene
+ * en el título que produce el motor, así que aquí no se añade ninguno.
+ */
+const ALTERNATIVE_STYLE: Record<
+  Alternative["kind"],
+  { icon: typeof Coins; accent: string }
+> = {
+  economic: { icon: Coins, accent: "var(--ok)" },
+  local: { icon: Lock, accent: "var(--info)" },
+  professional: { icon: Crown, accent: "var(--purple)" },
+};
+
 function AlternativeCard({ alternative }: { alternative: Alternative }) {
+  const style = ALTERNATIVE_STYLE[alternative.kind];
+  const Icon = style.icon;
   return (
-    <article className="panel alternative-card">
-      <h2>{alternative.title}</h2>
-      <div className="alternative-facts">
-        <span>
-          Costo mensual:{" "}
-          <strong>
+    <article
+      className="panel alternative-card"
+      style={{ "--card-accent": style.accent } as React.CSSProperties}
+    >
+      <header className="alternative-head">
+        <span className="alternative-icon">
+          <Icon />
+        </span>
+        <h2>{alternative.title}</h2>
+      </header>
+      <div className="alternative-metrics">
+        <div>
+          <span>Costo mensual estimado</span>
+          <strong
+            className={alternative.totalMonthlyUsd === null ? "unknown" : ""}
+          >
             {alternative.totalMonthlyUsd === null
               ? "Sin datos suficientes"
               : `US$ ${alternative.totalMonthlyUsd}`}
           </strong>
           {alternative.costComplete ? null : (
-            <em> Costo parcial — faltan datos de determinados componentes</em>
+            <em>Costo parcial — faltan datos de determinados componentes</em>
           )}
-        </span>
-        <span>
-          Dificultad: <strong>{alternative.difficulty}</strong>
-        </span>
-        <span>{alternative.privacyLevel}</span>
-        <span>{alternative.hardwareRequirement}</span>
+        </div>
+        <div>
+          <span>Dificultad</span>
+          <strong>{alternative.difficulty}</strong>
+        </div>
+        <div>
+          <span>Despliegue</span>
+          <strong>{alternative.privacyLevel}</strong>
+          <em>{alternative.hardwareRequirement}</em>
+        </div>
       </div>
       <h3>Arquitectura</h3>
       <ArchitectureDiagram nodes={alternative.architecture} />
@@ -370,6 +407,23 @@ export function LaboratoryPage() {
     setWizardOpen(true);
   }
 
+  const savedProjects = projects.data?.data ?? [];
+  const activeCount = savedProjects.filter(
+    (project) => project.status === "active",
+  ).length;
+  const totalAlternatives = savedProjects.reduce(
+    (sum, project) => sum + project.alternativeCount,
+    0,
+  );
+  const averageAlternatives = savedProjects.length
+    ? (totalAlternatives / savedProjects.length).toFixed(1).replace(".0", "")
+    : "0";
+  const lastUpdatedAt = savedProjects.reduce<string | null>(
+    (latest, project) =>
+      !latest || project.updatedAt > latest ? project.updatedAt : latest,
+    null,
+  );
+
   const detail = activeProject.data?.data;
   const alternatives = (detail?.alternatives ?? [])
     .map((entry) => entry.recommendation)
@@ -439,12 +493,57 @@ export function LaboratoryPage() {
         </div>
       </header>
 
+      <div className="laboratory-kpis">
+        <article className="panel market-kpi">
+          <FolderOpen />
+          <div>
+            <span>Total de proyectos</span>
+            <strong>{savedProjects.length}</strong>
+            <small>guardados en la base local</small>
+          </div>
+        </article>
+        <article className="panel market-kpi">
+          <CheckCircle2 />
+          <div>
+            <span>Proyectos activos</span>
+            <strong>{activeCount}</strong>
+            <small>
+              {savedProjects.length
+                ? `${Math.round((activeCount / savedProjects.length) * 100)}% del total`
+                : "sin proyectos"}
+            </small>
+          </div>
+        </article>
+        <article className="panel market-kpi">
+          <Sparkles />
+          <div>
+            <span>Alternativas calculadas</span>
+            <strong>{totalAlternatives}</strong>
+            <small>
+              {savedProjects.length
+                ? `${averageAlternatives} por proyecto`
+                : "sin cálculos"}
+            </small>
+          </div>
+        </article>
+        <article className="panel market-kpi">
+          <CalendarClock />
+          <div>
+            <span>Última actualización</span>
+            <strong className="market-kpi-date">
+              {lastUpdatedAt ? formatDate(lastUpdatedAt) : "—"}
+            </strong>
+            <small>del proyecto más reciente</small>
+          </div>
+        </article>
+      </div>
+
       <section className="panel data-table-panel">
         <div className="panel-heading">
           <h2>Proyectos guardados</h2>
-          <span>{projects.data?.data.length ?? 0} proyectos</span>
+          <span>{savedProjects.length} proyectos</span>
         </div>
-        {projects.data?.data.length ? (
+        {savedProjects.length ? (
           <div className="data-table-scroll">
             <table className="observatory-table compact-table">
               <thead>
@@ -457,7 +556,7 @@ export function LaboratoryPage() {
                 </tr>
               </thead>
               <tbody>
-                {projects.data.data.map((project) => (
+                {savedProjects.map((project) => (
                   <tr
                     key={project.id}
                     className={activeProjectId === project.id ? "selected" : ""}
@@ -468,7 +567,11 @@ export function LaboratoryPage() {
                       <small>{project.inputs?.domain ?? ""}</small>
                     </td>
                     <td>
-                      {project.status === "active" ? "Activo" : "Archivado"}
+                      <span
+                        className={`state-badge ${project.status === "active" ? "verified" : "provisional"}`}
+                      >
+                        {project.status === "active" ? "Activo" : "Archivado"}
+                      </span>
                     </td>
                     <td>{project.alternativeCount}</td>
                     <td>{formatDate(project.updatedAt)}</td>

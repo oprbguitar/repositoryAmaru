@@ -7,6 +7,7 @@ import type {
   CredentialMetadata,
   CredentialStorage,
 } from "../../lib/developer-lab/types";
+import { openSecret, sealSecret } from "../secret-box";
 
 export type DeveloperLabCredentialEnv = {
   DB: D1Database;
@@ -40,53 +41,12 @@ type TemporaryCredential = {
   lastTestedAt: string | null;
 };
 
-const encoder = new TextEncoder();
-const decoder = new TextDecoder();
-
-function toBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary);
-}
-
-function fromBase64(value: string): Uint8Array<ArrayBuffer> {
-  const binary = atob(value);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1)
-    bytes[index] = binary.charCodeAt(index);
-  return bytes;
-}
-
-async function encryptionKey(
-  env: DeveloperLabCredentialEnv,
-): Promise<CryptoKey> {
-  const secret = env.DEVELOPER_LAB_ENCRYPTION_KEY?.trim();
-  if (!secret)
-    throw new Error(
-      "Configura DEVELOPER_LAB_ENCRYPTION_KEY antes de guardar credenciales desde la interfaz.",
-    );
-  const digest = await crypto.subtle.digest("SHA-256", encoder.encode(secret));
-  return crypto.subtle.importKey("raw", digest, "AES-GCM", false, [
-    "encrypt",
-    "decrypt",
-  ]);
-}
-
 async function encrypt(
   value: string,
   env: DeveloperLabCredentialEnv,
 ): Promise<{ encryptedCredential: string; iv: string }> {
-  const key = await encryptionKey(env);
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const encrypted = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv },
-    key,
-    encoder.encode(value),
-  );
-  return {
-    encryptedCredential: toBase64(new Uint8Array(encrypted)),
-    iv: toBase64(iv),
-  };
+  const sealed = await sealSecret(value, env.DEVELOPER_LAB_ENCRYPTION_KEY);
+  return { encryptedCredential: sealed.encryptedValue, iv: sealed.iv };
 }
 
 async function decrypt(
@@ -94,13 +54,10 @@ async function decrypt(
   iv: string,
   env: DeveloperLabCredentialEnv,
 ): Promise<string> {
-  const key = await encryptionKey(env);
-  const clear = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: fromBase64(iv) },
-    key,
-    fromBase64(encryptedCredential),
+  return openSecret(
+    { encryptedValue: encryptedCredential, iv },
+    env.DEVELOPER_LAB_ENCRYPTION_KEY,
   );
-  return decoder.decode(clear);
 }
 
 function temporaryKey(providerId: string): string {

@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { Bot, ExternalLink, RefreshCw, Server, Tags, X } from "lucide-react";
+import { Bot, ExternalLink, Server, Tags, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { CapabilityTag, ModelRankingEntry } from "../../../types/api";
+import { SyncActionButton } from "../../components/common/SyncActionButton";
 import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
 import {
   getModelDetail,
@@ -415,14 +416,11 @@ export function ModelsRankingPage() {
             inventadas.
           </p>
         </div>
-        <button
-          type="button"
-          className="secondary-button compact"
+        <SyncActionButton
+          label="Sincronizar modelos"
+          busy={syncing}
           onClick={runSync}
-          disabled={syncing}
-        >
-          <RefreshCw className={syncing ? "spin" : ""} /> Sincronizar modelos
-        </button>
+        />
       </header>
       <div className="ranking-tabs" role="tablist">
         {RANKING_TABS.map((entry) => (

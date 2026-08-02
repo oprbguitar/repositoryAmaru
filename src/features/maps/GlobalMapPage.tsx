@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { Globe2, RefreshCw } from "lucide-react";
+import { Globe2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { SyncActionButton } from "../../components/common/SyncActionButton";
 import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
 import { getGlobalMap, synchronize } from "../observatory/api";
 import { CountryPanel } from "./CountryPanel";
@@ -61,14 +62,11 @@ export function GlobalMapPage() {
             registros verificados en la base local.
           </p>
         </div>
-        <button
-          type="button"
-          className="secondary-button compact"
+        <SyncActionButton
+          label="Sincronizar mapa"
+          busy={syncing}
           onClick={runSync}
-          disabled={syncing}
-        >
-          <RefreshCw className={syncing ? "spin" : ""} /> Sincronizar mapa
-        </button>
+        />
       </header>
       <div className="map-shell panel">
         {hasData ? (

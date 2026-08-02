@@ -8,7 +8,7 @@ import {
 const now = "2026-07-18T00:00:00Z";
 
 describe("SEC XBRL companyconcept", () => {
-  it("toma la última observación 10-K y 10-Q sin mezclar periodos", () => {
+  it("conserva la serie por periodo y descarta formularios ajenos", () => {
     const records = normalizeSecCompanyConcept(
       {
         cik: 1045810,
@@ -47,15 +47,48 @@ describe("SEC XBRL companyconcept", () => {
       now,
       "nvidia",
     );
-    expect(records).toHaveLength(2);
-    const annual = records.find((record) => record.data.form === "10-K");
+    // Los dos 10-K y el 10-Q se conservan; el DEF 14A queda fuera.
+    expect(records).toHaveLength(3);
+    expect(records.map((record) => record.data.periodEnd)).toEqual([
+      "2026-04-26",
+      "2026-01-25",
+      "2025-01-26",
+    ]);
     const quarterly = records.find((record) => record.data.form === "10-Q");
-    expect(annual?.data.value).toBe(215938000000);
-    expect(annual?.data.periodEnd).toBe("2026-01-25");
     expect(quarterly?.data.value).toBe(81615000000);
+    expect(records[0].externalId).toBe("1045810:Revenues:10-Q:2026-04-26");
     expect(records[0].sourceId).toBe("sec-xbrl");
     expect(records[0].verificationStatus).toBe("verified");
     expect(records[0].originalUrl).toContain("CIK0001045810/us-gaap/Revenues");
+  });
+
+  it("ante el mismo periodo y formulario se queda con la presentación más reciente", () => {
+    const records = normalizeSecCompanyConcept(
+      {
+        cik: 1045810,
+        entityName: "NVIDIA CORP",
+        units: {
+          USD: [
+            {
+              end: "2026-04-26",
+              val: 100,
+              form: "10-Q",
+              filed: "2026-05-27",
+            },
+            {
+              end: "2026-04-26",
+              val: 111,
+              form: "10-Q",
+              filed: "2026-08-20",
+            },
+          ],
+        },
+      },
+      { tag: "Revenues", label: "Ingresos" },
+      now,
+    );
+    expect(records).toHaveLength(1);
+    expect(records[0].data.value).toBe(111);
   });
 
   it("devuelve vacío cuando no hay unidades USD", () => {

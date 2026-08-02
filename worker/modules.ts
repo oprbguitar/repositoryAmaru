@@ -1,4 +1,11 @@
 import {
+  FACEBOOK_GRAPH_VERSION,
+  FACEBOOK_VIDEO_FIELDS,
+  type NormalizedFacebookVideo,
+  normalizeFacebookVideos,
+  pageSchema,
+} from "../lib/external/facebook-videos";
+import {
   CATALOG_RANKING_TYPES,
   CATEGORY_RANKING_TYPES,
   categoryRanking,
@@ -44,6 +51,7 @@ export type ModulesEnv = {
   CACHE: KVNamespace;
   YOUTUBE_API_KEY?: string;
   GITHUB_TOKEN?: string;
+  FACEBOOK_PAGE_ACCESS_TOKEN?: string;
 };
 
 export type ModuleSyncResult = {
@@ -502,6 +510,157 @@ export async function syncYouTube(
     }
   }
   const stored = await persistVideos(env, enriched, officialChannelIds, now);
+  return {
+    discovered: unique.length,
+    stored,
+    changed: 0,
+    httpStatus: 200,
+    rateLimitRemaining: null,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Videos de Meta (Facebook)
+// ---------------------------------------------------------------------------
+
+type FacebookPage = {
+  id: string;
+  name: string;
+  token: string;
+  /** Falso cuando la identidad es un perfil personal, no una página. */
+  isPage: boolean;
+};
+
+/**
+ * Un token puede ser de usuario (da acceso a varias páginas vía /me/accounts)
+ * o directamente de página. Se resuelven ambos casos consultando la API: no se
+ * asume la forma del token ni se codifican identificadores de página.
+ */
+async function resolveFacebookPages(token: string): Promise<FacebookPage[]> {
+  let listedAccounts = false;
+  try {
+    const { payload } = await fetchJson(
+      `https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/me/accounts?fields=id,name,access_token&limit=25&access_token=${encodeURIComponent(token)}`,
+    );
+    const parsed = pageSchema.safeParse(payload);
+    listedAccounts = parsed.success;
+    const pages = (parsed.success ? parsed.data.data : [])
+      .filter((page) => page.access_token)
+      .map((page) => ({
+        id: page.id,
+        name: page.name ?? page.id,
+        token: page.access_token as string,
+        isPage: true,
+      }));
+    if (pages.length) return pages;
+  } catch {
+    // Token de página: no expone /me/accounts. Se intenta como identidad única.
+  }
+  const { payload } = await fetchJson(
+    `https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/me?fields=id,name&access_token=${encodeURIComponent(token)}`,
+  );
+  const identity = payload as { id?: string; name?: string };
+  if (!identity?.id)
+    throw new Error("El token de Meta no identifica ninguna cuenta.");
+  return [
+    {
+      id: identity.id,
+      name: identity.name ?? identity.id,
+      token,
+      // Si /me/accounts respondió con una lista vacía, la identidad es un
+      // perfil personal: Graph no expone sus videos a la API.
+      isPage: !listedAccounts,
+    },
+  ];
+}
+
+async function persistFacebookVideos(
+  env: ModulesEnv,
+  videos: NormalizedFacebookVideo[],
+  now: string,
+): Promise<number> {
+  const existing = await env.DB.prepare(
+    "SELECT external_id FROM video_items WHERE platform = 'facebook'",
+  ).all<{ external_id: string }>();
+  const known = new Set(existing.results.map((row) => row.external_id));
+  const statements: D1PreparedStatement[] = [];
+  for (const video of videos) {
+    statements.push(
+      env.DB.prepare(`
+        INSERT INTO video_items (id, platform, external_id, title, description, channel_id, channel_title,
+          is_official_channel, published_at, thumbnail_url, watch_url, language, topic, query_group,
+          duration_seconds, view_count, source_id, source_name, retrieved_at, updated_at)
+        VALUES (?, 'facebook', ?, ?, ?, ?, ?, 1, ?, ?, ?, NULL, 'Página oficial', ?, ?, ?, 'facebook-videos', 'Meta Graph API', ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(platform, external_id) DO UPDATE SET
+          title = excluded.title, description = excluded.description,
+          channel_title = excluded.channel_title, thumbnail_url = excluded.thumbnail_url,
+          view_count = excluded.view_count, duration_seconds = excluded.duration_seconds,
+          retrieved_at = excluded.retrieved_at, updated_at = CURRENT_TIMESTAMP
+      `).bind(
+        crypto.randomUUID(),
+        video.externalId,
+        video.title,
+        video.description,
+        video.pageId,
+        video.pageName,
+        video.publishedAt,
+        video.thumbnailUrl,
+        video.watchUrl,
+        `page-${video.pageId}`,
+        video.durationSeconds,
+        video.viewCount,
+        now,
+      ),
+    );
+    if (!known.has(video.externalId)) {
+      statements.push(
+        env.DB.prepare(`
+          INSERT INTO live_events (id, event_type, record_id, title, event_at, source_name, target_path)
+          VALUES (?, 'new_video', NULL, ?, ?, ?, '/videos')
+        `).bind(crypto.randomUUID(), video.title, now, video.pageName),
+      );
+    }
+  }
+  await batchStatements(env, statements);
+  return videos.length;
+}
+
+export async function syncFacebookVideos(
+  env: ModulesEnv,
+  now: string,
+): Promise<ModuleSyncResult> {
+  const token = env.FACEBOOK_PAGE_ACCESS_TOKEN;
+  if (!token) throw new Error("Falta FACEBOOK_PAGE_ACCESS_TOKEN");
+  const pages = await resolveFacebookPages(token);
+  const collected: NormalizedFacebookVideo[] = [];
+  const failures: string[] = [];
+  for (const page of pages) {
+    try {
+      const { payload } = await fetchJson(
+        `https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/${page.id}/videos?fields=${FACEBOOK_VIDEO_FIELDS}&limit=25&access_token=${encodeURIComponent(page.token)}`,
+      );
+      collected.push(
+        ...normalizeFacebookVideos(payload, { id: page.id, name: page.name }),
+      );
+    } catch (error) {
+      failures.push(
+        `${page.name}: ${error instanceof Error ? error.message : "fallo"}`,
+      );
+    }
+  }
+  if (!collected.length && failures.length)
+    throw new Error(failures.join("; ").slice(0, 400));
+  if (!collected.length && pages.every((page) => !page.isPage)) {
+    // Distinguir «página sin videos» de «token que no es de página» evita que
+    // la interfaz muestre una sección vacía sin explicar por qué.
+    throw new Error(
+      `El token pertenece al perfil personal «${pages[0]?.name ?? ""}» y no administra ninguna página. La Graph API solo expone videos de páginas: genera un token de página con los permisos pages_show_list y pages_read_engagement.`,
+    );
+  }
+  const unique = [
+    ...new Map(collected.map((video) => [video.externalId, video])).values(),
+  ];
+  const stored = await persistFacebookVideos(env, unique, now);
   return {
     discovered: unique.length,
     stored,
@@ -1374,9 +1533,18 @@ function mapRepositoryRow(
 export async function listVideos(
   env: ModulesEnv,
   params: URLSearchParams,
-): Promise<{ items: Array<Record<string, unknown>>; total: number }> {
+): Promise<{
+  items: Array<Record<string, unknown>>;
+  total: number;
+  platforms: Array<{ platform: string; count: number }>;
+}> {
   const conditions: string[] = [];
   const bindings: unknown[] = [];
+  const platform = (params.get("platform") ?? "").trim();
+  if (platform === "youtube" || platform === "facebook") {
+    conditions.push("platform = ?");
+    bindings.push(platform);
+  }
   const search = (params.get("q") ?? "").trim().slice(0, 120);
   if (search) {
     conditions.push(
@@ -1402,7 +1570,7 @@ export async function listVideos(
       ? "view_count DESC NULLS LAST"
       : "published_at DESC";
   const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-  const [count, rows] = await Promise.all([
+  const [count, rows, platforms] = await Promise.all([
     env.DB.prepare(`SELECT COUNT(*) AS total FROM video_items ${where}`)
       .bind(...bindings)
       .first<{ total: number }>(),
@@ -1411,9 +1579,16 @@ export async function listVideos(
     )
       .bind(...bindings)
       .all<Record<string, unknown>>(),
+    env.DB.prepare(
+      "SELECT platform, COUNT(*) AS count FROM video_items GROUP BY platform ORDER BY count DESC",
+    ).all<{ platform: string; count: number }>(),
   ]);
   return {
     total: Number(count?.total ?? 0),
+    platforms: platforms.results.map((row) => ({
+      platform: String(row.platform),
+      count: Number(row.count),
+    })),
     items: rows.results.map((row) => ({
       id: String(row.id),
       platform: String(row.platform),

@@ -431,11 +431,69 @@ export type VideoItem = {
 export type VideoListResponse = {
   items: VideoItem[];
   total: number;
+  /** Conteo real por plataforma sobre el total indexado, sin filtros aplicados. */
+  platforms: Array<{ platform: string; count: number }>;
   integrations: {
     youtubeConfigured: boolean;
     metaConfigured: boolean;
     xConfigured: boolean;
   };
+};
+
+export type IntegrationStatus = {
+  binding: string;
+  name: string;
+  category: string;
+  unlocks: string;
+  apiKeyUrl: string;
+  documentationUrl: string;
+  freeTierNote: string;
+  configured: boolean;
+  storage: "none" | "environment" | "local_encrypted";
+  lastFour: string | null;
+  updatedAt: string | null;
+  lastTestedAt: string | null;
+  lastTestStatus: "ok" | "failed" | null;
+  lastTestMessage: string | null;
+  testable: boolean;
+  sources: Array<{
+    id: string;
+    status: string;
+    lastSuccessAt: string | null;
+    recordCount: number;
+  }>;
+};
+
+export type IntegrationsResponse = {
+  categories: Array<{ id: string; label: string; description: string }>;
+  items: IntegrationStatus[];
+  encryptionConfigured: boolean;
+};
+
+export type MarketQuote = {
+  symbol: string;
+  companyName: string;
+  providerId: string | null;
+  price: number;
+  changeAbsolute: number | null;
+  changePercent: number | null;
+  dayHigh: number | null;
+  dayLow: number | null;
+  dayOpen: number | null;
+  previousClose: number | null;
+  quotedAt: string;
+  retrievedAt: string;
+  sourceName: string;
+  originalUrl: string;
+};
+
+export type MarketQuotesResponse = {
+  configured: boolean;
+  quotes: MarketQuote[];
+  /** Motivo textual cuando no hay cotizaciones: nunca se rellena con datos falsos. */
+  reason: string | null;
+  refreshedAt: string | null;
+  fromCache: boolean;
 };
 
 export type ImportBatch = {

@@ -100,6 +100,65 @@ export function getVideos(params: URLSearchParams) {
   );
 }
 
+export function getIntegrations() {
+  return read<import("../../../types/api").IntegrationsResponse>(
+    "/api/integrations",
+  );
+}
+
+export function getMarketQuotes(force = false) {
+  return read<import("../../../types/api").MarketQuotesResponse>(
+    `/api/market/quotes${force ? "?force=1" : ""}`,
+  );
+}
+
+async function mutateIntegration<T>(
+  path: string,
+  method: "PUT" | "DELETE" | "POST",
+  body?: unknown,
+): Promise<ApiResponse<T>> {
+  const response = await fetch(path, {
+    method,
+    headers: { "content-type": "application/json", "x-amaru-csrf": "local-ui" },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+  const payload = (await response
+    .json()
+    .catch(() => null)) as ApiResponse<T> | null;
+  if (!response.ok)
+    throw new Error(
+      payload?.errors?.[0]?.message ?? "No se pudo actualizar la integración.",
+    );
+  if (!payload) throw new Error("Respuesta vacía del Worker.");
+  return payload;
+}
+
+export function saveIntegration(binding: string, credential: string) {
+  return mutateIntegration<import("../../../types/api").IntegrationStatus>(
+    `/api/integrations/${binding}`,
+    "PUT",
+    { credential },
+  );
+}
+
+export function deleteIntegration(binding: string) {
+  return mutateIntegration<import("../../../types/api").IntegrationStatus>(
+    `/api/integrations/${binding}`,
+    "DELETE",
+  );
+}
+
+export function testIntegration(binding: string) {
+  return mutateIntegration<{
+    binding: string;
+    status: "ok" | "failed" | "not_configured";
+    httpStatus: number | null;
+    latencyMs: number;
+    message: string;
+    testedAt: string;
+  }>(`/api/integrations/${binding}/test`, "POST");
+}
+
 export async function synchronize(
   scope: string,
 ): Promise<ApiResponse<SynchronizationSummary[]>> {

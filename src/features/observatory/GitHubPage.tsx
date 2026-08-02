@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, GitFork, RefreshCw, Star } from "lucide-react";
+import { ExternalLink, GitFork, Star } from "lucide-react";
 import { useState } from "react";
 import type { GithubRankingEntry } from "../../../types/api";
+import { SyncActionButton } from "../../components/common/SyncActionButton";
 import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
 import { getGithubRankings, synchronize } from "./api";
 import { formatDate, formatNumber, missing } from "./format";
@@ -117,14 +118,11 @@ export function GitHubPage() {
             crecimiento requiere al menos dos snapshots en fechas distintas.
           </p>
         </div>
-        <button
-          type="button"
-          className="secondary-button compact"
+        <SyncActionButton
+          label="Sincronizar GitHub"
+          busy={syncing}
           onClick={runSync}
-          disabled={syncing}
-        >
-          <RefreshCw className={syncing ? "spin" : ""} /> Sincronizar GitHub
-        </button>
+        />
       </header>
       <div className="ranking-tabs" role="tablist">
         {VIEWS.map((entry) => (

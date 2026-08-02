@@ -23,6 +23,15 @@ import {
   synchronizeSource,
 } from "./external";
 import {
+  deleteIntegration,
+  listIntegrations,
+  resolveSecret,
+  saveIntegration,
+  testIntegration,
+  withStoredSecrets,
+} from "./integrations";
+import { getMarketQuotes } from "./market";
+import {
   deleteLaboratoryProject,
   getCountryPanel,
   getGithubRankings,
@@ -92,6 +101,7 @@ type Env = {
   INSTAGRAM_ACCESS_TOKEN?: string;
   INSTAGRAM_BUSINESS_ACCOUNT_ID?: string;
   X_BEARER_TOKEN?: string;
+  FINNHUB_API_KEY?: string;
   OLLAMA_BASE_URL?: string;
   LM_STUDIO_BASE_URL?: string;
   VLLM_BASE_URL?: string;
@@ -107,7 +117,7 @@ type IndexJob = {
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 const SECURITY_HEADERS = {
   "content-security-policy":
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://tiles.openfreemap.org; font-src 'self'; worker-src 'self' blob:; child-src blob:; frame-src https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com https://*.fbcdn.net https://scontent.xx.fbcdn.net; connect-src 'self' https://tiles.openfreemap.org; font-src 'self'; worker-src 'self' blob:; child-src blob:; frame-src https://www.youtube-nocookie.com https://www.facebook.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
   "referrer-policy": "strict-origin-when-cross-origin",
   "x-content-type-options": "nosniff",
   "x-frame-options": "DENY",
@@ -473,9 +483,10 @@ async function getDocumentAnalysis(id: string, env: Env): Promise<Response> {
     analysisCacheKey(row.id, row.sha256),
     "json",
   );
+  const apiKey = await resolveSecret(env, "NVIDIA_API_KEY");
   return json(
     envelope(cached ?? null, {
-      sourceStatus: env.NVIDIA_API_KEY ? "ready" : "not_configured",
+      sourceStatus: apiKey ? "ready" : "not_configured",
     }),
   );
 }
@@ -492,10 +503,11 @@ async function analyzeDocument(
       403,
     );
   }
-  if (!env.NVIDIA_API_KEY) {
+  const apiKey = await resolveSecret(env, "NVIDIA_API_KEY");
+  if (!apiKey) {
     return errorResponse(
       "not_configured",
-      "La clave NVIDIA_API_KEY no está configurada en el Worker.",
+      "La clave NVIDIA_API_KEY no está configurada. Añádela en Configuración › Integraciones.",
       503,
     );
   }
@@ -536,7 +548,7 @@ async function analyzeDocument(
   const upstream = await fetch(NVIDIA_API_URL, {
     method: "POST",
     headers: {
-      authorization: `Bearer ${env.NVIDIA_API_KEY}`,
+      authorization: `Bearer ${apiKey}`,
       "content-type": "application/json",
     },
     body: JSON.stringify({
@@ -829,9 +841,11 @@ async function listExternalRecords(
     "",
   );
   const search = (url.searchParams.get("q") ?? "").trim().slice(0, 120);
+  // El módulo Mercado necesita la serie completa por empresa y periodo, que ya
+  // supera las 200 filas; el tope sigue acotado para no servir la tabla entera.
   const limit = Math.min(
     Math.max(Number(url.searchParams.get("limit") ?? 50), 1),
-    200,
+    500,
   );
   const offset = Math.max(Number(url.searchParams.get("offset") ?? 0), 0);
   const where: string[] = [];
@@ -1203,16 +1217,17 @@ async function moduleRouter(
     );
   }
   if (request.method === "GET" && path === "/api/videos") {
-    const configured = Boolean(env.YOUTUBE_API_KEY);
-    const result = await listVideos(env, url.searchParams);
+    // Las banderas reflejan la credencial efectiva (entorno o guardada cifrada).
+    const resolved = await withStoredSecrets(env);
+    const result = await listVideos(resolved, url.searchParams);
     return json(
       envelope(
         {
           ...result,
           integrations: {
-            youtubeConfigured: configured,
-            metaConfigured: Boolean(env.FACEBOOK_PAGE_ACCESS_TOKEN),
-            xConfigured: Boolean(env.X_BEARER_TOKEN),
+            youtubeConfigured: Boolean(resolved.YOUTUBE_API_KEY),
+            metaConfigured: Boolean(resolved.FACEBOOK_PAGE_ACCESS_TOKEN),
+            xConfigured: Boolean(resolved.X_BEARER_TOKEN),
           },
         },
         {
@@ -1220,6 +1235,24 @@ async function moduleRouter(
           sourceStatus: result.items.length ? "ready" : "empty",
         },
       ),
+    );
+  }
+  if (request.method === "GET" && path === "/api/market/quotes") {
+    const quotes = await getMarketQuotes(
+      env,
+      url.searchParams.get("force") === "1" ? { force: true } : {},
+    );
+    return json(
+      envelope(quotes, {
+        total: quotes.quotes.length,
+        sourceStatus: !quotes.configured
+          ? "not_configured"
+          : quotes.fromCache
+            ? "cached"
+            : quotes.quotes.length
+              ? "ready"
+              : "empty",
+      }),
     );
   }
   if (path === "/api/laboratory/projects" && request.method === "GET")
@@ -1277,6 +1310,51 @@ async function moduleRouter(
   return null;
 }
 
+/**
+ * Guardado, borrado y prueba de credenciales de integración. La credencial solo
+ * viaja del navegador al Worker: nunca se devuelve, ni siquiera al autor de la
+ * petición, y se almacena cifrada.
+ */
+async function integrationRouter(
+  request: Request,
+  env: Env,
+  match: RegExpMatchArray,
+): Promise<Response> {
+  const binding = match[1];
+  const isTest = Boolean(match[2]);
+  if (!csrfOk(request))
+    return errorResponse("csrf_failed", "Solicitud sin protección.", 403);
+  try {
+    if (isTest && request.method === "POST")
+      return json(envelope(await testIntegration(env, binding)));
+    if (!isTest && request.method === "PUT") {
+      const body = (await request.json().catch(() => null)) as {
+        credential?: unknown;
+      } | null;
+      if (typeof body?.credential !== "string")
+        return errorResponse(
+          "invalid_payload",
+          "Falta la credencial a guardar.",
+          400,
+        );
+      return json(
+        envelope(await saveIntegration(env, binding, body.credential)),
+      );
+    }
+    if (!isTest && request.method === "DELETE")
+      return json(envelope(await deleteIntegration(env, binding)));
+  } catch (error) {
+    return errorResponse(
+      "integration_error",
+      error instanceof Error
+        ? error.message
+        : "No se pudo actualizar la integración.",
+      400,
+    );
+  }
+  return errorResponse("not_found", "La ruta solicitada no existe.", 404);
+}
+
 async function apiRouter(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   if (env.ENABLE_DEVELOPER_LAB !== "false") {
@@ -1294,13 +1372,22 @@ async function apiRouter(request: Request, env: Env): Promise<Response> {
   if (request.method === "GET" && url.pathname === "/api/providers")
     return listProviders(env);
   if (request.method === "GET" && url.pathname === "/api/sources")
-    return listSources(env);
+    return listSources(await withStoredSecrets(env));
   if (request.method === "GET" && url.pathname === "/api/dashboard")
     return getDashboard(env);
   if (request.method === "GET" && url.pathname === "/api/live-events")
     return listLiveEvents(env);
   if (request.method === "POST" && url.pathname === "/api/sync")
     return runSynchronization(request, env);
+  if (request.method === "GET" && url.pathname === "/api/integrations")
+    return json(
+      envelope(await listIntegrations(env), { sourceStatus: "ready" }),
+    );
+  const integrationMatch = url.pathname.match(
+    /^\/api\/integrations\/([A-Z0-9_]{3,64})(\/test)?$/,
+  );
+  if (integrationMatch)
+    return integrationRouter(request, env, integrationMatch);
   if (
     request.method === "POST" &&
     url.pathname === "/api/internal/import/local"

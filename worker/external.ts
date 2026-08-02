@@ -17,8 +17,11 @@ import type {
   AdapterResult,
   NormalizedExternalRecord,
 } from "../lib/external/types";
+import { withStoredSecrets } from "./integrations";
+import { getMarketQuotes } from "./market";
 import {
   type ModuleSyncResult,
+  syncFacebookVideos,
   syncOpenAlexInstitutions,
   syncOpenRouterRankings,
   syncYouTube,
@@ -27,6 +30,7 @@ import {
 export type ExternalEnv = {
   DB: D1Database;
   CACHE: KVNamespace;
+  DEVELOPER_LAB_ENCRYPTION_KEY?: string;
   GITHUB_TOKEN?: string;
   HUGGINGFACE_TOKEN?: string;
   OPENAI_API_KEY?: string;
@@ -34,6 +38,8 @@ export type ExternalEnv = {
   GROQ_API_KEY?: string;
   MISTRAL_API_KEY?: string;
   YOUTUBE_API_KEY?: string;
+  FACEBOOK_PAGE_ACCESS_TOKEN?: string;
+  FINNHUB_API_KEY?: string;
 };
 
 export type SourceRow = {
@@ -82,6 +88,13 @@ const KEY_SOURCE_IDS = [
   "gemini-api",
   "groq-api",
   "mistral-api",
+] as const;
+
+/** Módulos con persistencia propia que solo corren con credencial configurada. */
+const CREDENTIALED_MODULE_SOURCE_IDS = [
+  "youtube",
+  "facebook-videos",
+  "finnhub",
 ] as const;
 
 const USER_AGENT =
@@ -334,11 +347,16 @@ async function secXbrlAdapter(now: string): Promise<AdapterResult> {
   const records: NormalizedExternalRecord[] = [];
   let lastStatus = 200;
   for (const company of SEC_AI_COMPANIES) {
-    const seenMetricLabels = new Set<string>();
+    // Las empresas usan etiquetas XBRL distintas para el mismo concepto y
+    // algunas dejaron de reportar una etiqueta hace años (Microsoft sigue
+    // publicando «Revenues» con datos de 2010). Se consultan todas las
+    // etiquetas del concepto y se conserva la que llega hasta el periodo más
+    // reciente; nunca se mezclan valores de dos etiquetas distintas.
+    const bestByLabel = new Map<
+      string,
+      { periodEnd: string; records: NormalizedExternalRecord[] }
+    >();
     for (const metric of SEC_METRICS) {
-      // Las empresas usan etiquetas distintas para ingresos; se toma la primera
-      // etiqueta con datos y no se mezclan valores de etiquetas diferentes.
-      if (seenMetricLabels.has(metric.label)) continue;
       try {
         const response = await getResponse(
           `https://data.sec.gov/api/xbrl/companyconcept/CIK${company.cik}/us-gaap/${metric.tag}.json`,
@@ -350,14 +368,25 @@ async function secXbrlAdapter(now: string): Promise<AdapterResult> {
           now,
           company.providerId,
         );
-        if (normalized.length) {
-          records.push(...normalized);
-          seenMetricLabels.add(metric.label);
-        }
+        if (!normalized.length) continue;
+        const latest = normalized.reduce(
+          (top, record) =>
+            String(record.data.periodEnd) > top
+              ? String(record.data.periodEnd)
+              : top,
+          "",
+        );
+        const current = bestByLabel.get(metric.label);
+        if (!current || latest > current.periodEnd)
+          bestByLabel.set(metric.label, {
+            periodEnd: latest,
+            records: normalized,
+          });
       } catch {
         // Etiqueta sin datos para esta empresa: se intenta la siguiente.
       }
     }
+    for (const entry of bestByLabel.values()) records.push(...entry.records);
   }
   return { records, httpStatus: lastStatus, rateLimitRemaining: null };
 }
@@ -619,6 +648,26 @@ async function persistRecords(
   return { stored: records.length, changed };
 }
 
+/**
+ * `/api/records` cachea cada combinación de filtros durante dos minutos. Tras
+ * una sincronización esa caché describiría el estado anterior, así que se borra
+ * para que la interfaz muestre lo recién indexado sin esperar a que expire.
+ */
+async function invalidateRecordListings(env: ExternalEnv): Promise<void> {
+  try {
+    let cursor: string | undefined;
+    do {
+      const page = await env.CACHE.list({ prefix: "records:", cursor });
+      await Promise.all(page.keys.map((key) => env.CACHE.delete(key.name)));
+      cursor = page.list_complete ? undefined : page.cursor;
+    } while (cursor);
+  } catch (error) {
+    console.error("record_cache_invalidation_failed", {
+      error: error instanceof Error ? error.message : "unknown",
+    });
+  }
+}
+
 export function credentialConfigured(
   source: SourceRow,
   env: ExternalEnv,
@@ -636,8 +685,11 @@ export function credentialConfigured(
 
 export async function synchronizeSource(
   sourceId: string,
-  env: ExternalEnv,
+  rawEnv: ExternalEnv,
 ): Promise<SyncSummary> {
+  // Las credenciales guardadas desde «Configuración › Integraciones» pesan más
+  // que las variables de entorno, y el resto del adaptador no necesita saberlo.
+  const env = await withStoredSecrets(rawEnv);
   const source = await env.DB.prepare(`
     SELECT id, name, base_url, endpoint, authentication_type, secret_binding_name, adapter_name, status
     FROM source_registry WHERE id = ? AND is_enabled = 1 LIMIT 1
@@ -694,8 +746,22 @@ export async function synchronizeSource(
     let moduleResult: ModuleSyncResult | null = null;
     if (source.adapter_name === "youtube")
       moduleResult = await syncYouTube(env, requestedAt);
+    else if (source.adapter_name === "facebook-videos")
+      moduleResult = await syncFacebookVideos(env, requestedAt);
     else if (source.adapter_name === "openalex-institutions")
       moduleResult = await syncOpenAlexInstitutions(env, requestedAt);
+    else if (source.adapter_name === "finnhub") {
+      const quotes = await getMarketQuotes(env, { force: true });
+      if (!quotes.quotes.length)
+        throw new Error(quotes.reason ?? "Finnhub no devolvió cotizaciones.");
+      moduleResult = {
+        discovered: quotes.quotes.length,
+        stored: quotes.quotes.length,
+        changed: quotes.quotes.length,
+        httpStatus: 200,
+        rateLimitRemaining: null,
+      };
+    }
 
     let records: NormalizedExternalRecord[] = [];
     let persisted = { stored: 0, changed: 0 };
@@ -747,6 +813,7 @@ export async function synchronizeSource(
       ),
     ]);
     await env.CACHE.delete("observatory:dashboard");
+    await invalidateRecordListings(env);
     return {
       runId,
       sourceId,
@@ -803,16 +870,20 @@ export async function synchronizeScope(
   env: ExternalEnv,
 ): Promise<SyncSummary[]> {
   const mapping: Record<string, readonly string[]> = {
-    all: [...PUBLIC_SOURCE_IDS, ...KEY_SOURCE_IDS],
+    all: [
+      ...PUBLIC_SOURCE_IDS,
+      ...KEY_SOURCE_IDS,
+      ...CREDENTIALED_MODULE_SOURCE_IDS,
+    ],
     public: PUBLIC_SOURCE_IDS,
     providers: ["openrouter", "hugging-face", ...KEY_SOURCE_IDS],
     models: ["openrouter", "hugging-face", ...KEY_SOURCE_IDS],
     news: ["openai-news"],
     research: ["arxiv", "openalex", "crossref"],
     github: ["github"],
-    market: ["sec-edgar", "sec-xbrl", "bcrp", "frankfurter"],
+    market: ["sec-edgar", "sec-xbrl", "bcrp", "frankfurter", "finnhub"],
     map: ["openalex-institutions", "openalex"],
-    videos: ["youtube"],
+    videos: ["youtube", "facebook-videos"],
     failed: [],
   };
   let sourceIds = mapping[scope] ?? [scope];
