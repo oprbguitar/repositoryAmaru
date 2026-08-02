@@ -1187,7 +1187,7 @@ async function moduleRouter(
     return json(
       envelope(history, {
         sourceStatus: history.available ? "ready" : "empty",
-        total: history.points.length,
+        total: history.series.length,
       }),
     );
   }

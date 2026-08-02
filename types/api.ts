@@ -355,14 +355,23 @@ export type ProviderModelsResponse = {
 
 export type PriceHistoryPoint = {
   date: string;
-  medianInputPerMillion: number;
-  minInputPerMillion: number;
-  maxInputPerMillion: number;
-  sampleSize: number;
+  pricePerMillion: number;
+};
+
+export type PriceHistorySeries = {
+  modelExternalId: string;
+  modelTitle: string;
+  points: PriceHistoryPoint[];
+  first: number;
+  current: number;
+  changePercent: number;
 };
 
 export type PriceHistoryResponse = {
-  points: PriceHistoryPoint[];
+  dates: string[];
+  series: PriceHistorySeries[];
+  observations: number;
+  trackedModels: number;
   available: boolean;
   reason: string | null;
   methodology: string;

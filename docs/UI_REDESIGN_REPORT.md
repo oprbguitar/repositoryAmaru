@@ -122,15 +122,30 @@ normalizer, capability derivation or cost calculation was changed. One
 **additive** read-only endpoint was introduced. No secret was moved toward the
 browser and no `VITE_`/`PUBLIC_`/`NEXT_PUBLIC_` prefix was added.
 
-**No fabricated data.** The reference mockup for `Hoy` showed a 30-day
-multi-series cost chart with specific figures. That history does not exist in
-the database, so it was not invented. Instead the panel plots a real series
-derived from stored `model_rankings` dates (median input price per 1M tokens),
-which currently has **two genuine points** (2026-07-19 → 2026-08-02, $0.065 →
-$0.0615). With fewer than two dates it renders an honest empty state stating
-that history accumulates per synchronization. "Models by country" uses the real
-country aggregates (US 700, FR 71, CN 12, CA 5). Health and activity panels read
-live source state and events.
+**No fabricated data.** The reference mockups for `Hoy` showed a 30-day,
+multi-series cost chart with named premium models and figures such as
+"GPT-4o $2.48 −28%". That data does not exist in the database:
+
+- the observatory has stored exactly **two** synchronization dates
+  (2026-07-19 and 2026-08-02), not thirty daily points;
+- the only ranking that carries a USD score is `pricing-low`
+  (`score_unit = usd_per_million_input`), which tracks the *cheapest* models,
+  so the premium models in the mockup are not in it at all;
+- `model_offerings` overwrites on conflict, so it holds no history either.
+
+Rather than invent the missing series, the chart keeps the mockup's **structure**
+— per-model summary cards with current price and change, a multi-series line
+chart, and a legend — and fills it with real observations: one line per model,
+one point per stored synchronization date, no interpolation between dates. The
+five models shown are those present on every stored date, ranked by how much
+their price actually moved. Current real values include Qwen3 30B A3B
+0.1 → 0.0482 (−51.8%) and Mistral Small 3.2 24B 0.1 → 0.075 (−25%), across 42
+models with complete history. Vertical guides mark each real observation so the
+sparsity is visible, and the caption states the observation count. With fewer
+than two shared dates the panel renders an honest empty state.
+
+"Models by country" uses the real country aggregates (US 700, FR 71, CN 12,
+CA 5). Health and activity panels read live source state and events.
 
 ## 8. Licensing
 

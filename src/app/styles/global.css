@@ -4850,33 +4850,82 @@ html[data-theme="light"] .provider-card-select {
 }
 
 /* Price trend */
-.trend-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-5);
+/* Per-model summary cards above the chart. */
+.trend-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--space-2);
   margin-bottom: var(--space-3);
 }
-.trend-summary > div {
+.trend-card {
   display: grid;
   gap: 1px;
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  min-width: 0;
 }
-.trend-summary span {
-  color: var(--text-subtle);
+.trend-card-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
   font-size: var(--text-xs);
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.trend-summary strong {
-  font-size: var(--text-xl);
+.trend-card-name i {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: var(--radius-pill);
+}
+.trend-card strong {
+  font-size: var(--text-lg);
   font-variant-numeric: tabular-nums;
 }
-.today-page .trend-summary small {
-  color: var(--text-subtle);
+.trend-card span:last-child {
   font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
 }
 .delta-down {
   color: var(--ok);
 }
 .delta-up {
   color: var(--warn);
+}
+.delta-flat {
+  color: var(--text-subtle);
+}
+.trend-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+.trend-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.trend-legend i {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: var(--radius-pill);
+}
+.trend-guide {
+  stroke: var(--line-soft);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
 }
 .trend-chart {
   width: 100%;
@@ -4891,20 +4940,15 @@ html[data-theme="light"] .provider-card-select {
   fill: var(--text-subtle);
   font-size: 10px;
 }
-.trend-area {
-  fill: var(--accent-quiet);
-}
 .trend-line {
   fill: none;
-  stroke: var(--accent);
   stroke-width: 2;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
 .trend-dot {
-  fill: var(--accent);
   stroke: var(--surface);
-  stroke-width: 2;
+  stroke-width: 1.5;
 }
 .trend-method,
 .trend-single {

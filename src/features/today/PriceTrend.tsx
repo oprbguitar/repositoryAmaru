@@ -1,22 +1,31 @@
 import type { PriceHistoryResponse } from "../../../types/api";
 import { formatDate } from "../observatory/format";
 
-const WIDTH = 720;
-const HEIGHT = 190;
-const PAD = { top: 14, right: 16, bottom: 26, left: 46 };
+const WIDTH = 760;
+const HEIGHT = 220;
+const PAD = { top: 16, right: 18, bottom: 30, left: 54 };
+
+/** One hue per line, drawn from the semantic palette rather than new colours. */
+const SERIES_COLORS = [
+  "var(--ok)",
+  "var(--purple)",
+  "var(--info)",
+  "var(--warn)",
+  "var(--danger)",
+];
 
 function money(value: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
-    maximumFractionDigits: 4,
+    maximumFractionDigits: value < 1 ? 4 : 2,
   }).format(value);
 }
 
 /**
- * Median input price per million tokens, one point per real synchronization
- * date. The series is drawn only from stored ranking dates: no interpolation
- * of missing days and no simulated history.
+ * Input price per million tokens, one line per model and one point per real
+ * synchronization date. Nothing between dates is interpolated and no earlier
+ * history is simulated, so a sparse series is shown as sparse.
  */
 export function PriceTrend({
   history,
@@ -25,82 +34,85 @@ export function PriceTrend({
   history: PriceHistoryResponse | undefined;
   emptyLabel: string;
 }) {
-  const points = history?.points ?? [];
+  const dates = history?.dates ?? [];
+  const series = history?.series ?? [];
 
-  if (!history || points.length < 2) {
+  if (!history || !history.available) {
     return (
       <div className="honest-empty compact-empty">
         <p>{history?.reason ?? emptyLabel}</p>
-        {points.length === 1 ? (
-          <p className="trend-single">
-            Único punto disponible: {formatDate(points[0].date)} ·{" "}
-            <strong>{money(points[0].medianInputPerMillion)}</strong> /1M
-            (mediana de {points[0].sampleSize} modelos)
-          </p>
-        ) : null}
       </div>
     );
   }
 
-  const values = points.map((point) => point.medianInputPerMillion);
+  const values = series.flatMap((entry) =>
+    entry.points.map((point) => point.pricePerMillion),
+  );
   const max = Math.max(...values);
   const min = Math.min(...values);
-  // Pad the domain so a flat-ish series is not drawn as a line on the axis.
   const span = max - min || max || 1;
-  const top = max + span * 0.25;
-  const bottom = Math.max(0, min - span * 0.25);
+  const top = max + span * 0.18;
+  const bottom = Math.max(0, min - span * 0.18);
 
   const plotW = WIDTH - PAD.left - PAD.right;
   const plotH = HEIGHT - PAD.top - PAD.bottom;
   const x = (index: number) =>
     PAD.left +
-    (points.length === 1 ? plotW / 2 : (index / (points.length - 1)) * plotW);
+    (dates.length === 1 ? plotW / 2 : (index / (dates.length - 1)) * plotW);
   const y = (value: number) =>
     PAD.top + plotH - ((value - bottom) / (top - bottom || 1)) * plotH;
 
-  const line = points
-    .map(
-      (point, index) =>
-        `${index ? "L" : "M"}${x(index)},${y(point.medianInputPerMillion)}`,
-    )
-    .join(" ");
-  const area = `${line} L${x(points.length - 1)},${PAD.top + plotH} L${x(0)},${PAD.top + plotH} Z`;
-
-  const first = points[0].medianInputPerMillion;
-  const last = points[points.length - 1].medianInputPerMillion;
-  const change = first ? ((last - first) / first) * 100 : 0;
-
   return (
     <div className="trend">
-      <div className="trend-summary">
-        <div>
-          <span>Mediana actual</span>
-          <strong>{money(last)}</strong>
-          <small>/1M tokens de entrada</small>
-        </div>
-        <div>
-          <span>Variación</span>
-          <strong className={change <= 0 ? "delta-down" : "delta-up"}>
-            {change > 0 ? "+" : ""}
-            {change.toFixed(1)}%
-          </strong>
-          <small>desde {formatDate(points[0].date)}</small>
-        </div>
-        <div>
-          <span>Puntos reales</span>
-          <strong>{points.length}</strong>
-          <small>fechas de sincronización</small>
-        </div>
+      {/* Per-model summary: current price and the real change across the window. */}
+      <div className="trend-cards">
+        {series.map((entry, index) => (
+          <article className="trend-card" key={entry.modelExternalId}>
+            <span className="trend-card-name" title={entry.modelExternalId}>
+              <i
+                style={{
+                  background: SERIES_COLORS[index % SERIES_COLORS.length],
+                }}
+              />
+              {entry.modelTitle}
+            </span>
+            <strong>{money(entry.current)}</strong>
+            <span
+              className={
+                entry.changePercent < 0
+                  ? "delta-down"
+                  : entry.changePercent > 0
+                    ? "delta-up"
+                    : "delta-flat"
+              }
+            >
+              {entry.changePercent > 0
+                ? "↑ +"
+                : entry.changePercent < 0
+                  ? "↓ "
+                  : "→ "}
+              {entry.changePercent === 0
+                ? "sin cambio"
+                : `${Math.abs(entry.changePercent)}%`}
+            </span>
+          </article>
+        ))}
       </div>
 
       <svg
         className="trend-chart"
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         role="img"
-        aria-label={`Mediana del precio de entrada por millón de tokens en ${points.length} fechas: de ${money(first)} el ${formatDate(points[0].date)} a ${money(last)} el ${formatDate(points[points.length - 1].date)}.`}
+        aria-label={`Precio de entrada por millón de tokens de ${series.length} modelos en ${dates.length} fechas de sincronización, entre ${formatDate(dates[0])} y ${formatDate(dates[dates.length - 1])}. ${series
+          .map(
+            (entry) =>
+              `${entry.modelTitle}: ${money(entry.first)} a ${money(entry.current)}`,
+          )
+          .join("; ")}.`}
       >
-        <title>Mediana del precio de entrada por millón de tokens</title>
-        {[0, 0.5, 1].map((ratio) => {
+        <title>Precio de entrada por millón de tokens</title>
+
+        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
           const value = bottom + (top - bottom) * (1 - ratio);
           const gy = PAD.top + plotH * ratio;
           return (
@@ -123,35 +135,82 @@ export function PriceTrend({
             </g>
           );
         })}
-        <path d={area} className="trend-area" />
-        <path d={line} className="trend-line" />
-        {points.map((point, index) => (
-          <g key={point.date}>
-            <circle
-              cx={x(index)}
-              cy={y(point.medianInputPerMillion)}
-              r="3.5"
-              className="trend-dot"
-            />
-            <text
-              x={x(index)}
-              y={HEIGHT - 8}
-              className="trend-axis"
-              textAnchor={
-                index === 0
-                  ? "start"
-                  : index === points.length - 1
-                    ? "end"
-                    : "middle"
-              }
-            >
-              {formatDate(point.date)}
-            </text>
-          </g>
+
+        {/* A vertical guide per real observation makes the sparsity explicit. */}
+        {dates.map((date, index) => (
+          <line
+            key={date}
+            x1={x(index)}
+            x2={x(index)}
+            y1={PAD.top}
+            y2={PAD.top + plotH}
+            className="trend-guide"
+          />
+        ))}
+
+        {series.map((entry, seriesIndex) => {
+          const color = SERIES_COLORS[seriesIndex % SERIES_COLORS.length];
+          const path = entry.points
+            .map(
+              (point, index) =>
+                `${index ? "L" : "M"}${x(index)},${y(point.pricePerMillion)}`,
+            )
+            .join(" ");
+          return (
+            <g key={entry.modelExternalId}>
+              <path d={path} className="trend-line" style={{ stroke: color }} />
+              {entry.points.map((point, index) => (
+                <circle
+                  key={point.date}
+                  cx={x(index)}
+                  cy={y(point.pricePerMillion)}
+                  r="3.2"
+                  className="trend-dot"
+                  style={{ fill: color }}
+                />
+              ))}
+            </g>
+          );
+        })}
+
+        {dates.map((date, index) => (
+          <text
+            key={date}
+            x={x(index)}
+            y={HEIGHT - 10}
+            className="trend-axis"
+            textAnchor={
+              index === 0
+                ? "start"
+                : index === dates.length - 1
+                  ? "end"
+                  : "middle"
+            }
+          >
+            {formatDate(date)}
+          </text>
         ))}
       </svg>
 
-      <p className="trend-method">{history.methodology}</p>
+      <ul className="trend-legend">
+        {series.map((entry, index) => (
+          <li key={entry.modelExternalId}>
+            <i
+              style={{
+                background: SERIES_COLORS[index % SERIES_COLORS.length],
+              }}
+            />
+            {entry.modelTitle}
+          </li>
+        ))}
+      </ul>
+
+      <p className="trend-method">
+        {history.methodology} {history.observations} observación
+        {history.observations === 1 ? "" : "es"} real
+        {history.observations === 1 ? "" : "es"} sobre {history.trackedModels}{" "}
+        modelos con histórico completo.
+      </p>
     </div>
   );
 }

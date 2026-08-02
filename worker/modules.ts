@@ -1165,58 +1165,92 @@ const GITHUB_TOPIC_VIEWS: Record<string, string[]> = {
   ],
 };
 
+/** How many model lines the trend chart shows at once. */
+const PRICE_SERIES_LIMIT = 5;
+
 /**
- * Median catalogue input price per million tokens, one point per ranking date.
+ * Per-model input price per million tokens, one point per synchronization date.
  *
- * The series is built strictly from `model_rankings` rows that were actually
- * stored on each synchronization, so it starts empty and grows as syncs
- * accumulate. Earlier values are never back-filled or simulated: with fewer
- * than two dates the endpoint reports that a trend is not available yet.
+ * Every value is a `score` that OpenRouter's `pricing-low` ranking actually
+ * reported on that date (`score_unit = usd_per_million_input`), so the series
+ * only ever contains observations the observatory really stored. Dates between
+ * synchronizations are not interpolated and history is never back-filled: with
+ * fewer than two dates the endpoint says a trend is not available yet.
+ *
+ * Models are chosen among those present on every stored date, ranked by how
+ * much their price actually moved, so the chart shows real movement rather than
+ * an arbitrary slice of the catalogue.
  */
 export async function getPriceHistory(env: ModulesEnv) {
   const rows = await env.DB.prepare(
-    `SELECT ranking_date, score FROM model_rankings
+    `SELECT ranking_date, model_external_id, model_title, score
+     FROM model_rankings
      WHERE ranking_type = 'pricing-low' AND score IS NOT NULL
      ORDER BY ranking_date ASC`,
   ).all<Record<string, unknown>>();
 
-  const byDate = new Map<string, number[]>();
+  const dates = [
+    ...new Set(rows.results.map((row) => String(row.ranking_date))),
+  ].sort();
+
+  const byModel = new Map<
+    string,
+    { title: string; points: Map<string, number> }
+  >();
   for (const row of rows.results) {
-    const date = String(row.ranking_date);
+    const id = String(row.model_external_id);
     const score = Number(row.score);
     if (!Number.isFinite(score)) continue;
-    const list = byDate.get(date) ?? [];
-    list.push(score);
-    byDate.set(date, list);
+    const entry = byModel.get(id) ?? {
+      title: String(row.model_title),
+      points: new Map<string, number>(),
+    };
+    entry.title = String(row.model_title);
+    entry.points.set(String(row.ranking_date), score);
+    byModel.set(id, entry);
   }
 
-  const points = [...byDate.entries()]
-    .map(([date, values]) => {
-      const sorted = [...values].sort((left, right) => left - right);
-      const middle = Math.floor(sorted.length / 2);
-      const median =
-        sorted.length % 2 === 0
-          ? (sorted[middle - 1] + sorted[middle]) / 2
-          : sorted[middle];
-      return {
+  const complete = [...byModel.entries()]
+    .filter(([, entry]) => entry.points.size === dates.length)
+    .map(([id, entry]) => {
+      const points = dates.map((date) => ({
         date,
-        medianInputPerMillion: Math.round(median * 10000) / 10000,
-        minInputPerMillion: sorted[0],
-        maxInputPerMillion: sorted[sorted.length - 1],
-        sampleSize: sorted.length,
+        pricePerMillion: entry.points.get(date) as number,
+      }));
+      const first = points[0].pricePerMillion;
+      const current = points[points.length - 1].pricePerMillion;
+      const changePercent = first ? ((current - first) / first) * 100 : 0;
+      return {
+        modelExternalId: id,
+        modelTitle: entry.title,
+        points,
+        first,
+        current,
+        changePercent: Math.round(changePercent * 10) / 10,
       };
+    });
+
+  // Prefer lines that actually moved; fall back to the dearer models so the
+  // chart is never a set of flat, identical lines when nothing changed.
+  const series = complete
+    .sort((left, right) => {
+      const move = Math.abs(right.changePercent) - Math.abs(left.changePercent);
+      return move !== 0 ? move : right.current - left.current;
     })
-    .sort((left, right) => left.date.localeCompare(right.date));
+    .slice(0, PRICE_SERIES_LIMIT);
 
   return {
-    points,
-    available: points.length >= 2,
+    dates,
+    series,
+    observations: dates.length,
+    trackedModels: complete.length,
+    available: dates.length >= 2 && series.length > 0,
     reason:
-      points.length >= 2
+      dates.length >= 2 && series.length > 0
         ? null
-        : "El histórico se construye con cada sincronización. Todavía no hay dos fechas distintas de ranking, y no se simulan valores anteriores.",
+        : "El histórico se construye con cada sincronización. Todavía no hay dos fechas distintas de ranking con los mismos modelos, y no se simulan valores anteriores.",
     methodology:
-      "Mediana del precio de entrada por millón de tokens sobre el ranking «pricing-low» de OpenRouter, agrupada por fecha de sincronización.",
+      "Precio de entrada por millón de tokens que el ranking «pricing-low» de OpenRouter publicó en cada fecha de sincronización. Sin interpolar días intermedios.",
   };
 }
 

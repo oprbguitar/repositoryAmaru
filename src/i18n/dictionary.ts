@@ -59,7 +59,7 @@ export const dictionary = {
     "today.modules": "Módulos del observatorio",
     "today.priceTrend": "Evolución del precio de entrada",
     "today.priceTrendHint":
-      "USD por 1M de tokens · mediana del catálogo por fecha de ranking",
+      "USD por 1M de tokens de entrada · una línea por modelo, un punto por sincronización",
     "today.modelsByCountry": "Modelos por país",
     "today.modelsByCountryHint": "Registros indexados por país de origen",
     "today.systemHealth": "Salud del sistema",
@@ -70,7 +70,7 @@ export const dictionary = {
     "today.recentActivity": "Actividad reciente",
     "today.quickLinks": "Accesos rápidos",
     "today.noSeries":
-      "Todavía no hay suficientes fechas de sincronización para trazar una serie. El histórico se construye con cada sincronización; no se simulan valores anteriores.",
+      "Todavía no hay dos fechas de sincronización con los mismos modelos. El histórico se construye con cada sincronización; no se simulan valores anteriores.",
     "today.noCountries":
       "Ningún registro indexado declara país de origen todavía.",
     "today.noActivity": "Aún no se detectaron cambios de fuentes externas.",
@@ -125,7 +125,7 @@ export const dictionary = {
     "today.modules": "Observatory modules",
     "today.priceTrend": "Input price over time",
     "today.priceTrendHint":
-      "USD per 1M tokens · catalogue median by ranking date",
+      "USD per 1M input tokens · one line per model, one point per synchronization",
     "today.modelsByCountry": "Models by country",
     "today.modelsByCountryHint": "Indexed records by country of origin",
     "today.systemHealth": "System health",
@@ -136,7 +136,7 @@ export const dictionary = {
     "today.recentActivity": "Recent activity",
     "today.quickLinks": "Quick links",
     "today.noSeries":
-      "Not enough synchronization dates yet to plot a series. History builds with each sync; earlier values are never simulated.",
+      "No two synchronization dates share the same models yet. History builds with each sync; earlier values are never simulated.",
     "today.noCountries": "No indexed record declares a country of origin yet.",
     "today.noActivity": "No external source changes detected yet.",
 
