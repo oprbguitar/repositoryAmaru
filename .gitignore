@@ -19,3 +19,7 @@ local-research/*
 worker-startup.cpuprofile
 .DS_Store
 worker-configuration.d.ts
+
+# Temporary UI comparison captures (kept out of the repo; curated shots live in docs/ui-redesign/showcase)
+docs/ui-redesign/baseline/
+docs/ui-redesign/after/
