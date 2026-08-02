@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   TrendingDown,
 } from "lucide-react";
+import type React from "react";
 import { Link } from "react-router-dom";
 import type { ApiResponse, LibraryStats } from "../../../types/api";
 import { useT } from "../../i18n/LanguageProvider";
@@ -79,6 +80,7 @@ export function TodayPage() {
     {
       to: "/providers",
       icon: Building2,
+      accent: "#2ec7d4",
       label: t("nav.providers"),
       value: stats?.providers ?? 0,
       hint: "Directorio oficial",
@@ -86,6 +88,7 @@ export function TodayPage() {
     {
       to: "/models",
       icon: Bot,
+      accent: "#9d7aea",
       label: t("nav.models"),
       value: stats?.models ?? 0,
       hint: "Registros sincronizados",
@@ -93,6 +96,7 @@ export function TodayPage() {
     {
       to: "/developer-lab",
       icon: ServerCog,
+      accent: "#58b0f7",
       label: t("nav.developerLab"),
       value: sourceItems.length,
       hint: "Fuentes registradas",
@@ -100,6 +104,7 @@ export function TodayPage() {
     {
       to: "/research",
       icon: BookOpen,
+      accent: "#4d8ef7",
       label: t("nav.research"),
       value: stats?.papers ?? 0,
       hint: "Metadatos reales",
@@ -107,6 +112,7 @@ export function TodayPage() {
     {
       to: "/github",
       icon: GitFork,
+      accent: "#3ad894",
       label: t("nav.github"),
       value: stats?.repositories ?? 0,
       hint: "Repositorios REST",
@@ -114,6 +120,7 @@ export function TodayPage() {
     {
       to: "/news",
       icon: Newspaper,
+      accent: "#f2b754",
       label: t("nav.news"),
       value: stats?.news ?? 0,
       hint: "Fuentes oficiales",
@@ -121,6 +128,7 @@ export function TodayPage() {
     {
       to: "/local-library",
       icon: Archive,
+      accent: "#2ec7d4",
       label: t("nav.localLibrary"),
       value: library?.processed ?? 0,
       hint: "Archivos locales",
@@ -128,6 +136,7 @@ export function TodayPage() {
     {
       to: "/laboratory",
       icon: Beaker,
+      accent: "#f4728f",
       label: t("nav.laboratory"),
       value: stats?.economicIndicators ?? 0,
       hint: "Indicadores indexados",
@@ -177,10 +186,17 @@ export function TodayPage() {
           {modules.map((module) => {
             const Icon = module.icon;
             return (
-              <Link key={module.to} to={module.to} className="module-tile">
+              <Link
+                key={module.to}
+                to={module.to}
+                className="module-tile"
+                style={
+                  { "--tile-accent": module.accent } as React.CSSProperties
+                }
+              >
                 <span className="module-tile-head">
                   <Icon />
-                  {module.label}
+                  <span>{module.label}</span>
                 </span>
                 <strong>{formatNumber(module.value)}</strong>
                 <span className="module-tile-foot">

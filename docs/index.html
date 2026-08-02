@@ -172,6 +172,88 @@
   footer.site a { color: var(--text-muted); }
 
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+  /* =======================================================================
+     Motion. Every animation is opt-out: the whole block is disabled under
+     prefers-reduced-motion, and the page reads fully without any of it.
+     ======================================================================= */
+
+  .hero { position: relative; isolation: isolate; overflow: hidden; }
+  .aurora {
+    position: absolute; inset: -40% -20% auto -20%; height: 460px; z-index: -1;
+    filter: blur(58px); opacity: .42; pointer-events: none;
+  }
+  .aurora span {
+    position: absolute; display: block; border-radius: 50%;
+    animation: drift 22s ease-in-out infinite;
+  }
+  .aurora span:nth-child(1) { width: 44%; height: 62%; left: 4%;  top: 22%; background: #2ec7d4; }
+  .aurora span:nth-child(2) { width: 38%; height: 56%; left: 38%; top: 8%;  background: #4d8ef7; animation-delay: -7s; }
+  .aurora span:nth-child(3) { width: 34%; height: 50%; left: 66%; top: 28%; background: #9d7aea; animation-delay: -14s; }
+  @keyframes drift {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    33%      { transform: translate3d(6%, -8%, 0) scale(1.12); }
+    66%      { transform: translate3d(-5%, 6%, 0) scale(.94); }
+  }
+  @media (prefers-color-scheme: light) { .aurora { opacity: .28; } }
+
+  .hero-ridge { width: 100%; max-width: 520px; margin-top: var(--space-5); overflow: visible; }
+  .hero-ridge .ridge-line {
+    fill: none; stroke: var(--accent); stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round;
+    stroke-dasharray: 760; stroke-dashoffset: 760;
+    animation: draw 2.2s cubic-bezier(.6,.05,.2,1) .25s forwards;
+  }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+
+  .reveal { opacity: 0; transform: translateY(14px); transition: opacity .6s ease, transform .6s ease; }
+  .reveal.is-in { opacity: 1; transform: none; }
+
+  .counters {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-3); margin-top: var(--space-6);
+  }
+  @media (max-width: 700px) { .counters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .counter {
+    padding: var(--space-3); border: 1px solid var(--line);
+    border-radius: var(--radius-md); background: var(--surface);
+  }
+  .counter b {
+    display: block; font-size: 26px; font-weight: 700;
+    font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
+  }
+  .counter span { color: var(--text-subtle); font-size: 12px; }
+
+  figure { position: relative; transition: transform .35s ease, border-color .35s ease; }
+  figure:hover { transform: translateY(-3px); border-color: var(--accent); }
+  figure::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(105deg, transparent 38%, rgb(255 255 255 / 12%) 50%, transparent 62%);
+    transform: translateX(-100%); transition: transform .8s ease;
+  }
+  figure:hover::after { transform: translateX(100%); }
+
+  .dot { position: relative; }
+  .dot::after {
+    content: ""; position: absolute; inset: -4px; border-radius: 50%;
+    border: 1px solid var(--accent); opacity: 0;
+    animation: ping 2.4s ease-out infinite;
+  }
+  @keyframes ping {
+    0%        { transform: scale(.6); opacity: .9; }
+    80%, 100% { transform: scale(2.1); opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .aurora span,
+    .hero-ridge .ridge-line,
+    .dot::after { animation: none; }
+    .hero-ridge .ridge-line { stroke-dashoffset: 0; }
+    .reveal { opacity: 1; transform: none; transition: none; }
+    figure, figure::after { transition: none; }
+    figure:hover { transform: none; }
+  }
+
 </style>
 </head>
 <body>
@@ -202,6 +284,7 @@
 <div class="wrap">
 
   <div class="hero">
+    <div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
     <span class="eyebrow">Observatorio local de IA</span>
     <h1>Inteligencia sobre IA que puedes auditar línea por línea.</h1>
     <p class="lead">
@@ -217,9 +300,39 @@
       <span class="badge"><b>Apache-2.0</b></span>
       <span class="badge">Interfaz en <b>español</b></span>
     </div>
+
+    <svg class="hero-ridge" viewBox="0 0 520 120" aria-hidden="true">
+      <path id="hero-path" class="ridge-line"
+            d="M8 104 L96 34 L150 74 L232 16 L300 70 L372 28 L442 84 L512 46" />
+      <circle r="4" fill="#2ec7d4">
+        <animateMotion dur="6s" repeatCount="indefinite" begin="2.2s">
+          <mpath href="#hero-path" /></animateMotion>
+        <animate attributeName="opacity" values="0;1;1;0" dur="6s"
+                 repeatCount="indefinite" begin="2.2s" />
+      </circle>
+      <circle r="3.4" fill="#3ad894">
+        <animateMotion dur="6s" repeatCount="indefinite" begin="4.2s">
+          <mpath href="#hero-path" /></animateMotion>
+        <animate attributeName="opacity" values="0;1;1;0" dur="6s"
+                 repeatCount="indefinite" begin="4.2s" />
+      </circle>
+      <circle r="3" fill="#9d7aea">
+        <animateMotion dur="6s" repeatCount="indefinite" begin="6.2s">
+          <mpath href="#hero-path" /></animateMotion>
+        <animate attributeName="opacity" values="0;1;1;0" dur="6s"
+                 repeatCount="indefinite" begin="6.2s" />
+      </circle>
+    </svg>
+
+    <div class="counters">
+      <div class="counter"><b data-count="14">0</b><span>módulos operativos</span></div>
+      <div class="counter"><b data-count="112">0</b><span>vistas auditadas</span></div>
+      <div class="counter"><b data-count="85">0</b><span>pruebas unitarias</span></div>
+      <div class="counter"><b data-count="0">0</b><span>datos inventados</span></div>
+    </div>
   </div>
 
-  <section id="recorrido">
+  <section id="recorrido" class="reveal">
     <span class="eyebrow">Recorrido</span>
     <h2>Cómo se ve</h2>
     <p class="intro">
@@ -277,7 +390,7 @@
     </div>
   </section>
 
-  <section id="modulos">
+  <section id="modulos" class="reveal">
     <span class="eyebrow">Módulos</span>
     <h2>Qué incluye</h2>
     <p class="intro">
@@ -300,7 +413,7 @@
     </div>
   </section>
 
-  <section id="principios">
+  <section id="principios" class="reveal">
     <span class="eyebrow">Principios</span>
     <h2>Reglas que el proyecto no rompe</h2>
     <ul class="principles">
@@ -312,7 +425,7 @@
     </ul>
   </section>
 
-  <section id="local">
+  <section id="local" class="reveal">
     <span class="eyebrow">Ejecutar</span>
     <h2>Levantarlo en local</h2>
     <p class="intro">
@@ -335,7 +448,7 @@ pnpm dev            <span class="c"># http://127.0.0.1:5174</span></pre>
     </p>
   </section>
 
-  <section id="licencia">
+  <section id="licencia" class="reveal">
     <span class="eyebrow">Repositorio y licencia</span>
     <h2>Código abierto bajo Apache-2.0</h2>
     <p class="intro">
@@ -383,5 +496,93 @@ pnpm dev            <span class="c"># http://127.0.0.1:5174</span></pre>
   </div>
 </footer>
 
+
+<script>
+  // Progressive enhancement: without JS the page is complete, just static.
+  (() => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const reveals = Array.from(document.querySelectorAll(".reveal"));
+    const counters = Array.from(document.querySelectorAll("[data-count]"));
+
+    const showAll = () => {
+      for (const el of reveals) el.classList.add("is-in");
+    };
+
+    const count = (el) => {
+      const target = Number(el.getAttribute("data-count")) || 0;
+      if (reduce.matches || target === 0) {
+        el.textContent = String(target);
+        return;
+      }
+      const start = performance.now();
+      const step = (now) => {
+        const p = Math.min(1, (now - start) / 1100);
+        const eased = 1 - (1 - p) ** 3;
+        el.textContent = String(Math.round(target * eased));
+        if (p < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    };
+
+    if (reduce.matches || !("IntersectionObserver" in window)) {
+      showAll();
+      for (const el of counters) count(el);
+      return;
+    }
+
+    const revealObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          // Also reveal anything already scrolled past, so an anchor jump never
+          // leaves a section permanently invisible.
+          const passed = entry.boundingClientRect.top < 0;
+          if (!entry.isIntersecting && !passed) continue;
+          entry.target.classList.add("is-in");
+          revealObserver.unobserve(entry.target);
+        }
+      },
+      { rootMargin: "0px 0px -12% 0px", threshold: 0.08 },
+    );
+    for (const el of reveals) revealObserver.observe(el);
+
+    // An instant jump can move a section from below the fold to above it
+    // without the observer ever seeing it intersect; this sweep catches those.
+    let ticking = false;
+    const sweep = () => {
+      ticking = false;
+      const fold = window.innerHeight;
+      let pending = false;
+      for (const el of reveals) {
+        if (el.classList.contains("is-in")) continue;
+        if (el.getBoundingClientRect().top < fold) {
+          el.classList.add("is-in");
+          revealObserver.unobserve(el);
+        } else {
+          pending = true;
+        }
+      }
+      if (!pending) window.removeEventListener("scroll", onScroll);
+    };
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(sweep);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+
+    const countObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          count(entry.target);
+          countObserver.unobserve(entry.target);
+        }
+      },
+      { threshold: 0.4 },
+    );
+    for (const el of counters) countObserver.observe(el);
+  })();
+</script>
 </body>
 </html>
