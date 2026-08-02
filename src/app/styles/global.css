@@ -4567,3 +4567,63 @@ html[data-theme="light"] .provider-card-select {
     font-size: var(--text-lg);
   }
 }
+
+/* ===========================================================================
+   Small-screen corrections
+   ---------------------------------------------------------------------------
+   The page description and status copy are content, so they stay visible on
+   mobile; the containers stack instead so the text gets a full-width measure.
+   =========================================================================== */
+@media (max-width: 768px) {
+  .page-heading {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+  .page-heading > div {
+    min-width: 0;
+  }
+  /* The page action sits under the title rather than squeezing it. */
+  .page-heading > .secondary-button,
+  .page-heading > a.secondary-button,
+  .page-heading .sync-control {
+    align-self: flex-start;
+  }
+  .sync-control {
+    justify-items: start;
+  }
+  .sync-result {
+    max-width: 100%;
+    text-align: left;
+  }
+
+  .status-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+    background: var(--surface-2);
+  }
+
+  /* Bottom tabs: labels must not collide. */
+  .mobile-tabs a {
+    gap: 2px;
+    padding: 0 var(--space-1);
+    min-width: 0;
+  }
+  .mobile-tabs a span {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 10px;
+    line-height: 1.2;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Stat cards: long labels wrap rather than being clipped mid-word. */
+.stat-grid > .panel span,
+.stat-grid > .panel small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
