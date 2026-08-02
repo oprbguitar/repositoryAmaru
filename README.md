@@ -8,6 +8,13 @@
   <img alt="React 19" src="https://img.shields.io/badge/React-19-2ed489?style=flat-square">
   <img alt="Tests" src="https://img.shields.io/badge/tests-77%20passing-2ed489?style=flat-square">
   <img alt="No invented data" src="https://img.shields.io/badge/data-never%20invented-f0b34f?style=flat-square">
+  <img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-9d7aea?style=flat-square">
+</p>
+
+<p align="center">
+  <b><a href="https://oprbguitar.github.io/repositoryAmaru/">▶ View the demo showcase</a></b>
+  &nbsp;·&nbsp;
+  offline: open <code>docs/index.html</code> straight from the repository
 </p>
 
 # AMARU AI Observatory
@@ -17,6 +24,36 @@ AMARU is a private, local-first intelligence workspace for AI research, provider
 > **The core rule:** AMARU never invents a number. Every price, rank, and capability tag on screen can be traced back to the source field that published it. When a source is unavailable, the interface says so instead of filling the gap.
 
 The interface is Spanish; code and technical documentation are English. Public no-key synchronization covers OpenRouter, Hugging Face, arXiv, OpenAlex, Crossref, GitHub, OpenAI's official RSS, SEC EDGAR, and BCRPData.
+
+---
+
+## The interface
+
+<p align="center">
+  <img src="docs/ui-redesign/showcase/today-dark.webp" alt="The Hoy screen: a verifiable digest of everything synchronized, with the live state of each source" width="100%">
+</p>
+
+<table>
+<tr>
+<td width="50%"><img src="docs/ui-redesign/showcase/models-light.webp" alt="Models ranking in light theme with capability tags and per-million token prices"></td>
+<td width="50%"><img src="docs/ui-redesign/showcase/providers-dark.webp" alt="Providers directory in dark theme"></td>
+</tr>
+<tr>
+<td><b>Modelos</b> — real-usage ranking, evidence-backed capability tags and price per million tokens. Light theme.</td>
+<td><b>Proveedores</b> — each card opens its usage ranking and token cost without leaving the app.</td>
+</tr>
+</table>
+
+Information-first and deliberately quiet: one accent colour, 1px borders instead
+of shadows, a 4px spacing scale, and an 11px type floor. Both themes are verified
+for WCAG 1.4.3 contrast, and every control clears the 24px target minimum —
+checked across 112 views (14 routes × 4 widths × 2 themes). See
+[docs/UI_REDESIGN_PLAN.md](docs/UI_REDESIGN_PLAN.md) and
+[docs/UI_REDESIGN_REPORT.md](docs/UI_REDESIGN_REPORT.md).
+
+The full walkthrough, including mobile, lives in the
+[demo showcase](https://oprbguitar.github.io/repositoryAmaru/) — which is just
+`docs/index.html`, so it also opens straight from a local clone with no server.
 
 ---
 
@@ -258,3 +295,21 @@ The latest local verification, known blockers, and release decision are recorded
 - **Resetting local state** — back up `.wrangler/state` first. The project never deletes local state automatically.
 
 More detail: [docs/troubleshooting.md](docs/troubleshooting.md).
+
+## License
+
+Licensed under the Apache License, Version 2.0. The full, unmodified text is in
+[LICENSE](LICENSE); you may also obtain it at
+<https://www.apache.org/licenses/LICENSE-2.0>.
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied.
+
+All direct production dependencies are permissive and Apache-2.0 compatible
+(MIT, ISC, BSD-2-Clause, BSD-3-Clause, Apache-2.0). `package.json` keeps
+`"private": true` to prevent accidental npm publication — that flag is a
+packaging control and is independent of this license.
+
+> The copyright line in the license appendix is intentionally left as published.
+> Fill in the year and copyright owner before distributing releases.
