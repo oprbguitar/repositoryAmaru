@@ -59,6 +59,29 @@ function stringValue(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+/**
+ * Crossref entrega los resúmenes en JATS (`<jats:p>…</jats:p>`) y algunos
+ * índices en HTML. Se quitan las etiquetas y se resuelven las entidades más
+ * frecuentes para no imprimir marcado en la interfaz. Solo se elimina el
+ * marcado: ni una palabra del texto de la fuente se reescribe.
+ */
+export function plainText(value: unknown): string | null {
+  const raw = stringValue(value);
+  if (!raw) return null;
+  const stripped = raw
+    .replace(/<[^>]+>/g, " ")
+    .replaceAll("&amp;", "&")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&apos;", "'")
+    .replaceAll("&#39;", "'")
+    .replaceAll("&nbsp;", " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return stripped || null;
+}
+
 function numberValue(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
@@ -67,6 +90,17 @@ function stringArray(value: unknown): string[] {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === "string")
     : [];
+}
+
+/**
+ * Crossref envuelve cada fecha en `{ "date-parts": [[año, mes, día]] }`, no en
+ * el array suelto que espera `firstDate`. Pasarle el objeto devolvía siempre
+ * null y dejaba todos los registros de Crossref sin fecha de publicación.
+ * `issued` puede llegar como `[[null]]`, que `firstDate` ya descarta.
+ */
+function crossrefDate(value: unknown): string | null {
+  if (!value || typeof value !== "object") return null;
+  return firstDate((value as Record<string, unknown>)["date-parts"]);
 }
 
 function firstDate(value: unknown): string | null {
@@ -278,11 +312,14 @@ export function normalizeCrossref(
       recordKind: "paper",
       externalId: doi,
       title,
-      summary: stringValue(work.abstract),
+      summary: plainText(work.abstract),
       originalUrl: stringValue(work.URL) ?? `https://doi.org/${doi}`,
       sourceName: "Crossref",
       sourceType: "doi_registry",
-      publishedAt: firstDate(work.published) ?? firstDate(work.created),
+      publishedAt:
+        crossrefDate(work.published) ??
+        crossrefDate(work.issued) ??
+        crossrefDate(work.created),
       detectedAt: now,
       retrievedAt: now,
       verificationStatus: "confirmed",

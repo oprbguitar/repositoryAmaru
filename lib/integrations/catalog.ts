@@ -202,15 +202,33 @@ export const INTEGRATIONS: IntegrationDefinition[] = [
     binding: "SEMANTIC_SCHOLAR_API_KEY",
     name: "Semantic Scholar",
     category: "research",
-    unlocks: "Metadatos de publicaciones con límites ampliados.",
-    sourceIds: [],
+    unlocks:
+      "Fuente «Semantic Scholar» en Investigación: resúmenes, citas y PDF de acceso abierto.",
+    sourceIds: ["semantic-scholar"],
     apiKeyUrl: "https://www.semanticscholar.org/product/api#api-key",
     documentationUrl: "https://api.semanticscholar.org/api-docs/",
-    freeTierNote: "Clave gratuita previa solicitud.",
+    freeTierNote:
+      "Clave gratuita previa solicitud. Sin ella la API responde 429 casi siempre.",
     probe: {
       url: () =>
         "https://api.semanticscholar.org/graph/v1/paper/search?query=llm&limit=1",
       headers: (credential) => ({ "x-api-key": credential }),
+    },
+  },
+  {
+    binding: "CORE_API_KEY",
+    name: "CORE",
+    category: "research",
+    unlocks:
+      "Fuente «CORE» en Investigación: textos completos de repositorios institucionales de acceso abierto.",
+    sourceIds: ["core"],
+    apiKeyUrl: "https://core.ac.uk/services/api",
+    documentationUrl: "https://api.core.ac.uk/docs/v3",
+    freeTierNote:
+      "Clave gratuita para uso académico: 10 000 peticiones al día.",
+    probe: {
+      url: () => "https://api.core.ac.uk/v3/search/works?q=llm&limit=1",
+      headers: (credential) => ({ authorization: `Bearer ${credential}` }),
     },
   },
   {

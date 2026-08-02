@@ -1,4 +1,11 @@
 import {
+  normalizeCore,
+  normalizeDblp,
+  normalizeDoaj,
+  normalizeEuropePmc,
+  normalizeSemanticScholar,
+} from "../lib/external/academic";
+import {
   normalizeArxivXml,
   normalizeBcrp,
   normalizeCrossref,
@@ -40,6 +47,8 @@ export type ExternalEnv = {
   YOUTUBE_API_KEY?: string;
   FACEBOOK_PAGE_ACCESS_TOKEN?: string;
   FINNHUB_API_KEY?: string;
+  SEMANTIC_SCHOLAR_API_KEY?: string;
+  CORE_API_KEY?: string;
 };
 
 export type SourceRow = {
@@ -75,6 +84,9 @@ const PUBLIC_SOURCE_IDS = [
   "openalex",
   "openalex-institutions",
   "crossref",
+  "europe-pmc",
+  "doaj",
+  "dblp",
   "github",
   "openai-news",
   "sec-edgar",
@@ -95,6 +107,8 @@ const CREDENTIALED_MODULE_SOURCE_IDS = [
   "youtube",
   "facebook-videos",
   "finnhub",
+  "semantic-scholar",
+  "core",
 ] as const;
 
 const USER_AGENT =
@@ -238,6 +252,178 @@ async function crossrefAdapter(now: string): Promise<AdapterResult> {
     httpStatus: response.status,
     rateLimitRemaining: rateLimit(response.headers),
   };
+}
+
+/** Consultas temáticas compartidas por los índices académicos generales. */
+const ACADEMIC_QUERIES = [
+  '"artificial intelligence"',
+  '"large language model"',
+  '"machine learning"',
+] as const;
+
+/**
+ * Ejecuta varias consultas contra un mismo índice tolerando fallos puntuales:
+ * DBLP y DOAJ responden 429/500 ante ráfagas, y perder una consulta no debería
+ * descartar las demás. Solo se declara fallida la fuente cuando ninguna
+ * consulta devolvió registros, para no marcar como sana una sincronización que
+ * en realidad no trajo nada.
+ */
+async function runAcademicQueries(
+  queries: readonly string[],
+  fetchQuery: (term: string) => Promise<{
+    records: NormalizedExternalRecord[];
+    status: number;
+    remaining: number | null;
+  }>,
+): Promise<AdapterResult> {
+  const records: NormalizedExternalRecord[] = [];
+  const failures: string[] = [];
+  let lastStatus = 200;
+  let remaining: number | null = null;
+  for (const term of queries) {
+    try {
+      const result = await fetchQuery(term);
+      records.push(...result.records);
+      lastStatus = result.status;
+      remaining = result.remaining;
+    } catch (error) {
+      failures.push(
+        `${term}: ${error instanceof Error ? error.message : "fallo"}`,
+      );
+      if (error instanceof SourceHttpError) lastStatus = error.status;
+    }
+  }
+  if (!records.length)
+    throw new SourceHttpError(
+      failures.join("; ").slice(0, 400) ||
+        "La fuente no devolvió registros para ninguna consulta.",
+      lastStatus,
+      remaining,
+    );
+  return { records, httpStatus: 200, rateLimitRemaining: remaining };
+}
+
+async function europePmcAdapter(now: string): Promise<AdapterResult> {
+  return runAcademicQueries(ACADEMIC_QUERIES, async (term) => {
+    const query = new URL(
+      "https://www.ebi.ac.uk/europepmc/webservices/rest/search",
+    );
+    query.searchParams.set("query", term);
+    query.searchParams.set("format", "json");
+    query.searchParams.set("resultType", "core");
+    query.searchParams.set("pageSize", "25");
+    query.searchParams.set("sort", "P_PDATE_D desc");
+    const response = await getResponse(query.toString());
+    return {
+      records: normalizeEuropePmc(await response.json(), now),
+      status: response.status,
+      remaining: rateLimit(response.headers),
+    };
+  });
+}
+
+async function doajAdapter(now: string): Promise<AdapterResult> {
+  return runAcademicQueries(ACADEMIC_QUERIES, async (term) => {
+    const response = await getResponse(
+      `https://doaj.org/api/search/articles/${encodeURIComponent(term)}?pageSize=25&sort=created_date:desc`,
+    );
+    return {
+      records: normalizeDoaj(await response.json(), now),
+      status: response.status,
+      remaining: rateLimit(response.headers),
+    };
+  });
+}
+
+async function dblpAdapter(now: string): Promise<AdapterResult> {
+  // DBLP indexa ciencias de la computación: consultas más específicas que las
+  // generales para no traer el mismo material que Europe PMC o DOAJ.
+  const queries = [
+    "large language model",
+    "retrieval augmented generation",
+    "neural network",
+  ];
+  return runAcademicQueries(queries, async (term) => {
+    const query = new URL("https://dblp.org/search/publ/api");
+    query.searchParams.set("q", term);
+    query.searchParams.set("format", "json");
+    query.searchParams.set("h", "25");
+    const response = await getResponse(query.toString());
+    return {
+      records: normalizeDblp(await response.json(), now),
+      status: response.status,
+      remaining: rateLimit(response.headers),
+    };
+  });
+}
+
+async function semanticScholarAdapter(
+  now: string,
+  env: ExternalEnv,
+): Promise<AdapterResult> {
+  const fields = [
+    "title",
+    "abstract",
+    "year",
+    "publicationDate",
+    "authors",
+    "externalIds",
+    "url",
+    "venue",
+    "citationCount",
+    "publicationTypes",
+    "openAccessPdf",
+  ].join(",");
+  return runAcademicQueries(ACADEMIC_QUERIES, async (term) => {
+    const query = new URL(
+      "https://api.semanticscholar.org/graph/v1/paper/search",
+    );
+    query.searchParams.set("query", term.replaceAll('"', ""));
+    query.searchParams.set("limit", "25");
+    query.searchParams.set("fields", fields);
+    // La clave viaja en cabecera, nunca en la URL.
+    const response = await fetch(query.toString(), {
+      headers: {
+        accept: "application/json",
+        "user-agent": USER_AGENT,
+        ...(env.SEMANTIC_SCHOLAR_API_KEY
+          ? { "x-api-key": env.SEMANTIC_SCHOLAR_API_KEY }
+          : {}),
+      },
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!response.ok)
+      throw new SourceHttpError(
+        `La fuente respondió HTTP ${response.status}.`,
+        response.status,
+        rateLimit(response.headers),
+      );
+    return {
+      records: normalizeSemanticScholar(await response.json(), now),
+      status: response.status,
+      remaining: rateLimit(response.headers),
+    };
+  });
+}
+
+async function coreAdapter(
+  now: string,
+  env: ExternalEnv,
+): Promise<AdapterResult> {
+  return runAcademicQueries(ACADEMIC_QUERIES, async (term) => {
+    const query = new URL("https://api.core.ac.uk/v3/search/works");
+    query.searchParams.set("q", term);
+    query.searchParams.set("limit", "25");
+    query.searchParams.set("sort", "publishedDate:desc");
+    const response = await getResponse(query.toString(), {
+      token: env.CORE_API_KEY,
+    });
+    return {
+      records: normalizeCore(await response.json(), now),
+      status: response.status,
+      remaining: rateLimit(response.headers),
+    };
+  });
 }
 
 async function githubAdapter(
@@ -495,6 +681,16 @@ export async function runAdapter(
       return openAlexAdapter(now);
     case "crossref":
       return crossrefAdapter(now);
+    case "europe-pmc":
+      return europePmcAdapter(now);
+    case "doaj":
+      return doajAdapter(now);
+    case "dblp":
+      return dblpAdapter(now);
+    case "semantic-scholar":
+      return semanticScholarAdapter(now, env);
+    case "core":
+      return coreAdapter(now, env);
     case "github":
       return githubAdapter(now, env);
     case "official-feed":
@@ -879,7 +1075,16 @@ export async function synchronizeScope(
     providers: ["openrouter", "hugging-face", ...KEY_SOURCE_IDS],
     models: ["openrouter", "hugging-face", ...KEY_SOURCE_IDS],
     news: ["openai-news"],
-    research: ["arxiv", "openalex", "crossref"],
+    research: [
+      "arxiv",
+      "openalex",
+      "crossref",
+      "europe-pmc",
+      "doaj",
+      "dblp",
+      "semantic-scholar",
+      "core",
+    ],
     github: ["github"],
     market: ["sec-edgar", "sec-xbrl", "bcrp", "frankfurter", "finnhub"],
     map: ["openalex-institutions", "openalex"],

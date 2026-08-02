@@ -3,25 +3,158 @@ import {
   ArrowDownUp,
   BookOpen,
   CalendarDays,
+  CircleAlert,
   Database,
   ExternalLink,
+  FileType2,
   FilterX,
+  LayoutGrid,
+  List,
+  Quote,
   Search,
   Shapes,
+  Unlock,
+  UserRound,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import type { ObservatoryRecord } from "../../../types/api";
+import { Link } from "react-router-dom";
+import type { ObservatoryRecord, SourceHealth } from "../../../types/api";
 import { getRecords, getSources } from "./api";
-import { formatDate, missing, verificationLabel } from "./format";
+import { formatDate, verificationLabel } from "./format";
 import { RecordContext } from "./RecordContext";
 import {
   evidenceType,
   evidenceTypeLabel,
   filterResearchRecords,
+  isFuturePublication,
   type ResearchDateRange,
   type ResearchSort,
 } from "./researchFilters";
 import { SyncButton } from "./SyncButton";
+
+type ViewMode = "grid" | "list";
+
+function authorsOf(record: ObservatoryRecord): string[] {
+  return Array.isArray(record.data.authors)
+    ? record.data.authors.filter(
+        (item): item is string => typeof item === "string",
+      )
+    : [];
+}
+
+/**
+ * Tarjeta de un resultado. Cada dato mostrado viene del índice de origen; los
+ * que la fuente no entrega se declaran en lugar de omitirse en silencio.
+ */
+function ResearchCard({
+  record,
+  selected,
+  onSelect,
+}: {
+  record: ObservatoryRecord;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const authors = authorsOf(record);
+  const citations = record.data.citationCount;
+  const future = isFuturePublication(record);
+  return (
+    <article className={`panel research-card${selected ? " selected" : ""}`}>
+      <header className="research-card-head">
+        <span className="research-card-source">{record.sourceName}</span>
+        <span
+          className={`state-badge ${record.verificationStatus === "verified" ? "verified" : "provisional"}`}
+        >
+          {verificationLabel(record)}
+        </span>
+        {record.data.openAccess === true ? (
+          <span className="research-chip open">
+            <Unlock /> Acceso abierto
+          </span>
+        ) : null}
+      </header>
+      <h3>{record.title}</h3>
+      <p className="research-card-abstract">
+        {record.summary ??
+          "El índice de origen no proporcionó un resumen reutilizable."}
+      </p>
+      <ul className="research-card-facts">
+        <li title={authors.join(", ") || undefined}>
+          <UserRound />
+          {authors.length
+            ? `${authors.slice(0, 3).join(", ")}${authors.length > 3 ? ", …" : ""}`
+            : "Autoría no informada"}
+        </li>
+        <li className={future ? "research-fact-flagged" : ""}>
+          <CalendarDays />
+          {formatDate(record.publishedAt)}
+          {future ? (
+            <em title="La fuente informa una fecha posterior a hoy; se muestra tal cual, sin corregirla.">
+              <CircleAlert /> fecha futura informada por la fuente
+            </em>
+          ) : null}
+        </li>
+        <li>
+          <FileType2 />
+          {evidenceTypeLabel(evidenceType(record))}
+        </li>
+        {typeof citations === "number" ? (
+          <li>
+            <Quote />
+            {citations.toLocaleString("es-PE")} citas
+          </li>
+        ) : null}
+      </ul>
+      <footer className="research-card-actions">
+        <button type="button" className="ghost-link" onClick={onSelect}>
+          Ver contexto
+        </button>
+        <a
+          className="source-link-button compact"
+          href={record.originalUrl}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Fuente original <ExternalLink />
+        </a>
+      </footer>
+    </article>
+  );
+}
+
+function SourceTile({ source }: { source: SourceHealth }) {
+  const connected = source.status === "connected" || source.status === "ready";
+  return (
+    <a
+      className="panel research-source-card"
+      href={source.endpoint ?? undefined}
+      target="_blank"
+      rel="noreferrer"
+    >
+      <span className="research-source-icon">
+        <Database />
+      </span>
+      <div className="research-source-body">
+        <strong>{source.name}</strong>
+        <small className="research-source-meta">
+          API oficial ·{" "}
+          {connected ? "Conectada" : source.status.replaceAll("_", " ")}
+        </small>
+      </div>
+      <div className="research-source-count">
+        <strong>{source.recordCount}</strong>
+        <small>registros</small>
+      </div>
+      <div className="research-source-sync">
+        <small>Última sincronización:</small>
+        <small>
+          {formatDate(source.lastSuccessAt)}
+          <i className={connected ? "ok" : "warn"} />
+        </small>
+      </div>
+    </a>
+  );
+}
 
 export function ResearchPage() {
   const [query, setQuery] = useState("");
@@ -29,28 +162,41 @@ export function ResearchPage() {
   const [type, setType] = useState("all");
   const [source, setSource] = useState("all");
   const [sort, setSort] = useState<ResearchSort>("newest");
+  const [view, setView] = useState<ViewMode>("grid");
   const [selected, setSelected] = useState<ObservatoryRecord | null>(null);
   const records = useQuery({
     queryKey: ["records", "research"],
-    queryFn: () => getRecords({ kind: "paper", limit: 200 }),
+    queryFn: () => getRecords({ kind: "paper", limit: 400 }),
   });
   const sources = useQuery({
     queryKey: ["sources", "research"],
     queryFn: getSources,
   });
   const allRecords = records.data?.data ?? [];
-  const researchSources = useMemo(
+  const allResearchSources = useMemo(
     () =>
       (sources.data?.data ?? [])
-        .filter(
-          (item) =>
-            item.category === "research" &&
-            item.isOfficial &&
-            item.status === "connected" &&
-            item.recordCount > 0,
-        )
+        .filter((item) => item.category === "research")
         .sort((left, right) => left.name.localeCompare(right.name, "es")),
     [sources.data],
+  );
+  /** Solo las fuentes que han devuelto registros llegan a las fichas y al filtro. */
+  const activeSources = useMemo(
+    () =>
+      allResearchSources.filter(
+        (item) =>
+          item.isOfficial &&
+          (item.status === "connected" || item.status === "ready") &&
+          item.recordCount > 0,
+      ),
+    [allResearchSources],
+  );
+  const pendingSources = useMemo(
+    () =>
+      allResearchSources.filter(
+        (item) => !item.credentialConfigured && item.recordCount === 0,
+      ),
+    [allResearchSources],
   );
   const types = useMemo(
     () =>
@@ -83,6 +229,7 @@ export function ResearchPage() {
     setSource("all");
     setSort("newest");
   };
+
   return (
     <div className="module-layout observatory-layout">
       <section className="module-main scroll-region">
@@ -92,8 +239,11 @@ export function ResearchPage() {
               <BookOpen /> Investigación
             </h1>
             <p>
-              Preprints y metadatos académicos recuperados de arXiv, OpenAlex y
-              Crossref.
+              Preprints y metadatos académicos recuperados de{" "}
+              {activeSources.length
+                ? activeSources.map((item) => item.name).join(", ")
+                : "los índices oficiales configurados"}
+              .
             </p>
           </div>
           <SyncButton
@@ -104,29 +254,32 @@ export function ResearchPage() {
             }}
           />
         </header>
+
         <section className="research-sources" aria-label="Fuentes académicas">
-          {researchSources.map((item) => (
-            <a
-              className="research-source-card panel"
-              href={item.endpoint ?? undefined}
-              target="_blank"
-              rel="noreferrer"
-              key={item.id}
-            >
-              <span>
-                <Database /> {item.name}
-              </span>
-              <strong>{item.recordCount} registros</strong>
-              <small className="research-source-meta">
-                API oficial ·{" "}
-                {item.status === "connected" ? "Conectada" : item.status}
-              </small>
-              <small className="research-source-meta">
-                Última sincronización: {formatDate(item.lastSuccessAt)}
-              </small>
-            </a>
+          {activeSources.map((item) => (
+            <SourceTile key={item.id} source={item} />
           ))}
         </section>
+
+        {pendingSources.length ? (
+          <div className="panel status-banner">
+            <Database />
+            <div>
+              <strong>
+                {pendingSources.length} índice
+                {pendingSources.length === 1 ? "" : "s"} académico
+                {pendingSources.length === 1 ? "" : "s"} sin credencial
+              </strong>
+              <p>
+                {pendingSources.map((item) => item.name).join(", ")} necesita
+                {pendingSources.length === 1 ? "" : "n"} una clave gratuita.{" "}
+                <Link to="/admin/sources">Configurar integraciones</Link> para
+                añadirla y ampliar la cobertura.
+              </p>
+            </div>
+          </div>
+        ) : null}
+
         <section
           className="research-toolbar panel"
           aria-label="Filtros de investigación"
@@ -181,7 +334,7 @@ export function ResearchPage() {
               onChange={(event) => setSource(event.target.value)}
             >
               <option value="all">Todas las fuentes</option>
-              {researchSources.map((item) => (
+              {activeSources.map((item) => (
                 <option value={item.id} key={item.id}>
                   {item.name}
                 </option>
@@ -209,77 +362,64 @@ export function ResearchPage() {
             <FilterX /> Limpiar
           </button>
         </section>
-        <section className="record-list panel">
-          <div className="panel-heading">
-            <h2>Investigaciones recientes</h2>
-            <span>
-              {filtered.length} de {allRecords.length} registros · ordenados por
-              fecha
-            </span>
+
+        <div className="research-results-bar">
+          <span>
+            {filtered.length} de {allRecords.length} registros · ordenados por
+            fecha
+          </span>
+          {/* `fieldset` en lugar de un div con role="group": agrupa los dos
+              controles con semántica nativa y sin ARIA redundante. */}
+          <fieldset className="research-view-toggle">
+            <legend className="visually-hidden">Vista de resultados</legend>
+            <button
+              type="button"
+              className={view === "grid" ? "active" : ""}
+              aria-pressed={view === "grid"}
+              title="Vista de cuadrícula"
+              onClick={() => setView("grid")}
+            >
+              <LayoutGrid />
+              <span className="visually-hidden">Cuadrícula</span>
+            </button>
+            <button
+              type="button"
+              className={view === "list" ? "active" : ""}
+              aria-pressed={view === "list"}
+              title="Vista de lista"
+              onClick={() => setView("list")}
+            >
+              <List />
+              <span className="visually-hidden">Lista</span>
+            </button>
+          </fieldset>
+        </div>
+
+        {filtered.length ? (
+          <div className={`research-results ${view}`}>
+            {filtered.map((record) => (
+              <ResearchCard
+                key={record.id}
+                record={record}
+                selected={chosen?.id === record.id}
+                onSelect={() => setSelected(record)}
+              />
+            ))}
           </div>
-          {filtered.length ? (
-            filtered.map((record) => {
-              const authors = Array.isArray(record.data.authors)
-                ? record.data.authors.filter(
-                    (item): item is string => typeof item === "string",
-                  )
-                : [];
-              return (
-                <article
-                  key={record.id}
-                  className={chosen?.id === record.id ? "selected" : ""}
-                >
-                  <div className="record-source">
-                    <span>{record.sourceName}</span>
-                    <span
-                      className={`state-badge ${record.verificationStatus === "verified" ? "verified" : "provisional"}`}
-                    >
-                      {verificationLabel(record)}
-                    </span>
-                  </div>
-                  <h2>{record.title}</h2>
-                  <p>
-                    {record.summary ??
-                      "El índice de origen no proporcionó un resumen reutilizable."}
-                  </p>
-                  <div className="record-meta">
-                    <button type="button" onClick={() => setSelected(record)}>
-                      Ver contexto
-                    </button>
-                    <span>{authors.slice(0, 4).join(", ") || missing}</span>
-                    <span>{formatDate(record.publishedAt)}</span>
-                    <span>
-                      {typeof record.data.evidenceType === "string"
-                        ? evidenceTypeLabel(record.data.evidenceType)
-                        : missing}
-                    </span>
-                    <a
-                      href={record.originalUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      Fuente original <ExternalLink />
-                    </a>
-                  </div>
-                </article>
-              );
-            })
-          ) : (
-            <div className="honest-empty">
-              <h2>
-                {allRecords.length
-                  ? "No hay resultados con estos filtros"
-                  : "No hay investigaciones sincronizadas"}
-              </h2>
-              <p>
-                {allRecords.length
-                  ? "Prueba otra fecha, tipo, fuente o término de búsqueda."
-                  : "La interfaz permanece vacía hasta que una fuente académica responda correctamente."}
-              </p>
-            </div>
-          )}
-        </section>
+        ) : (
+          <div className="panel honest-empty">
+            <h2>
+              {allRecords.length
+                ? "No hay resultados con estos filtros"
+                : "No hay investigaciones sincronizadas"}
+            </h2>
+            <p>
+              {allRecords.length
+                ? "Prueba otra fecha, tipo, fuente o término de búsqueda."
+                : "La interfaz permanece vacía hasta que una fuente académica responda correctamente."}
+            </p>
+          </div>
+        )}
       </section>
       <RecordContext record={chosen} />
     </div>

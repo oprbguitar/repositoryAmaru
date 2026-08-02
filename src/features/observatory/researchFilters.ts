@@ -32,6 +32,21 @@ export function evidenceTypeLabel(value: string): string {
       preprint: "Preprint",
       standard: "Estándar",
       unknown: "Tipo no informado",
+      // Vocabularios de Europe PMC, DOAJ, DBLP, Semantic Scholar y CORE.
+      "posted-content": "Preprint",
+      review: "Revisión",
+      letter: "Carta al editor",
+      editorial: "Editorial",
+      report: "Informe",
+      "case-reports": "Reporte de caso",
+      "clinical-trial": "Ensayo clínico",
+      "comparative-study": "Estudio comparativo",
+      "multicenter-study": "Estudio multicéntrico",
+      "observational-study": "Estudio observacional",
+      "validation-study": "Estudio de validación",
+      "systematic-review": "Revisión sistemática",
+      "meta-analysis": "Metaanálisis",
+      dataset: "Conjunto de datos",
     }[value] ?? value.replaceAll("-", " ")
   );
 }
@@ -39,6 +54,20 @@ export function evidenceTypeLabel(value: string): string {
 function recordTimestamp(record: ObservatoryRecord): number {
   if (!record.publishedAt) return Number.NaN;
   return new Date(record.publishedAt).getTime();
+}
+
+/**
+ * Algunos índices publican fechas posteriores a hoy (números «in press» o
+ * errores de captura en el registro de origen). No se corrigen ni se ocultan:
+ * el registro se muestra tal cual y la interfaz avisa de la anomalía, para que
+ * quien lo lea sepa que la rareza viene de la fuente y no del observatorio.
+ */
+export function isFuturePublication(
+  record: ObservatoryRecord,
+  now = new Date(),
+): boolean {
+  const timestamp = recordTimestamp(record);
+  return !Number.isNaN(timestamp) && timestamp > now.getTime();
 }
 
 export function filterResearchRecords(

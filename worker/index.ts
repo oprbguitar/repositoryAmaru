@@ -102,6 +102,8 @@ type Env = {
   INSTAGRAM_BUSINESS_ACCOUNT_ID?: string;
   X_BEARER_TOKEN?: string;
   FINNHUB_API_KEY?: string;
+  SEMANTIC_SCHOLAR_API_KEY?: string;
+  CORE_API_KEY?: string;
   OLLAMA_BASE_URL?: string;
   LM_STUDIO_BASE_URL?: string;
   VLLM_BASE_URL?: string;
