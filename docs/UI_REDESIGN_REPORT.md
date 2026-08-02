@@ -1,7 +1,8 @@
 # AMARU — minimalist UI redesign report
 
-Branch `design/minimal-ui-refresh`. **Nothing was deployed and nothing was
-pushed to any remote.** All commits are local.
+Branch `design/minimal-ui-refresh`. **No application deployment was performed**
+— see section 13. The redesign itself was completed with no remote push;
+publication to GitHub was authorised separately, afterwards.
 
 ## 1. Executive summary
 
@@ -211,6 +212,12 @@ are generated into `docs/ui-redesign/{baseline,after}/`, which are gitignored.
 
 ## 13. Deployment confirmation
 
-No deployment was performed. `wrangler deploy` was never invoked, no Cloudflare
-resource was created or modified, and no commit was pushed to any remote. The
-GitHub Pages showcase will only change once the maintainer pushes this branch.
+**No application deployment was performed.** `wrangler deploy` was never
+invoked and no Cloudflare resource (Worker, D1, KV, R2, Queue) was created or
+modified. Local state under `.wrangler/state` was never deleted.
+
+The redesign work was carried out with no remote push, as originally
+instructed. The maintainer subsequently authorised publication, so the branch
+and `main` were pushed to GitHub, which republishes the GitHub Pages showcase
+from `main:/docs`. That is a documentation-site publication, not an application
+deployment.
