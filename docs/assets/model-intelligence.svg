@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 520" width="1180" height="520" role="img" aria-label="How AMARU derives capability tags and per-provider prices for a model">
+  <defs>
+    <linearGradient id="c2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#10263b"/>
+      <stop offset="100%" stop-color="#0a1a2b"/>
+    </linearGradient>
+    <marker id="tip2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#20c8d4"/>
+    </marker>
+    <style>
+      .t   { font-family: Segoe UI, Inter, system-ui, sans-serif; fill: #edf5fb; font-size: 13px; font-weight: 700; }
+      .s   { font-family: Segoe UI, Inter, system-ui, sans-serif; fill: #91a4b6; font-size: 11px; }
+      .h   { font-family: Segoe UI, Inter, system-ui, sans-serif; fill: #20c8d4; font-size: 10.5px; font-weight: 800; letter-spacing: .12em; }
+      .m   { font-family: "Cascadia Code", Consolas, monospace; fill: #7fd6e6; font-size: 11px; }
+      .box2{ fill: url(#c2); stroke: #20374a; stroke-width: 1.4; rx: 12; }
+      .arr { fill: none; stroke: #24485f; stroke-width: 2; marker-end: url(#tip2); }
+    </style>
+  </defs>
+
+  <rect width="1180" height="520" rx="16" fill="#061426"/>
+  <text class="h" x="30" y="38">DE CAMPO PUBLICADO → ETIQUETA CON EVIDENCIA</text>
+  <text class="s" x="30" y="58">Ninguna etiqueta se infiere del nombre del modelo. Si la fuente no publicó la señal, la etiqueta no se emite.</text>
+
+  <!-- INPUT column -->
+  <rect class="box2" x="30" y="80" width="300" height="330"/>
+  <text class="h" x="46" y="108">CAMPOS QUE PUBLICA LA FUENTE</text>
+  <g class="m">
+    <text x="46" y="140">architecture.input_modalities</text>
+    <text x="46" y="180">architecture.output_modalities</text>
+    <text x="46" y="220">supported_parameters[]</text>
+    <text x="46" y="260">context_length</text>
+    <text x="46" y="300">pricing.prompt / .completion</text>
+    <text x="46" y="340">hugging_face_id</text>
+    <text x="46" y="380">GET /models?category=…</text>
+  </g>
+  <g fill="#2ed489">
+    <circle cx="38" cy="136" r="2.6"><animate attributeName="opacity" values=".2;1;.2" dur="3s" repeatCount="indefinite"/></circle>
+    <circle cx="38" cy="216" r="2.6"><animate attributeName="opacity" values=".2;1;.2" dur="3s" begin=".6s" repeatCount="indefinite"/></circle>
+    <circle cx="38" cy="296" r="2.6"><animate attributeName="opacity" values=".2;1;.2" dur="3s" begin="1.2s" repeatCount="indefinite"/></circle>
+    <circle cx="38" cy="376" r="2.6"><animate attributeName="opacity" values=".2;1;.2" dur="3s" begin="1.8s" repeatCount="indefinite"/></circle>
+  </g>
+
+  <!-- ENGINE -->
+  <rect class="box2" x="404" y="150" width="230" height="190"/>
+  <text class="h" x="420" y="178">MOTOR PURO Y PROBADO</text>
+  <text class="t" x="420" y="206" font-size="12.5">deriveCapabilityTags()</text>
+  <text class="s" x="420" y="226">lib/models/capabilities.ts</text>
+  <text class="s" x="420" y="256">· 22 pruebas unitarias</text>
+  <text class="s" x="420" y="276">· sin acceso a red ni a la BD</text>
+  <text class="s" x="420" y="296">· umbrales explícitos en el texto</text>
+  <text class="s" x="420" y="316">· señal ausente → sin etiqueta</text>
+  <rect x="408" y="192" width="3" height="140" rx="1.5" fill="#20c8d4" opacity=".25"/>
+  <rect x="408" y="192" width="3" height="34" rx="1.5" fill="#20c8d4">
+    <animate attributeName="y" values="192;228;264;300;192" dur="4s" repeatCount="indefinite"/>
+  </rect>
+
+  <path class="arr" d="M330 245 H404"/>
+  <circle r="3.6" fill="#20c8d4">
+    <animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#e1"/></animateMotion>
+  </circle>
+  <path id="e1" d="M330 245 H404" fill="none"/>
+
+  <!-- OUTPUT: tags -->
+  <rect class="box2" x="708" y="80" width="442" height="196"/>
+  <text class="h" x="724" y="108">ETIQUETAS EN LA INTERFAZ (con evidencia al pasar el cursor)</text>
+  <g font-family="Segoe UI, Inter, system-ui, sans-serif" font-size="11.5" font-weight="700">
+    <g>
+      <rect x="724" y="124" width="104" height="24" rx="12" fill="#0d2033" stroke="#2ed489"/>
+      <text x="776" y="140" fill="#2ed489" text-anchor="middle">Programación</text>
+      <animate attributeName="opacity" from="0" to="1" dur=".5s" begin="0s" fill="freeze"/>
+    </g>
+    <g>
+      <rect x="838" y="124" width="86" height="24" rx="12" fill="#0d2033" stroke="#2ed489"/>
+      <text x="881" y="140" fill="#2ed489" text-anchor="middle">Ciencia</text>
+      <animate attributeName="opacity" from="0" to="1" dur=".5s" begin=".3s" fill="freeze"/>
+    </g>
+    <g>
+      <rect x="934" y="124" width="152" height="24" rx="12" fill="#0d2033" stroke="#9d7aea"/>
+      <text x="1010" y="140" fill="#9d7aea" text-anchor="middle">Visión (analiza imágenes)</text>
+      <animate attributeName="opacity" from="0" to="1" dur=".5s" begin=".6s" fill="freeze"/>
+    </g>
+    <g>
+      <rect x="724" y="160" width="140" height="24" rx="12" fill="#0d2033" stroke="#3fa8f5"/>
+      <text x="794" y="176" fill="#3fa8f5" text-anchor="middle">Tool calling / agentes</text>
+      <animate attributeName="opacity" from="0" to="1" dur=".5s" begin=".9s" fill="freeze"/>
+    </g>
+    <g>
+      <rect x="874" y="160" width="152" height="24" rx="12" fill="#0d2033" stroke="#3fa8f5"/>
+      <text x="950" y="176" fill="#3fa8f5" text-anchor="middle">Salida estructurada (JSON)</text>
+      <animate attributeName="opacity" from="0" to="1" dur=".5s" begin="1.2s" fill="freeze"/>
+    </g>
+    <g>
+      <rect x="724" y="196" width="118" height="24" rx="12" fill="#0d2033" stroke="#3fa8f5"/>
+      <text x="783" y="212" fill="#3fa8f5" text-anchor="middle">Contexto largo</text>
+      <animate attributeName="opacity" from="0" to="1" dur=".5s" begin="1.5s" fill="freeze"/>
+    </g>
+    <g>
+      <rect x="852" y="196" width="122" height="24" rx="12" fill="#0d2033" stroke="#f0b34f"/>
+      <text x="913" y="212" fill="#f0b34f" text-anchor="middle">Pesos publicados</text>
+      <animate attributeName="opacity" from="0" to="1" dur=".5s" begin="1.8s" fill="freeze"/>
+    </g>
+  </g>
+  <text class="s" x="724" y="250">Evidencia real: «Puesto #1 en el ranking de uso, categoría programming».</text>
+  <text class="s" x="724" y="266" fill="#657a8e">Las etiquetas también filtran la tabla de rankings — búsqueda por etiqueta.</text>
+
+  <!-- OUTPUT: hosts -->
+  <rect class="box2" x="708" y="296" width="442" height="192"/>
+  <text class="h" x="724" y="324">QUIÉN ALOJA EL MODELO Y A QUÉ PRECIO</text>
+  <g class="s">
+    <text x="724" y="350" fill="#657a8e">PROVEEDOR</text>
+    <text x="948" y="350" fill="#657a8e" text-anchor="end">ENTRADA / 1M</text>
+    <text x="1078" y="350" fill="#657a8e" text-anchor="end">SALIDA / 1M</text>
+  </g>
+  <line x1="724" y1="358" x2="1078" y2="358" stroke="#20374a"/>
+  <g class="t" font-size="12" font-weight="600">
+    <text x="724" y="380">DeepInfra</text><text class="m" x="948" y="380" text-anchor="end">$0.40</text><text class="m" x="1078" y="380" text-anchor="end">$2.00</text>
+    <text x="724" y="406">Novita</text><text class="m" x="948" y="406" text-anchor="end">$0.168</text><text class="m" x="1078" y="406" text-anchor="end">$0.336</text>
+    <text x="724" y="432">Parasail</text><text class="m" x="948" y="432" text-anchor="end">$0.14</text><text class="m" x="1078" y="432" text-anchor="end">$0.28</text>
+  </g>
+  <rect x="716" y="366" width="370" height="24" rx="6" fill="#20c8d4" opacity=".08">
+    <animate attributeName="y" values="366;392;418;366" dur="4.2s" repeatCount="indefinite"/>
+  </rect>
+  <text class="s" x="724" y="462">Origen: GET /models/{id}/endpoints de OpenRouter · fecha de verificación en cada fila.</text>
+  <text class="s" x="724" y="478" fill="#657a8e">Todo se resuelve dentro de la app: no hay que abrir la web del proveedor.</text>
+
+  <path class="arr" d="M634 200 H690 V178"/>
+  <path class="arr" d="M634 290 H690 V330"/>
+</svg>

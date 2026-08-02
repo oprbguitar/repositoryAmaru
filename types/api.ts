@@ -228,6 +228,7 @@ export type CountryPanelData = {
 };
 
 export type ModelRankingEntry = {
+  capabilities: CapabilityTag[];
   modelExternalId: string;
   modelTitle: string;
   position: number;
@@ -271,6 +272,85 @@ export type ModelOffering = {
   status: string | null;
   pricingSourceName: string;
   verifiedAt: string;
+};
+
+export type CapabilityTag = {
+  id: string;
+  label: string;
+  group: "uso" | "modalidad" | "capacidad" | "acceso";
+  evidence: string;
+};
+
+export type ModelRankingMembership = {
+  rankingType: string;
+  label: string;
+  position: number;
+  rankingDate: string;
+  methodology: string;
+  methodologyUrl: string | null;
+  isUsageCategory: boolean;
+};
+
+export type ModelDetail = {
+  modelExternalId: string;
+  modelTitle: string;
+  summary: string | null;
+  url: string | null;
+  contextLength: number | null;
+  inputPricePerToken: number | null;
+  outputPricePerToken: number | null;
+  indexed: boolean;
+  capabilities: CapabilityTag[];
+  primaryUse: string | null;
+  rankings: ModelRankingMembership[];
+  offerings: ModelOffering[];
+  hostSummary: {
+    providers: number;
+    minInputPerMillion: number;
+    maxInputPerMillion: number;
+    verifiedAt: string;
+  } | null;
+  offeringsNote: string | null;
+};
+
+export type ProviderAuthoredModel = {
+  modelExternalId: string;
+  modelTitle: string;
+  summary: string | null;
+  url: string | null;
+  contextLength: number | null;
+  inputPricePerMillion: number | null;
+  outputPricePerMillion: number | null;
+  usageRank: {
+    category: string;
+    position: number;
+    rankingDate: string | null;
+  } | null;
+  capabilities: CapabilityTag[];
+  hostCount: number;
+};
+
+export type ProviderHostedModel = {
+  modelExternalId: string;
+  modelTitle: string;
+  inputPricePerMillion: number | null;
+  outputPricePerMillion: number | null;
+  cachedInputPricePerMillion: number | null;
+  contextLength: number | null;
+  quantization: string | null;
+  status: string | null;
+  verifiedAt: string;
+};
+
+export type ProviderModelsResponse = {
+  providerId: string;
+  providerName: string;
+  isAggregator: boolean;
+  rankingDate: string | null;
+  authored: ProviderAuthoredModel[];
+  hosted: ProviderHostedModel[];
+  links: { models: string | null; pricing: string | null };
+  note: string;
 };
 
 export type GithubRankingEntry = {

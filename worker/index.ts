@@ -28,8 +28,10 @@ import {
   getGithubRankings,
   getGlobalMap,
   getLaboratoryProject,
+  getModelDetail,
   getModelOfferings,
   getModelRankings,
+  getProviderModels,
   getRegionalMap,
   listLaboratoryProjects,
   listVideos,
@@ -1149,6 +1151,33 @@ async function moduleRouter(
       envelope(offerings, {
         total: offerings.length,
         sourceStatus: offerings.length ? "ready" : "empty",
+      }),
+    );
+  }
+  if (request.method === "GET" && path === "/api/models/detail") {
+    const modelId = url.searchParams.get("model") ?? "";
+    if (!modelId)
+      return errorResponse("invalid_request", "Falta el parámetro model.", 400);
+    const detail = await getModelDetail(env, modelId);
+    return json(
+      envelope(detail, {
+        modelId,
+        sourceStatus: detail.indexed ? "ready" : "empty",
+      }),
+    );
+  }
+  const providerModelsMatch = path.match(
+    /^\/api\/providers\/([A-Za-z0-9-]{1,64})\/models$/,
+  );
+  if (request.method === "GET" && providerModelsMatch) {
+    const detail = await getProviderModels(env, providerModelsMatch[1]);
+    if (!detail)
+      return errorResponse("not_found", "Proveedor no registrado.", 404);
+    return json(
+      envelope(detail, {
+        providerId: detail.providerId,
+        sourceStatus:
+          detail.authored.length || detail.hosted.length ? "ready" : "empty",
       }),
     );
   }

@@ -6,6 +6,7 @@ import { getRecords } from "./api";
 import { formatDate, verificationLabel } from "./format";
 import { newestNewsFirst } from "./newsSort";
 import { RecordContext } from "./RecordContext";
+import { SyncButton } from "./SyncButton";
 
 export function NewsPage() {
   const [selected, setSelected] = useState<ObservatoryRecord | null>(null);
@@ -32,6 +33,11 @@ export function NewsPage() {
               registrados.
             </p>
           </div>
+          <SyncButton
+            scope="news"
+            label="Actualizar noticias"
+            onRefetch={() => records.refetch()}
+          />
         </header>
         <section className="record-list panel">
           <div className="panel-heading">

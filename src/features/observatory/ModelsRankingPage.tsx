@@ -1,9 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
-import { Bot, ExternalLink, RefreshCw, X } from "lucide-react";
-import { useState } from "react";
-import type { ModelRankingEntry } from "../../../types/api";
+import { Bot, ExternalLink, RefreshCw, Server, Tags, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import type { CapabilityTag, ModelRankingEntry } from "../../../types/api";
 import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
-import { getModelOfferings, getModelRankings, synchronize } from "./api";
+import {
+  getModelDetail,
+  getModelOfferings,
+  getModelRankings,
+  synchronize,
+} from "./api";
+import { CapabilityChips, CapabilityEvidenceList } from "./CapabilityTags";
 import {
   formatDate,
   formatNumber,
@@ -117,17 +123,261 @@ function OfferingsDrawer({
   );
 }
 
+/**
+ * Context panel for the selected model: what it is good for (evidence-backed
+ * tags), which providers host it, and the price each one charges per million
+ * input/output tokens — all inside the app, no external lookup needed.
+ */
+function ModelContextPanel({
+  entry,
+  tabLabel,
+  onOpenDrawer,
+  onSelectTag,
+  activeTagId,
+}: {
+  entry: ModelRankingEntry | null;
+  tabLabel: string;
+  onOpenDrawer: () => void;
+  onSelectTag: (tag: CapabilityTag) => void;
+  activeTagId: string | null;
+}) {
+  const detail = useQuery({
+    queryKey: ["model-detail", entry?.modelExternalId],
+    queryFn: () => getModelDetail(entry?.modelExternalId ?? ""),
+    enabled: Boolean(entry),
+  });
+
+  if (!entry) {
+    return (
+      <aside className="context-panel scroll-region">
+        <div className="context-title">
+          <Bot />
+          <strong>Información contextual</strong>
+        </div>
+        <section>
+          <p>Selecciona un modelo para revisar procedencia y precios.</p>
+        </section>
+      </aside>
+    );
+  }
+
+  const data = detail.data?.data;
+  const hosts = data?.offerings ?? [];
+
+  return (
+    <aside className="context-panel scroll-region">
+      <div className="context-title">
+        <Bot />
+        <strong>Información contextual</strong>
+      </div>
+      <section>
+        <h2 className="context-record-title">{entry.modelTitle}</h2>
+        <p>{entry.summary ?? missing}</p>
+      </section>
+
+      <section>
+        <h3>
+          <Tags /> Para qué sirve
+        </h3>
+        {data?.primaryUse ? (
+          <p className="primary-use">{data.primaryUse}</p>
+        ) : null}
+        <CapabilityChips
+          tags={data?.capabilities ?? entry.capabilities}
+          onSelect={onSelectTag}
+          activeTagId={activeTagId}
+        />
+        {detail.isLoading ? (
+          <p className="context-loading">Consultando ficha del modelo…</p>
+        ) : (
+          <CapabilityEvidenceList
+            tags={data?.capabilities ?? entry.capabilities}
+          />
+        )}
+      </section>
+
+      <section>
+        <h3>
+          <Server /> Proveedores que alojan este modelo
+        </h3>
+        {hosts.length ? (
+          <>
+            <div className="host-list">
+              {hosts.map((offering) => (
+                <article className="host-row" key={offering.providerName}>
+                  <div className="host-row-title">
+                    <strong>{offering.providerName}</strong>
+                    {offering.quantization ? (
+                      <span className="state-badge provisional">
+                        {offering.quantization}
+                      </span>
+                    ) : null}
+                  </div>
+                  <dl className="host-prices">
+                    <div>
+                      <dt>Entrada / 1M</dt>
+                      <dd>{money(offering.inputPricePerMillion)}</dd>
+                    </div>
+                    <div>
+                      <dt>Salida / 1M</dt>
+                      <dd>{money(offering.outputPricePerMillion)}</dd>
+                    </div>
+                    {offering.cachedInputPricePerMillion !== null ? (
+                      <div>
+                        <dt>Caché / 1M</dt>
+                        <dd>{money(offering.cachedInputPricePerMillion)}</dd>
+                      </div>
+                    ) : null}
+                  </dl>
+                  <small className="host-row-meta">
+                    {offering.contextLength
+                      ? `${offering.contextLength.toLocaleString("es-PE")} tokens · `
+                      : ""}
+                    {offering.pricingSourceName} ·{" "}
+                    {formatDate(offering.verifiedAt)}
+                  </small>
+                </article>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="secondary-button compact"
+              onClick={onOpenDrawer}
+            >
+              Comparar en tabla
+            </button>
+          </>
+        ) : (
+          <p className="capability-empty">
+            {data?.offeringsNote ??
+              "Todavía no hay proveedores indexados para este modelo."}
+          </p>
+        )}
+      </section>
+
+      <section>
+        <h3>Ranking</h3>
+        <dl className="context-facts">
+          <dt>Posición</dt>
+          <dd>#{entry.position}</dd>
+          <dt>Categoría</dt>
+          <dd>{tabLabel}</dd>
+          <dt>Fuente</dt>
+          <dd>{entry.sourceName}</dd>
+          <dt>Fecha</dt>
+          <dd>{formatDate(entry.rankingDate)}</dd>
+          {entry.score !== null ? (
+            <>
+              <dt>Valor</dt>
+              <dd>
+                {entry.scoreUnit === "usd_per_million_input"
+                  ? money(entry.score)
+                  : entry.scoreUnit === "tokens"
+                    ? entry.score.toLocaleString("es-PE")
+                    : String(entry.score)}
+              </dd>
+            </>
+          ) : null}
+        </dl>
+        {data?.rankings.length ? (
+          <ul className="ranking-membership">
+            {data.rankings.map((membership) => (
+              <li key={`${membership.rankingType}-${membership.rankingDate}`}>
+                <strong>#{membership.position}</strong> {membership.label}
+                <small className="ranking-membership-date">
+                  {formatDate(membership.rankingDate)}
+                </small>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <p>{entry.methodology}</p>
+        {entry.methodologyUrl ? (
+          <a
+            className="source-link-button"
+            href={entry.methodologyUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Metodología de la fuente <ExternalLink />
+          </a>
+        ) : null}
+      </section>
+
+      <section>
+        <h3>Contexto y precios del catálogo</h3>
+        <dl className="context-facts">
+          <dt>Contexto</dt>
+          <dd>
+            {entry.contextLength
+              ? `${entry.contextLength.toLocaleString("es-PE")} tokens`
+              : missing}
+          </dd>
+          <dt>Entrada / 1M</dt>
+          <dd>{formatPricePerMillion(entry.inputPricePerToken)}</dd>
+          <dt>Salida / 1M</dt>
+          <dd>{formatPricePerMillion(entry.outputPricePerToken)}</dd>
+          <dt>Proveedores</dt>
+          <dd>{entry.offeringSummary?.providers ?? 0}</dd>
+        </dl>
+      </section>
+
+      {entry.url ? (
+        <section>
+          <h3>Fuentes</h3>
+          <a
+            className="source-link-button"
+            href={entry.url}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Abrir fuente original <ExternalLink />
+          </a>
+        </section>
+      ) : null}
+    </aside>
+  );
+}
+
 export function ModelsRankingPage() {
   const [tab, setTab] = useState("category-programming");
   const [selected, setSelected] = useState<ModelRankingEntry | null>(null);
   const [drawer, setDrawer] = useState<ModelRankingEntry | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
   const rankings = useQuery({
     queryKey: ["model-rankings", tab],
     queryFn: () => getModelRankings(tab),
   });
   const data = rankings.data?.data;
-  const chosen = selected ?? data?.entries[0] ?? null;
+
+  // Tag vocabulary available in the current ranking, for tag-based search.
+  const availableTags = useMemo(() => {
+    const byId = new Map<string, { tag: CapabilityTag; count: number }>();
+    for (const entry of data?.entries ?? []) {
+      for (const tag of entry.capabilities ?? []) {
+        const current = byId.get(tag.id);
+        if (current) current.count += 1;
+        else byId.set(tag.id, { tag, count: 1 });
+      }
+    }
+    return [...byId.values()].sort((left, right) => right.count - left.count);
+  }, [data]);
+
+  const entries = useMemo(() => {
+    const all = data?.entries ?? [];
+    if (!tagFilter) return all;
+    return all.filter((entry) =>
+      (entry.capabilities ?? []).some((tag) => tag.id === tagFilter),
+    );
+  }, [data, tagFilter]);
+
+  const chosen =
+    entries.find(
+      (entry) => entry.modelExternalId === selected?.modelExternalId,
+    ) ??
+    entries[0] ??
+    null;
 
   async function runSync() {
     setSyncing(true);
@@ -139,102 +389,18 @@ export function ModelsRankingPage() {
     }
   }
 
-  const panel = chosen ? (
-    <aside className="context-panel scroll-region">
-      <div className="context-title">
-        <Bot />
-        <strong>Información contextual</strong>
-      </div>
-      <section>
-        <h2 className="context-record-title">{chosen.modelTitle}</h2>
-        <p>{chosen.summary ?? missing}</p>
-      </section>
-      <section>
-        <h3>Ranking</h3>
-        <dl className="context-facts">
-          <dt>Posición</dt>
-          <dd>#{chosen.position}</dd>
-          <dt>Categoría</dt>
-          <dd>
-            {RANKING_TABS.find((entry) => entry.id === tab)?.label ?? tab}
-          </dd>
-          <dt>Fuente</dt>
-          <dd>{chosen.sourceName}</dd>
-          <dt>Fecha</dt>
-          <dd>{formatDate(chosen.rankingDate)}</dd>
-          {chosen.score !== null ? (
-            <>
-              <dt>Valor</dt>
-              <dd>
-                {chosen.scoreUnit === "usd_per_million_input"
-                  ? money(chosen.score)
-                  : chosen.scoreUnit === "tokens"
-                    ? chosen.score.toLocaleString("es-PE")
-                    : String(chosen.score)}
-              </dd>
-            </>
-          ) : null}
-        </dl>
-        <p>{chosen.methodology}</p>
-        {chosen.methodologyUrl ? (
-          <a
-            className="source-link-button"
-            href={chosen.methodologyUrl}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Metodología de la fuente <ExternalLink />
-          </a>
-        ) : null}
-      </section>
-      <section>
-        <h3>Contexto y precios</h3>
-        <dl className="context-facts">
-          <dt>Contexto</dt>
-          <dd>
-            {chosen.contextLength
-              ? `${chosen.contextLength.toLocaleString("es-PE")} tokens`
-              : missing}
-          </dd>
-          <dt>Entrada / 1M</dt>
-          <dd>{formatPricePerMillion(chosen.inputPricePerToken)}</dd>
-          <dt>Salida / 1M</dt>
-          <dd>{formatPricePerMillion(chosen.outputPricePerToken)}</dd>
-          <dt>Proveedores</dt>
-          <dd>{chosen.offeringSummary?.providers ?? 0}</dd>
-        </dl>
-        <button
-          type="button"
-          className="secondary-button compact"
-          onClick={() => setDrawer(chosen)}
-        >
-          Comparar proveedores
-        </button>
-      </section>
-      {chosen.url ? (
-        <section>
-          <h3>Fuentes</h3>
-          <a
-            className="source-link-button"
-            href={chosen.url}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Abrir fuente original <ExternalLink />
-          </a>
-        </section>
-      ) : null}
-    </aside>
-  ) : (
-    <aside className="context-panel scroll-region">
-      <div className="context-title">
-        <Bot />
-        <strong>Información contextual</strong>
-      </div>
-      <section>
-        <p>Selecciona un modelo para revisar procedencia y precios.</p>
-      </section>
-    </aside>
+  const tabLabel = RANKING_TABS.find((entry) => entry.id === tab)?.label ?? tab;
+
+  const panel = (
+    <ModelContextPanel
+      entry={chosen}
+      tabLabel={tabLabel}
+      onOpenDrawer={() => chosen && setDrawer(chosen)}
+      onSelectTag={(tag) =>
+        setTagFilter((current) => (current === tag.id ? null : tag.id))
+      }
+      activeTagId={tagFilter}
+    />
   );
 
   return (
@@ -275,6 +441,44 @@ export function ModelsRankingPage() {
           </button>
         ))}
       </div>
+      {availableTags.length ? (
+        <section
+          className="tag-filter-bar panel"
+          aria-label="Filtrar por etiqueta"
+        >
+          <span className="tag-filter-label">
+            <Tags /> Etiquetas
+          </span>
+          <ul className="capability-chips compact">
+            {availableTags.map(({ tag, count }) => (
+              <li key={tag.id}>
+                <button
+                  type="button"
+                  className={`capability-chip group-${tag.group}${tagFilter === tag.id ? " active" : ""}`}
+                  title={tag.evidence}
+                  aria-pressed={tagFilter === tag.id}
+                  onClick={() =>
+                    setTagFilter((current) =>
+                      current === tag.id ? null : tag.id,
+                    )
+                  }
+                >
+                  {tag.label} <em>{count}</em>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {tagFilter ? (
+            <button
+              type="button"
+              className="tag-filter-reset"
+              onClick={() => setTagFilter(null)}
+            >
+              Quitar filtro
+            </button>
+          ) : null}
+        </section>
+      ) : null}
       {data && !data.available ? (
         <div className="panel honest-empty">
           <h2>Ranking no disponible</h2>
@@ -283,22 +487,24 @@ export function ModelsRankingPage() {
       ) : (
         <section className="panel data-table-panel">
           <div className="panel-heading">
-            <h2>
-              {RANKING_TABS.find((entry) => entry.id === tab)?.label ?? tab}
-            </h2>
+            <h2>{tabLabel}</h2>
             <span>
               {data?.rankingDate
                 ? `Fuente: OpenRouter · ${formatDate(data.rankingDate)}`
                 : "Sin sincronizar"}
+              {tagFilter
+                ? ` · ${entries.length} de ${data?.entries.length ?? 0} por etiqueta`
+                : ""}
             </span>
           </div>
-          {data?.entries.length ? (
+          {entries.length ? (
             <div className="data-table-scroll">
               <table className="observatory-table">
                 <thead>
                   <tr>
                     <th>#</th>
                     <th>Modelo</th>
+                    <th>Para qué sirve</th>
                     <th>Contexto</th>
                     <th>Entrada / 1M (mín.)</th>
                     <th>Salida / 1M (mín.)</th>
@@ -308,7 +514,7 @@ export function ModelsRankingPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.entries.map((entry) => (
+                  {entries.map((entry) => (
                     <tr
                       key={entry.modelExternalId}
                       className={
@@ -322,6 +528,12 @@ export function ModelsRankingPage() {
                       <td>
                         <strong>{entry.modelTitle}</strong>
                         <small>{entry.modelExternalId}</small>
+                      </td>
+                      <td>
+                        <CapabilityChips
+                          tags={entry.capabilities ?? []}
+                          compact
+                        />
                       </td>
                       <td>
                         {entry.contextLength
@@ -357,11 +569,15 @@ export function ModelsRankingPage() {
             </div>
           ) : (
             <div className="honest-empty">
-              <h2>Sin ranking sincronizado</h2>
+              <h2>
+                {tagFilter
+                  ? "Ningún modelo del ranking tiene esa etiqueta"
+                  : "Sin ranking sincronizado"}
+              </h2>
               <p>
-                Ejecuta «Sincronizar modelos» para obtener el catálogo y los
-                rankings reales de OpenRouter. No se muestran posiciones
-                inventadas.
+                {tagFilter
+                  ? "Quita el filtro o elige otra etiqueta. Las etiquetas se derivan de los campos publicados por la fuente."
+                  : "Ejecuta «Sincronizar modelos» para obtener el catálogo y los rankings reales de OpenRouter. No se muestran posiciones inventadas."}
               </p>
             </div>
           )}

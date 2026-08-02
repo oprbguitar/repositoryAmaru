@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Bot, Building2, ExternalLink, Search } from "lucide-react";
 import { useMemo, useState } from "react";
-import type { ObservatoryRecord } from "../../../types/api";
+import type { ObservatoryRecord, ProviderRecord } from "../../../types/api";
 import { getProviders, getRecords } from "./api";
 import {
   formatDate,
@@ -9,11 +9,13 @@ import {
   missing,
   verificationLabel,
 } from "./format";
+import { ProviderDetail } from "./ProviderDetail";
 import { RecordContext } from "./RecordContext";
 
 export function CatalogPage({ mode }: { mode: "providers" | "models" }) {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<ObservatoryRecord | null>(null);
+  const [openProvider, setOpenProvider] = useState<ProviderRecord | null>(null);
   const providers = useQuery({
     queryKey: ["providers"],
     queryFn: getProviders,
@@ -62,7 +64,10 @@ export function CatalogPage({ mode }: { mode: "providers" | "models" }) {
             aria-label="Directorio de proveedores"
           >
             {(providers.data?.data ?? []).map((provider) => (
-              <article className="panel provider-card" key={provider.id}>
+              <article
+                className={`panel provider-card${openProvider?.id === provider.id ? " selected" : ""}`}
+                key={provider.id}
+              >
                 <div className="provider-card-title">
                   <span className="provider-monogram">
                     {provider.name.slice(0, 2).toUpperCase()}
@@ -106,15 +111,38 @@ export function CatalogPage({ mode }: { mode: "providers" | "models" }) {
                         href={url}
                         target="_blank"
                         rel="noreferrer"
+                        onClick={(event) => event.stopPropagation()}
                       >
                         {label}
                         <ExternalLink />
                       </a>
                     ))}
                 </div>
+                {/* Stretched hit area: the whole card is clickable while the
+                    control stays a real button for keyboard and screen readers. */}
+                <button
+                  type="button"
+                  className="provider-card-select"
+                  aria-expanded={openProvider?.id === provider.id}
+                  onClick={() =>
+                    setOpenProvider((current) =>
+                      current?.id === provider.id ? null : provider,
+                    )
+                  }
+                >
+                  {openProvider?.id === provider.id
+                    ? "Ocultar ficha ▴"
+                    : `Ver ranking de uso y costo por token de ${provider.name}`}
+                </button>
               </article>
             ))}
           </section>
+        ) : null}
+        {mode === "providers" && openProvider ? (
+          <ProviderDetail
+            provider={openProvider}
+            onClose={() => setOpenProvider(null)}
+          />
         ) : null}
         <section className="panel data-table-panel">
           <div className="panel-heading">

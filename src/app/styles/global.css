@@ -3859,3 +3859,372 @@ html[data-theme="light"] .developer-mode,
 html[data-theme="light"] .developer-timeline {
   background: #eaf1f4;
 }
+
+/* ---------------------------------------------------------------------------
+   Sincronización en contexto (Noticias e Investigación)
+   --------------------------------------------------------------------------- */
+.sync-control {
+  display: grid;
+  gap: 6px;
+  justify-items: end;
+}
+.sync-result {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 460px;
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: right;
+}
+.sync-result svg {
+  flex: none;
+  width: 13px;
+  height: 13px;
+}
+.sync-result.ok {
+  color: var(--green);
+}
+.sync-result.warning {
+  color: var(--amber);
+}
+.spin {
+  animation: amaru-spin 900ms linear infinite;
+}
+@keyframes amaru-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Etiquetas de capacidad
+   --------------------------------------------------------------------------- */
+.capability-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.capability-chips.compact {
+  gap: 4px;
+  margin: 0;
+}
+.capability-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: nowrap;
+  cursor: default;
+}
+button.capability-chip {
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    transform 140ms ease;
+}
+button.capability-chip:hover {
+  transform: translateY(-1px);
+  border-color: var(--cyan);
+}
+.capability-chip em {
+  font-style: normal;
+  color: var(--subtle);
+  font-weight: 500;
+}
+.capability-chip.group-uso {
+  border-color: color-mix(in srgb, var(--green) 45%, var(--line));
+  color: var(--green);
+}
+.capability-chip.group-modalidad {
+  border-color: color-mix(in srgb, var(--purple) 45%, var(--line));
+  color: var(--purple);
+}
+.capability-chip.group-capacidad {
+  border-color: color-mix(in srgb, var(--blue) 45%, var(--line));
+  color: var(--blue);
+}
+.capability-chip.group-acceso {
+  border-color: color-mix(in srgb, var(--amber) 45%, var(--line));
+  color: var(--amber);
+}
+.capability-chip.active {
+  background: color-mix(in srgb, var(--cyan) 18%, var(--surface-2));
+  border-color: var(--cyan);
+  color: var(--text);
+}
+.capability-group {
+  margin-top: 10px;
+}
+.capability-group h4 {
+  margin: 0 0 4px;
+  color: var(--subtle);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.capability-evidence {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.capability-evidence li {
+  display: grid;
+  gap: 2px;
+  padding-left: 9px;
+  border-left: 2px solid var(--line);
+}
+.capability-evidence strong {
+  font-size: 12px;
+}
+.capability-evidence-note,
+.capability-empty {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.primary-use {
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 3px solid var(--cyan);
+  border-radius: 0 6px 6px 0;
+  background: var(--surface-2);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.context-loading {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Barra de filtro por etiqueta */
+.tag-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+}
+.tag-filter-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--subtle);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.tag-filter-label svg {
+  width: 14px;
+  height: 14px;
+}
+.tag-filter-bar .capability-chips {
+  flex: 1;
+  margin: 0;
+}
+.tag-filter-reset {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+.tag-filter-reset:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+/* ---------------------------------------------------------------------------
+   Proveedores que alojan un modelo (panel contextual)
+   --------------------------------------------------------------------------- */
+.host-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.host-row {
+  display: grid;
+  gap: 6px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.host-row-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+.host-prices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+}
+.host-prices div {
+  display: grid;
+  gap: 1px;
+}
+.host-prices dt {
+  color: var(--subtle);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.host-prices dd {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.host-row-meta {
+  color: var(--muted);
+  font-size: 10px;
+}
+.ranking-membership {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0;
+  padding: 0;
+  list-style: none;
+}
+.ranking-membership li {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font-size: 12px;
+}
+.ranking-membership strong {
+  color: var(--cyan);
+  font-variant-numeric: tabular-nums;
+}
+.ranking-membership-date {
+  margin-left: auto;
+  color: var(--subtle);
+  font-size: 10px;
+}
+
+/* ---------------------------------------------------------------------------
+   Ficha de proveedor
+   --------------------------------------------------------------------------- */
+.provider-card {
+  position: relative;
+  transition:
+    border-color 140ms ease,
+    transform 140ms ease;
+}
+.provider-card.selected {
+  border-color: var(--cyan);
+}
+.provider-card:hover {
+  transform: translateY(-2px);
+}
+.provider-card .provider-links {
+  position: relative;
+  z-index: 2;
+}
+/* El botón cubre la tarjeta: clic en cualquier parte abre la ficha, pero el
+   control sigue siendo un button real para teclado y lectores de pantalla. */
+.provider-card-select {
+  justify-self: start;
+  margin-top: 2px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 11px;
+  background: var(--surface-3);
+  color: var(--cyan);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.provider-card-select::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius);
+  z-index: 1;
+}
+.provider-card-select:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+.provider-detail {
+  margin-top: 14px;
+  animation: amaru-reveal 220ms ease both;
+}
+@keyframes amaru-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .provider-detail {
+    animation: none;
+  }
+}
+.provider-detail-note,
+.provider-hosted h3 {
+  margin: 10px 12px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.provider-hosted h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-size: 13px;
+}
+.provider-hosted h3 svg {
+  width: 15px;
+  height: 15px;
+  color: var(--cyan);
+}
+.provider-extra {
+  margin: 0 12px 10px;
+}
+.provider-extra-summary {
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+.provider-detail .provider-links {
+  padding: 0 12px 12px;
+}
+
+html[data-theme="light"] .capability-chip,
+html[data-theme="light"] .host-row,
+html[data-theme="light"] .primary-use {
+  background: #f4f8fb;
+}
+html[data-theme="light"] .provider-card-select {
+  background: #eaf2f7;
+}

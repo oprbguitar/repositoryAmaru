@@ -21,6 +21,7 @@ import {
   type ResearchDateRange,
   type ResearchSort,
 } from "./researchFilters";
+import { SyncButton } from "./SyncButton";
 
 export function ResearchPage() {
   const [query, setQuery] = useState("");
@@ -95,6 +96,13 @@ export function ResearchPage() {
               Crossref.
             </p>
           </div>
+          <SyncButton
+            scope="research"
+            label="Actualizar investigación"
+            onRefetch={async () => {
+              await Promise.all([records.refetch(), sources.refetch()]);
+            }}
+          />
         </header>
         <section className="research-sources" aria-label="Fuentes académicas">
           {researchSources.map((item) => (

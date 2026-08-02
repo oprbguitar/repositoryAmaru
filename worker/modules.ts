@@ -28,6 +28,16 @@ import {
   type ProjectInputs,
   recommend,
 } from "../lib/laboratory/engine";
+import {
+  type CapabilityInput,
+  deriveCapabilityTags,
+  describePrimaryUse,
+} from "../lib/models/capabilities";
+import {
+  authorPrefixesFor,
+  hostNamesFor,
+  isAggregator,
+} from "../lib/models/provider-identity";
 
 export type ModulesEnv = {
   DB: D1Database;
@@ -734,6 +744,7 @@ export async function getModelRankings(env: ModulesEnv, type: string) {
   const offeringMap = new Map(
     offerings.results.map((row) => [String(row.model_external_id), row]),
   );
+  const usageByModel = await usageRankingsByModel(env);
   return {
     type,
     available: true,
@@ -747,7 +758,12 @@ export async function getModelRankings(env: ModulesEnv, type: string) {
         data = {};
       }
       const offering = offeringMap.get(String(row.model_external_id));
+      const capabilities = deriveCapabilityTags({
+        ...capabilityInputFrom(data),
+        rankings: usageByModel.get(String(row.model_external_id)) ?? [],
+      });
       return {
+        capabilities,
         modelExternalId: String(row.model_external_id),
         modelTitle: String(row.model_title),
         position: Number(row.ranking_position),
@@ -814,6 +830,309 @@ export async function getModelOfferings(env: ModulesEnv, modelId: string) {
     pricingSourceName: String(row.pricing_source_name),
     verifiedAt: String(row.verified_at),
   }));
+}
+
+// ---------------------------------------------------------------------------
+// Ficha de modelo: capacidades, rankings de uso y proveedores que lo alojan
+// ---------------------------------------------------------------------------
+
+const CATEGORY_LABELS: Record<string, string> = {
+  "category-programming": "Programación",
+  "category-technology": "Tecnología",
+  "category-science": "Ciencia",
+  "category-translation": "Traducción",
+};
+
+function parseJsonObject(value: unknown): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(String(value ?? "{}"));
+    return parsed && typeof parsed === "object"
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function stringList(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
+function numberOrNull(value: unknown): number | null {
+  const parsed = Number(value);
+  return value === null || value === undefined || !Number.isFinite(parsed)
+    ? null
+    : parsed;
+}
+
+function capabilityInputFrom(data: Record<string, unknown>): CapabilityInput {
+  const architecture = (data.architecture ?? {}) as Record<string, unknown>;
+  return {
+    contextLength: numberOrNull(data.contextLength),
+    inputModalities: stringList(architecture.input_modalities),
+    outputModalities: stringList(architecture.output_modalities),
+    supportedParameters: stringList(data.supportedParameters),
+    inputPricePerToken: numberOrNull(data.inputPricePerToken),
+    outputPricePerToken: numberOrNull(data.outputPricePerToken),
+    huggingFaceId:
+      typeof data.huggingFaceId === "string" ? data.huggingFaceId : null,
+  };
+}
+
+/** Latest date on which usage-category rankings were stored. */
+async function latestCategoryRankingDate(
+  env: ModulesEnv,
+): Promise<string | null> {
+  const placeholders = CATEGORY_RANKING_TYPES.map(() => "?").join(",");
+  const row = await env.DB.prepare(
+    `SELECT MAX(ranking_date) AS date FROM model_rankings WHERE ranking_type IN (${placeholders})`,
+  )
+    .bind(...CATEGORY_RANKING_TYPES)
+    .first<{ date: string | null }>();
+  return row?.date ?? null;
+}
+
+/**
+ * Real-usage category positions per model at the latest ranking date, used to
+ * tag models with the categories they actually rank in.
+ */
+async function usageRankingsByModel(
+  env: ModulesEnv,
+): Promise<Map<string, { rankingType: string; position: number }[]>> {
+  const byModel = new Map<
+    string,
+    { rankingType: string; position: number }[]
+  >();
+  const rankingDate = await latestCategoryRankingDate(env);
+  if (!rankingDate) return byModel;
+  const placeholders = CATEGORY_RANKING_TYPES.map(() => "?").join(",");
+  const rows = await env.DB.prepare(
+    `SELECT model_external_id, ranking_type, ranking_position FROM model_rankings
+     WHERE ranking_date = ? AND ranking_type IN (${placeholders})`,
+  )
+    .bind(rankingDate, ...CATEGORY_RANKING_TYPES)
+    .all<Record<string, unknown>>();
+  for (const row of rows.results) {
+    const key = String(row.model_external_id);
+    const list = byModel.get(key) ?? [];
+    list.push({
+      rankingType: String(row.ranking_type),
+      position: Number(row.ranking_position),
+    });
+    byModel.set(key, list);
+  }
+  return byModel;
+}
+
+export async function getModelDetail(env: ModulesEnv, modelId: string) {
+  const record = await env.DB.prepare(
+    `SELECT title, summary, original_url, data_json, last_successful_sync_at
+     FROM observatory_records
+     WHERE record_kind = 'model' AND external_id = ?
+     ORDER BY CASE WHEN source_id = 'openrouter' THEN 0 ELSE 1 END LIMIT 1`,
+  )
+    .bind(modelId)
+    .first<Record<string, unknown>>();
+
+  const rankingRows = await env.DB.prepare(
+    `SELECT mr.ranking_type, mr.ranking_position, mr.ranking_date, mr.methodology, mr.methodology_url
+     FROM model_rankings mr
+     WHERE mr.model_external_id = ?
+       AND mr.ranking_date = (
+         SELECT MAX(ranking_date) FROM model_rankings WHERE ranking_type = mr.ranking_type
+       )
+     ORDER BY mr.ranking_position ASC`,
+  )
+    .bind(modelId)
+    .all<Record<string, unknown>>();
+
+  const rankings = rankingRows.results.map((row) => ({
+    rankingType: String(row.ranking_type),
+    label:
+      CATEGORY_LABELS[String(row.ranking_type)] ?? String(row.ranking_type),
+    position: Number(row.ranking_position),
+    rankingDate: String(row.ranking_date),
+    methodology: String(row.methodology),
+    methodologyUrl: row.methodology_url ? String(row.methodology_url) : null,
+    isUsageCategory: (CATEGORY_RANKING_TYPES as readonly string[]).includes(
+      String(row.ranking_type),
+    ),
+  }));
+
+  const data = record ? parseJsonObject(record.data_json) : {};
+  const capabilities = deriveCapabilityTags({
+    ...capabilityInputFrom(data),
+    rankings: rankings
+      .filter((entry) => entry.isUsageCategory)
+      .map((entry) => ({
+        rankingType: entry.rankingType,
+        position: entry.position,
+      })),
+  });
+
+  const offerings = await getModelOfferings(env, modelId);
+  const priced = offerings.filter(
+    (offering) => offering.inputPricePerMillion !== null,
+  );
+
+  return {
+    modelExternalId: modelId,
+    modelTitle: record ? String(record.title) : modelId,
+    summary: record?.summary ? String(record.summary) : null,
+    url: record?.original_url ? String(record.original_url) : null,
+    contextLength: numberOrNull(data.contextLength),
+    inputPricePerToken: numberOrNull(data.inputPricePerToken),
+    outputPricePerToken: numberOrNull(data.outputPricePerToken),
+    indexed: Boolean(record),
+    capabilities,
+    primaryUse: describePrimaryUse(capabilities),
+    rankings,
+    offerings,
+    hostSummary: priced.length
+      ? {
+          providers: priced.length,
+          minInputPerMillion: Math.min(
+            ...priced.map((item) => item.inputPricePerMillion ?? 0),
+          ),
+          maxInputPerMillion: Math.max(
+            ...priced.map((item) => item.inputPricePerMillion ?? 0),
+          ),
+          verifiedAt: priced
+            .map((item) => item.verifiedAt)
+            .sort()
+            .at(-1) as string,
+        }
+      : null,
+    offeringsNote: offerings.length
+      ? null
+      : "OpenRouter indexa los proveedores que alojan cada modelo solo para los mejor posicionados de cada sincronización. Ejecuta «Sincronizar modelos» o elige un modelo del ranking principal.",
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Ficha de proveedor: sus modelos por uso real y los que aloja
+// ---------------------------------------------------------------------------
+
+export async function getProviderModels(env: ModulesEnv, providerId: string) {
+  const provider = await env.DB.prepare(
+    "SELECT id, name, models_url, pricing_url FROM providers WHERE id = ?",
+  )
+    .bind(providerId)
+    .first<Record<string, unknown>>();
+  if (!provider) return null;
+  const providerName = String(provider.name);
+
+  const prefixes = authorPrefixesFor(providerId);
+  const prefixClauses = prefixes.map(() => "r.external_id LIKE ?").join(" OR ");
+  const records = await env.DB.prepare(
+    `SELECT r.external_id, r.title, r.summary, r.original_url, r.data_json
+     FROM observatory_records r
+     WHERE r.record_kind = 'model' AND (r.provider_id = ? OR ${prefixClauses})
+     GROUP BY r.external_id
+     LIMIT 400`,
+  )
+    .bind(providerId, ...prefixes.map((prefix) => `${prefix}/%`))
+    .all<Record<string, unknown>>();
+
+  // Usage rankings (real order published by OpenRouter per category).
+  const rankingDate = await latestCategoryRankingDate(env);
+  const rankingByModel = await usageRankingsByModel(env);
+
+  const offeringRows = await env.DB.prepare(
+    `SELECT model_external_id, COUNT(*) AS providers, MIN(input_price_per_million) AS min_input,
+       MIN(output_price_per_million) AS min_output, MAX(verified_at) AS verified_at
+     FROM model_offerings WHERE input_price_per_million IS NOT NULL
+     GROUP BY model_external_id`,
+  ).all<Record<string, unknown>>();
+  const offeringMap = new Map(
+    offeringRows.results.map((row) => [String(row.model_external_id), row]),
+  );
+
+  const authored = records.results
+    .map((row) => {
+      const modelId = String(row.external_id);
+      const data = parseJsonObject(row.data_json);
+      const modelRankings = rankingByModel.get(modelId) ?? [];
+      const best = modelRankings.length
+        ? modelRankings.reduce((left, right) =>
+            left.position <= right.position ? left : right,
+          )
+        : null;
+      const capabilities = deriveCapabilityTags({
+        ...capabilityInputFrom(data),
+        rankings: modelRankings,
+      });
+      const offering = offeringMap.get(modelId);
+      const perToken = (value: number | null) =>
+        value === null ? null : Math.round(value * 1_000_000 * 10_000) / 10_000;
+      return {
+        modelExternalId: modelId,
+        modelTitle: String(row.title),
+        summary: row.summary ? String(row.summary) : null,
+        url: row.original_url ? String(row.original_url) : null,
+        contextLength: numberOrNull(data.contextLength),
+        inputPricePerMillion: perToken(numberOrNull(data.inputPricePerToken)),
+        outputPricePerMillion: perToken(numberOrNull(data.outputPricePerToken)),
+        usageRank: best
+          ? {
+              category: CATEGORY_LABELS[best.rankingType] ?? best.rankingType,
+              position: best.position,
+              rankingDate,
+            }
+          : null,
+        capabilities,
+        hostCount: offering ? Number(offering.providers) : 0,
+      };
+    })
+    .sort((left, right) => {
+      const leftRank = left.usageRank?.position ?? Number.MAX_SAFE_INTEGER;
+      const rightRank = right.usageRank?.position ?? Number.MAX_SAFE_INTEGER;
+      if (leftRank !== rightRank) return leftRank - rightRank;
+      return left.modelTitle.localeCompare(right.modelTitle, "es");
+    });
+
+  // Models this provider hosts as an inference endpoint.
+  const hostNames = hostNamesFor(providerId, providerName);
+  const hostPlaceholders = hostNames.map(() => "?").join(",");
+  const hostedRows = await env.DB.prepare(
+    `SELECT model_external_id, model_title, input_price_per_million, output_price_per_million,
+       cached_input_price_per_million, context_length, quantization, status, verified_at
+     FROM model_offerings WHERE LOWER(provider_name) IN (${hostPlaceholders})
+     ORDER BY input_price_per_million ASC LIMIT 120`,
+  )
+    .bind(...hostNames)
+    .all<Record<string, unknown>>();
+  const hosted = hostedRows.results.map((row) => ({
+    modelExternalId: String(row.model_external_id),
+    modelTitle: String(row.model_title),
+    inputPricePerMillion: numberOrNull(row.input_price_per_million),
+    outputPricePerMillion: numberOrNull(row.output_price_per_million),
+    cachedInputPricePerMillion: numberOrNull(
+      row.cached_input_price_per_million,
+    ),
+    contextLength: numberOrNull(row.context_length),
+    quantization: row.quantization ? String(row.quantization) : null,
+    status: row.status ? String(row.status) : null,
+    verifiedAt: String(row.verified_at),
+  }));
+
+  return {
+    providerId,
+    providerName,
+    isAggregator: isAggregator(providerId),
+    rankingDate,
+    authored,
+    hosted,
+    links: {
+      models: provider.models_url ? String(provider.models_url) : null,
+      pricing: provider.pricing_url ? String(provider.pricing_url) : null,
+    },
+    note: authored.length
+      ? "El orden usa los rankings de uso real por categoría de OpenRouter. Los modelos sin posición no aparecieron en ninguna categoría en la última sincronización."
+      : "No hay modelos indexados para este proveedor. Ejecuta «Sincronizar modelos» para poblar el catálogo público.",
+  };
 }
 
 // ---------------------------------------------------------------------------

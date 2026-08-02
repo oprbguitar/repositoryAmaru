@@ -70,6 +70,18 @@ export function getModelOfferings(modelId: string) {
   );
 }
 
+export function getModelDetail(modelId: string) {
+  return read<import("../../../types/api").ModelDetail>(
+    `/api/models/detail?model=${encodeURIComponent(modelId)}`,
+  );
+}
+
+export function getProviderModels(providerId: string) {
+  return read<import("../../../types/api").ProviderModelsResponse>(
+    `/api/providers/${encodeURIComponent(providerId)}/models`,
+  );
+}
+
 export function getGithubRankings(view: string) {
   return read<import("../../../types/api").GithubRankingResponse>(
     `/api/github/rankings?view=${encodeURIComponent(view)}`,

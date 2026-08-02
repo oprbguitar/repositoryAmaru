@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 280" width="1200" height="280" role="img" aria-label="AMARU AI Observatory — local-first AI intelligence workspace">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#061426"/>
+      <stop offset="55%" stop-color="#0a1a2b"/>
+      <stop offset="100%" stop-color="#04101d"/>
+    </linearGradient>
+    <linearGradient id="ink" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#20c8d4"/>
+      <stop offset="50%" stop-color="#3fa8f5"/>
+      <stop offset="100%" stop-color="#9d7aea"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="0%" r="70%">
+      <stop offset="0%" stop-color="#20c8d4" stop-opacity=".26"/>
+      <stop offset="100%" stop-color="#20c8d4" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5"/>
+    </filter>
+    <path id="ridge" d="M0 214 L118 150 L196 196 L318 104 L430 186 L534 132 L648 200 L760 128 L878 190 L996 140 L1094 198 L1200 158"/>
+  </defs>
+
+  <rect width="1200" height="280" rx="18" fill="url(#sky)"/>
+  <rect width="1200" height="280" rx="18" fill="url(#glow)"/>
+
+  <!-- Star field -->
+  <g fill="#7fd6e6">
+    <circle cx="150" cy="52" r="1.5"><animate attributeName="opacity" values=".15;.9;.15" dur="4s" repeatCount="indefinite"/></circle>
+    <circle cx="420" cy="38" r="1.2"><animate attributeName="opacity" values=".8;.15;.8" dur="5.5s" repeatCount="indefinite"/></circle>
+    <circle cx="700" cy="60" r="1.6"><animate attributeName="opacity" values=".2;1;.2" dur="3.4s" repeatCount="indefinite"/></circle>
+    <circle cx="980" cy="44" r="1.3"><animate attributeName="opacity" values=".9;.2;.9" dur="4.8s" repeatCount="indefinite"/></circle>
+    <circle cx="1108" cy="76" r="1.1"><animate attributeName="opacity" values=".25;.85;.25" dur="6s" repeatCount="indefinite"/></circle>
+  </g>
+
+  <!-- Andes ridge: the AMARU silhouette -->
+  <use href="#ridge" stroke="#123a4e" stroke-width="10" fill="none" filter="url(#soft)" opacity=".7"/>
+  <use href="#ridge" stroke="url(#ink)" stroke-width="2.5" fill="none" stroke-linejoin="round"
+       stroke-dasharray="1600" stroke-dashoffset="1600">
+    <animate attributeName="stroke-dashoffset" from="1600" to="0" dur="3.2s" fill="freeze"/>
+  </use>
+
+  <!-- Data packets travelling the ridge -->
+  <g>
+    <circle r="4.5" fill="#20c8d4">
+      <animateMotion dur="7s" repeatCount="indefinite" begin="1s"><mpath href="#ridge"/></animateMotion>
+      <animate attributeName="opacity" values="0;1;1;0" dur="7s" repeatCount="indefinite" begin="1s"/>
+    </circle>
+    <circle r="3.5" fill="#2ed489">
+      <animateMotion dur="7s" repeatCount="indefinite" begin="3.4s"><mpath href="#ridge"/></animateMotion>
+      <animate attributeName="opacity" values="0;1;1;0" dur="7s" repeatCount="indefinite" begin="3.4s"/>
+    </circle>
+    <circle r="3" fill="#9d7aea">
+      <animateMotion dur="7s" repeatCount="indefinite" begin="5.6s"><mpath href="#ridge"/></animateMotion>
+      <animate attributeName="opacity" values="0;1;1;0" dur="7s" repeatCount="indefinite" begin="5.6s"/>
+    </circle>
+  </g>
+
+  <!-- Wordmark -->
+  <g font-family="Segoe UI, Inter, system-ui, sans-serif" text-anchor="middle">
+    <text x="600" y="112" font-size="54" font-weight="800" fill="#edf5fb" letter-spacing="7">
+      AMARU
+      <animate attributeName="opacity" from="0" to="1" dur="1.1s" fill="freeze"/>
+    </text>
+    <text x="600" y="146" font-size="17" font-weight="600" fill="#20c8d4" letter-spacing="5.5">
+      AI OBSERVATORY
+      <animate attributeName="opacity" from="0" to="1" dur="1.1s" begin=".5s" fill="freeze"/>
+    </text>
+    <text x="600" y="256" font-size="13.5" fill="#91a4b6" letter-spacing=".4">
+      Local-first · Cloudflare-native · every figure traceable to the source that published it
+      <animate attributeName="opacity" from="0" to="1" dur="1.2s" begin="1s" fill="freeze"/>
+    </text>
+  </g>
+</svg>

@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 470" width="1180" height="470" role="img" aria-label="AMARU synchronization pipeline: public sources, worker adapters, normalization, D1 storage and the React portal">
+  <defs>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#10263b"/>
+      <stop offset="100%" stop-color="#0a1a2b"/>
+    </linearGradient>
+    <marker id="tip" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#3fa8f5"/>
+    </marker>
+    <style>
+      .lbl  { font-family: Segoe UI, Inter, system-ui, sans-serif; fill: #edf5fb; font-size: 14px; font-weight: 700; }
+      .sub  { font-family: Segoe UI, Inter, system-ui, sans-serif; fill: #91a4b6; font-size: 11px; }
+      .step { font-family: Segoe UI, Inter, system-ui, sans-serif; fill: #20c8d4; font-size: 10.5px; font-weight: 800; letter-spacing: .12em; }
+      .wire { fill: none; stroke: #24485f; stroke-width: 2; marker-end: url(#tip); }
+      .box  { fill: url(#card); stroke: #20374a; stroke-width: 1.4; rx: 12; }
+    </style>
+  </defs>
+
+  <rect width="1180" height="470" rx="16" fill="#061426"/>
+
+  <!-- ============ Stage 1: sources ============ -->
+  <rect class="box" x="26" y="70" width="212" height="300"/>
+  <text class="step" x="42" y="98">01 · FUENTES PÚBLICAS</text>
+  <g class="sub">
+    <text x="42" y="128">OpenRouter · catálogo y rankings</text>
+    <text x="42" y="152">Hugging Face · modelos abiertos</text>
+    <text x="42" y="176">arXiv · OpenAlex · Crossref</text>
+    <text x="42" y="200">GitHub · repositorios</text>
+    <text x="42" y="224">OpenAI RSS · changelogs</text>
+    <text x="42" y="248">SEC EDGAR · XBRL</text>
+    <text x="42" y="272">BCRP · Frankfurter</text>
+    <text x="42" y="296">YouTube (clave opcional)</text>
+  </g>
+  <g>
+    <circle cx="34" cy="123" r="3" fill="#2ed489"><animate attributeName="opacity" values=".2;1;.2" dur="2.6s" repeatCount="indefinite"/></circle>
+    <circle cx="34" cy="171" r="3" fill="#2ed489"><animate attributeName="opacity" values=".2;1;.2" dur="2.6s" begin=".5s" repeatCount="indefinite"/></circle>
+    <circle cx="34" cy="219" r="3" fill="#2ed489"><animate attributeName="opacity" values=".2;1;.2" dur="2.6s" begin="1s" repeatCount="indefinite"/></circle>
+    <circle cx="34" cy="267" r="3" fill="#2ed489"><animate attributeName="opacity" values=".2;1;.2" dur="2.6s" begin="1.5s" repeatCount="indefinite"/></circle>
+  </g>
+  <text class="sub" x="42" y="340" fill="#657a8e">Sin clave → estado</text>
+  <text class="sub" x="42" y="356" fill="#f0b34f">«no configurado», nunca inventado</text>
+
+  <!-- ============ Stage 2: worker ============ -->
+  <rect class="box" x="292" y="70" width="228" height="300"/>
+  <text class="step" x="308" y="98">02 · WORKER (workerd)</text>
+  <g class="lbl" font-size="12.5">
+    <text x="308" y="130">runAdapter()</text>
+    <text x="308" y="176">Zod · validación</text>
+    <text x="308" y="222">normalizers.ts</text>
+    <text x="308" y="268">procedencia + hash</text>
+    <text x="308" y="314">deriveCapabilityTags()</text>
+  </g>
+  <g class="sub">
+    <text x="308" y="147">HTTP con timeout y user-agent</text>
+    <text x="308" y="193">rechaza payloads fuera de esquema</text>
+    <text x="308" y="239">forma canónica por tipo de registro</text>
+    <text x="308" y="285">fuente, fecha, confianza, licencia</text>
+    <text x="308" y="331">etiquetas con evidencia citable</text>
+  </g>
+  <rect x="296" y="112" width="4" height="228" rx="2" fill="#20c8d4" opacity=".28"/>
+  <rect x="296" y="112" width="4" height="46" rx="2" fill="#20c8d4">
+    <animate attributeName="y" values="112;158;204;250;296;112" dur="5s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- ============ Stage 3: storage ============ -->
+  <rect class="box" x="574" y="70" width="196" height="300"/>
+  <text class="step" x="590" y="98">03 · ESTADO LOCAL</text>
+  <g>
+    <ellipse cx="672" cy="146" rx="52" ry="13" fill="#0d2033" stroke="#2ed489" stroke-width="1.4"/>
+    <path d="M620 146 v34 a52 13 0 0 0 104 0 v-34" fill="#0d2033" stroke="#2ed489" stroke-width="1.4"/>
+    <text class="lbl" x="672" y="172" text-anchor="middle" font-size="12">D1</text>
+    <text class="sub" x="672" y="206" text-anchor="middle">registros · rankings · ofertas</text>
+  </g>
+  <g>
+    <rect x="620" y="230" width="104" height="42" rx="9" fill="#0d2033" stroke="#3fa8f5" stroke-width="1.4"/>
+    <text class="lbl" x="672" y="250" text-anchor="middle" font-size="12">KV</text>
+    <text class="sub" x="672" y="264" text-anchor="middle">caché y análisis</text>
+  </g>
+  <g>
+    <rect x="620" y="290" width="104" height="42" rx="9" fill="#0d2033" stroke="#9d7aea" stroke-width="1.4"/>
+    <text class="lbl" x="672" y="310" text-anchor="middle" font-size="12">R2</text>
+    <text class="sub" x="672" y="324" text-anchor="middle">documentos locales</text>
+  </g>
+  <text class="sub" x="672" y="356" text-anchor="middle" fill="#657a8e">.wrangler/state — nunca se borra solo</text>
+
+  <!-- ============ Stage 4: UI ============ -->
+  <rect class="box" x="824" y="70" width="330" height="300"/>
+  <text class="step" x="840" y="98">04 · PORTAL REACT</text>
+  <g class="sub">
+    <text x="840" y="128">Hoy · Proveedores · Modelos</text>
+    <text x="840" y="152">Noticias · Investigación · GitHub</text>
+    <text x="840" y="176">Mapa · Mercado · Videos</text>
+    <text x="840" y="200">Laboratorio de APIs · Biblioteca local</text>
+  </g>
+  <rect x="840" y="222" width="298" height="128" rx="10" fill="#0d2033" stroke="#20374a"/>
+  <text class="step" x="856" y="246" fill="#f0b34f">CADA CIFRA MUESTRA</text>
+  <g class="sub">
+    <text x="856" y="270">· la fuente que la publicó</text>
+    <text x="856" y="292">· la fecha de verificación</text>
+    <text x="856" y="314">· la metodología del ranking</text>
+    <text x="856" y="336">· o un estado vacío honesto</text>
+  </g>
+
+  <!-- ============ Wires + packets ============ -->
+  <path id="w1" class="wire" d="M238 220 H292"/>
+  <path id="w2" class="wire" d="M520 220 H574"/>
+  <path id="w3" class="wire" d="M770 220 H824"/>
+  <g>
+    <circle r="4" fill="#20c8d4"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#w1"/></animateMotion></circle>
+    <circle r="4" fill="#2ed489"><animateMotion dur="1.5s" begin=".5s" repeatCount="indefinite"><mpath href="#w2"/></animateMotion></circle>
+    <circle r="4" fill="#3fa8f5"><animateMotion dur="1.5s" begin="1s" repeatCount="indefinite"><mpath href="#w3"/></animateMotion></circle>
+  </g>
+
+  <!-- Feedback loop: UI sync buttons trigger a fresh run -->
+  <path id="loop" d="M989 370 V410 H140 V370" class="wire" stroke="#f0b34f" stroke-dasharray="7 6"/>
+  <text class="sub" x="565" y="432" text-anchor="middle" fill="#f0b34f">
+    «Actualizar noticias» / «Actualizar investigación» / «Sincronizar modelos» → POST /api/sync
+  </text>
+  <circle r="3.6" fill="#f0b34f">
+    <animateMotion dur="3.4s" repeatCount="indefinite"><mpath href="#loop"/></animateMotion>
+  </circle>
+</svg>
