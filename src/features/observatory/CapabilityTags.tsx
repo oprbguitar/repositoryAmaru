@@ -23,16 +23,21 @@ export function CapabilityChips({
   onSelect,
   activeTagId,
   compact = false,
+  max,
 }: {
   tags: CapabilityTag[];
   onSelect?: (tag: CapabilityTag) => void;
   activeTagId?: string | null;
   compact?: boolean;
+  /** Caps the inline list in dense contexts; the rest are summarised as "+N". */
+  max?: number;
 }) {
   if (!tags.length) return null;
+  const shown = typeof max === "number" ? tags.slice(0, max) : tags;
+  const hidden = tags.length - shown.length;
   return (
     <ul className={`capability-chips${compact ? " compact" : ""}`}>
-      {tags.map((tag) => (
+      {shown.map((tag) => (
         <li key={tag.id}>
           {onSelect ? (
             <button
@@ -56,6 +61,19 @@ export function CapabilityChips({
           )}
         </li>
       ))}
+      {hidden > 0 ? (
+        <li>
+          <span
+            className="capability-chip capability-chip-more"
+            title={tags
+              .slice(shown.length)
+              .map((tag) => tag.label)
+              .join(" · ")}
+          >
+            +{hidden}
+          </span>
+        </li>
+      ) : null}
     </ul>
   );
 }

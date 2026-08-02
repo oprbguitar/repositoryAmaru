@@ -8,7 +8,11 @@
       "!.wrangler",
       "!coverage",
       "!local-library-export",
-      "!worker-configuration.d.ts"
+      "!worker-configuration.d.ts",
+      "!test-results",
+      "!playwright-report",
+      "!developer-lab-test-output",
+      "!docs/ui-redesign"
     ]
   },
   "formatter": {

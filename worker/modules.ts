@@ -1165,6 +1165,61 @@ const GITHUB_TOPIC_VIEWS: Record<string, string[]> = {
   ],
 };
 
+/**
+ * Median catalogue input price per million tokens, one point per ranking date.
+ *
+ * The series is built strictly from `model_rankings` rows that were actually
+ * stored on each synchronization, so it starts empty and grows as syncs
+ * accumulate. Earlier values are never back-filled or simulated: with fewer
+ * than two dates the endpoint reports that a trend is not available yet.
+ */
+export async function getPriceHistory(env: ModulesEnv) {
+  const rows = await env.DB.prepare(
+    `SELECT ranking_date, score FROM model_rankings
+     WHERE ranking_type = 'pricing-low' AND score IS NOT NULL
+     ORDER BY ranking_date ASC`,
+  ).all<Record<string, unknown>>();
+
+  const byDate = new Map<string, number[]>();
+  for (const row of rows.results) {
+    const date = String(row.ranking_date);
+    const score = Number(row.score);
+    if (!Number.isFinite(score)) continue;
+    const list = byDate.get(date) ?? [];
+    list.push(score);
+    byDate.set(date, list);
+  }
+
+  const points = [...byDate.entries()]
+    .map(([date, values]) => {
+      const sorted = [...values].sort((left, right) => left - right);
+      const middle = Math.floor(sorted.length / 2);
+      const median =
+        sorted.length % 2 === 0
+          ? (sorted[middle - 1] + sorted[middle]) / 2
+          : sorted[middle];
+      return {
+        date,
+        medianInputPerMillion: Math.round(median * 10000) / 10000,
+        minInputPerMillion: sorted[0],
+        maxInputPerMillion: sorted[sorted.length - 1],
+        sampleSize: sorted.length,
+      };
+    })
+    .sort((left, right) => left.date.localeCompare(right.date));
+
+  return {
+    points,
+    available: points.length >= 2,
+    reason:
+      points.length >= 2
+        ? null
+        : "El histórico se construye con cada sincronización. Todavía no hay dos fechas distintas de ranking, y no se simulan valores anteriores.",
+    methodology:
+      "Mediana del precio de entrada por millón de tokens sobre el ranking «pricing-low» de OpenRouter, agrupada por fecha de sincronización.",
+  };
+}
+
 export async function getGithubRankings(env: ModulesEnv, view: string) {
   const baseSelect = `
     SELECT r.id, r.title, r.summary, r.original_url, r.published_at, r.source_name, r.retrieved_at, r.data_json

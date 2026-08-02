@@ -31,6 +31,7 @@ import {
   getModelDetail,
   getModelOfferings,
   getModelRankings,
+  getPriceHistory,
   getProviderModels,
   getRegionalMap,
   listLaboratoryProjects,
@@ -1178,6 +1179,15 @@ async function moduleRouter(
         providerId: detail.providerId,
         sourceStatus:
           detail.authored.length || detail.hosted.length ? "ready" : "empty",
+      }),
+    );
+  }
+  if (request.method === "GET" && path === "/api/dashboard/price-history") {
+    const history = await getPriceHistory(env);
+    return json(
+      envelope(history, {
+        sourceStatus: history.available ? "ready" : "empty",
+        total: history.points.length,
       }),
     );
   }

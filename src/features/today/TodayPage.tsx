@@ -3,18 +3,34 @@ import {
   Activity,
   Archive,
   ArrowRight,
+  Beaker,
   BookOpen,
   Bot,
+  Building2,
   Database,
   GitFork,
+  Globe2,
+  Landmark,
+  LayoutGrid,
   Newspaper,
   Radar,
+  ServerCog,
   ShieldCheck,
+  TrendingDown,
 } from "lucide-react";
+import type React from "react";
 import { Link } from "react-router-dom";
 import type { ApiResponse, LibraryStats } from "../../../types/api";
-import { getDashboard, getSources } from "../observatory/api";
-import { formatDate, verificationLabel } from "../observatory/format";
+import { useT } from "../../i18n/LanguageProvider";
+import {
+  getDashboard,
+  getGlobalMap,
+  getLiveEvents,
+  getPriceHistory,
+  getSources,
+} from "../observatory/api";
+import { formatDate, formatNumber } from "../observatory/format";
+import { PriceTrend } from "./PriceTrend";
 
 async function getStatus(): Promise<ApiResponse<LibraryStats>> {
   const response = await fetch("/api/status");
@@ -23,6 +39,7 @@ async function getStatus(): Promise<ApiResponse<LibraryStats>> {
 }
 
 export function TodayPage() {
+  const t = useT();
   const status = useQuery({ queryKey: ["status"], queryFn: getStatus });
   const dashboard = useQuery({
     queryKey: ["dashboard"],
@@ -34,190 +51,334 @@ export function TodayPage() {
     queryFn: getSources,
     refetchInterval: 60_000,
   });
+  const priceHistory = useQuery({
+    queryKey: ["price-history"],
+    queryFn: getPriceHistory,
+  });
+  const map = useQuery({ queryKey: ["map", "global"], queryFn: getGlobalMap });
+  const events = useQuery({
+    queryKey: ["live-events"],
+    queryFn: getLiveEvents,
+    refetchInterval: 60_000,
+  });
+
   const library = status.data?.data;
   const stats = dashboard.data?.data;
   const sourceItems = sources.data?.data ?? [];
   const connected = sourceItems.filter(
     (source) => source.status === "connected",
   );
+  const countries = (map.data?.data.countries ?? [])
+    .filter((country) => country.models > 0)
+    .sort((left, right) => right.models - left.models)
+    .slice(0, 10);
+  const maxModels = countries[0]?.models ?? 0;
+  const healthy =
+    (stats?.failedSources ?? 0) === 0 && (stats?.staleSources ?? 0) === 0;
+
+  const modules = [
+    {
+      to: "/providers",
+      icon: Building2,
+      accent: "#2ec7d4",
+      label: t("nav.providers"),
+      value: stats?.providers ?? 0,
+      hint: "Directorio oficial",
+    },
+    {
+      to: "/models",
+      icon: Bot,
+      accent: "#9d7aea",
+      label: t("nav.models"),
+      value: stats?.models ?? 0,
+      hint: "Registros sincronizados",
+    },
+    {
+      to: "/developer-lab",
+      icon: ServerCog,
+      accent: "#58b0f7",
+      label: t("nav.developerLab"),
+      value: sourceItems.length,
+      hint: "Fuentes registradas",
+    },
+    {
+      to: "/research",
+      icon: BookOpen,
+      accent: "#4d8ef7",
+      label: t("nav.research"),
+      value: stats?.papers ?? 0,
+      hint: "Metadatos reales",
+    },
+    {
+      to: "/github",
+      icon: GitFork,
+      accent: "#3ad894",
+      label: t("nav.github"),
+      value: stats?.repositories ?? 0,
+      hint: "Repositorios REST",
+    },
+    {
+      to: "/news",
+      icon: Newspaper,
+      accent: "#f2b754",
+      label: t("nav.news"),
+      value: stats?.news ?? 0,
+      hint: "Fuentes oficiales",
+    },
+    {
+      to: "/local-library",
+      icon: Archive,
+      accent: "#2ec7d4",
+      label: t("nav.localLibrary"),
+      value: library?.processed ?? 0,
+      hint: "Archivos locales",
+    },
+    {
+      to: "/laboratory",
+      icon: Beaker,
+      accent: "#f4728f",
+      label: t("nav.laboratory"),
+      value: stats?.economicIndicators ?? 0,
+      hint: "Indicadores indexados",
+    },
+  ];
+
   return (
-    <div className="module-layout today-layout">
-      <section className="module-main scroll-region">
-        <header className="page-heading">
-          <div>
-            <h1>
-              <Radar /> Hoy
-            </h1>
-            <p>
-              Resumen verificable del observatorio local conectado a internet
-            </p>
-          </div>
-          <Link className="secondary-button compact" to="/admin/sources">
-            Sincronizar fuentes
-          </Link>
-        </header>
-        <div className="status-banner">
-          <span className="status-beacon">
-            <Activity />
-          </span>
-          <div>
-            <strong>
-              AMARU funciona localmente con datos externos trazables
-            </strong>
-            <p>
-              D1, KV y R2 permanecen locales; las solicitudes públicas se
-              ejecutan en el Worker y conservan la última copia válida.
-            </p>
-          </div>
-          <span className="state-badge verified">
-            <ShieldCheck /> Sin datos de demostración
-          </span>
+    <div className="today-page scroll-region">
+      <header className="page-heading">
+        <div>
+          <h1>
+            <Radar /> {t("today.title")}
+          </h1>
+          <p>{t("today.subtitle")}</p>
         </div>
+        <Link className="secondary-button compact" to="/admin/sources">
+          {t("today.sync")}
+        </Link>
+      </header>
 
-        <div className="stat-grid dashboard-stats">
-          <Link to="/providers" className="panel">
-            <Database />
-            <span>Proveedores</span>
-            <strong>{stats?.providers ?? 0}</strong>
-            <small>directorio oficial</small>
-          </Link>
-          <Link to="/models" className="panel">
-            <Bot />
-            <span>Modelos</span>
-            <strong>{stats?.models ?? 0}</strong>
-            <small>registros sincronizados</small>
-          </Link>
-          <Link to="/research" className="panel">
-            <BookOpen />
-            <span>Investigaciones</span>
-            <strong>{stats?.papers ?? 0}</strong>
-            <small>metadatos reales</small>
-          </Link>
-          <Link to="/github" className="panel">
-            <GitFork />
-            <span>Repositorios</span>
-            <strong>{stats?.repositories ?? 0}</strong>
-            <small>GitHub REST</small>
-          </Link>
-          <Link to="/news" className="panel">
-            <Newspaper />
-            <span>Noticias</span>
-            <strong>{stats?.news ?? 0}</strong>
-            <small>fuentes oficiales</small>
-          </Link>
-          <Link to="/local-library" className="panel">
-            <Archive />
-            <span>Biblioteca</span>
-            <strong>{library?.processed ?? 0}</strong>
-            <small>archivos locales</small>
-          </Link>
+      <div className="status-banner">
+        <span className="status-beacon">
+          <Activity />
+        </span>
+        <div>
+          <strong>
+            AMARU funciona localmente con datos externos trazables
+          </strong>
+          <p>
+            D1, KV y R2 permanecen locales; las solicitudes públicas se ejecutan
+            en el Worker y conservan la última copia válida.
+          </p>
         </div>
+        <span className="state-badge verified">
+          <ShieldCheck /> Sin datos de demostración
+        </span>
+      </div>
 
-        <div className="today-grid real-today-grid">
-          <section className="panel record-list dashboard-recent">
-            <div className="panel-heading">
-              <h2>Detecciones recientes</h2>
-              <span>{stats?.recent.length ?? 0} registros</span>
-            </div>
-            {stats?.recent.length ? (
-              stats.recent.slice(0, 8).map((record) => (
-                <article key={record.id}>
-                  <div className="record-source">
-                    <span>{record.sourceName}</span>
-                    <span
-                      className={`state-badge ${record.verificationStatus === "verified" ? "verified" : "provisional"}`}
-                    >
-                      {verificationLabel(record)}
-                    </span>
-                  </div>
-                  <h2>{record.title}</h2>
-                  <div className="record-meta">
-                    <span>Publicado: {formatDate(record.publishedAt)}</span>
-                    <span>Recuperado: {formatDate(record.retrievedAt)}</span>
-                    <a
-                      href={record.originalUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Fuente original
-                    </a>
-                  </div>
-                </article>
-              ))
-            ) : (
-              <div className="honest-empty">
-                <h2>Aún no hay registros externos</h2>
-                <p>
-                  La primera sincronización pública se encola al iniciar.
-                  También puedes ejecutarla desde Administración.
-                </p>
-              </div>
-            )}
-          </section>
-          <section className="panel module-state-list">
-            <div className="panel-heading">
-              <h2>Salud de fuentes</h2>
-              <Link to="/admin/sources">Ver todas</Link>
-            </div>
-            {sourceItems.slice(0, 8).map((source) => (
-              <article key={source.id}>
-                <span
-                  className={`source-health-dot ${source.status === "connected" ? "ok" : source.status === "failed" ? "error" : "warn"}`}
-                />
-                <div>
-                  <strong>{source.name}</strong>
-                  <small>
-                    {source.lastSuccessAt
-                      ? `Éxito ${formatDate(source.lastSuccessAt)}`
-                      : source.credentialConfigured
-                        ? "Pendiente de primera sincronización"
-                        : `Falta ${source.secretBindingName}`}
-                  </small>
-                </div>
-                <span
-                  className={`state-badge ${source.status === "connected" ? "verified" : "provisional"}`}
-                >
-                  {source.status}
+      {/* --- Modules ------------------------------------------------------ */}
+      <section className="panel today-section">
+        <div className="panel-heading">
+          <h2>
+            <LayoutGrid /> {t("today.modules")}
+          </h2>
+        </div>
+        <div className="module-grid">
+          {modules.map((module) => {
+            const Icon = module.icon;
+            return (
+              <Link
+                key={module.to}
+                to={module.to}
+                className="module-tile"
+                style={
+                  { "--tile-accent": module.accent } as React.CSSProperties
+                }
+              >
+                <span className="module-tile-head">
+                  <Icon />
+                  <span>{module.label}</span>
                 </span>
-              </article>
-            ))}
-            <Link className="panel-link" to="/admin/sources">
-              {connected.length} conectadas · revisar integraciones{" "}
-              <ArrowRight />
-            </Link>
-          </section>
+                <strong>{formatNumber(module.value)}</strong>
+                <span className="module-tile-foot">
+                  <small>{module.hint}</small>
+                  <ArrowRight />
+                </span>
+              </Link>
+            );
+          })}
         </div>
       </section>
-      <aside className="context-panel scroll-region">
-        <div className="context-title">
-          <Database />
-          <strong>Información contextual</strong>
-        </div>
-        <section>
-          <h3>Última sincronización</h3>
-          <p>{formatDate(stats?.lastSuccessfulSyncAt)}</p>
+
+      {/* --- Trend + countries -------------------------------------------- */}
+      <div className="today-columns">
+        <section className="panel today-section">
+          <div className="panel-heading">
+            <div>
+              <h2>
+                <TrendingDown /> {t("today.priceTrend")}
+              </h2>
+              <span>{t("today.priceTrendHint")}</span>
+            </div>
+          </div>
+          <div className="today-section-body">
+            <PriceTrend
+              history={priceHistory.data?.data}
+              emptyLabel={t("today.noSeries")}
+            />
+          </div>
         </section>
-        <section>
-          <h3>Estado</h3>
-          <dl className="context-facts">
-            <dt>Fuentes conectadas</dt>
-            <dd>{connected.length}</dd>
-            <dt>Fuentes fallidas</dt>
-            <dd>{stats?.failedSources ?? 0}</dd>
-            <dt>Requieren credencial</dt>
-            <dd>{stats?.sourcesRequiringCredentials ?? 0}</dd>
-            <dt>Desactualizadas</dt>
-            <dd>{stats?.staleSources ?? 0}</dd>
-          </dl>
+
+        <section className="panel today-section">
+          <div className="panel-heading">
+            <div>
+              <h2>
+                <Globe2 /> {t("today.modelsByCountry")}
+              </h2>
+              <span>{t("today.modelsByCountryHint")}</span>
+            </div>
+            <Link to="/map">{t("common.viewAll")}</Link>
+          </div>
+          <div className="today-section-body">
+            {countries.length ? (
+              <ol className="country-bars">
+                {countries.map((country, index) => (
+                  <li key={country.countryCode}>
+                    <span className="country-rank">{index + 1}</span>
+                    <span className="country-name">{country.countryName}</span>
+                    <span className="country-track">
+                      <span
+                        className="country-fill"
+                        style={{
+                          width: `${maxModels ? (country.models / maxModels) * 100 : 0}%`,
+                        }}
+                      />
+                    </span>
+                    <span className="country-value">
+                      {formatNumber(country.models)}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <div className="honest-empty compact-empty">
+                <p>{t("today.noCountries")}</p>
+              </div>
+            )}
+          </div>
         </section>
-        <section>
-          <h3>Fuentes</h3>
-          <p>
-            Todos los registros recientes enlazan su fuente original. Los
-            agregados provienen de consultas D1, no de colecciones del frontend.
-          </p>
+      </div>
+
+      {/* --- Health + activity + quick links ------------------------------ */}
+      <div className="today-columns three">
+        <section className="panel today-section">
+          <div className="panel-heading">
+            <h2>
+              <ShieldCheck /> {t("today.systemHealth")}
+            </h2>
+          </div>
+          <div className="today-section-body">
+            <div className="health-grid">
+              <div>
+                <small>{t("today.connected")}</small>
+                <strong className="delta-down">
+                  {connected.length}/{sourceItems.length}
+                </strong>
+              </div>
+              <div>
+                <small>{t("today.failed")}</small>
+                <strong
+                  className={
+                    (stats?.failedSources ?? 0) > 0 ? "delta-up" : undefined
+                  }
+                >
+                  {stats?.failedSources ?? 0}
+                </strong>
+              </div>
+              <div>
+                <small>{t("today.stale")}</small>
+                <strong>{stats?.staleSources ?? 0}</strong>
+              </div>
+              <div>
+                <small>{t("today.overall")}</small>
+                <strong className={healthy ? "delta-down" : undefined}>
+                  {healthy ? "Óptimo" : "Con incidencias"}
+                </strong>
+              </div>
+            </div>
+            <Link className="panel-link" to="/admin/sources">
+              {t("shell.configureIntegrations")} <ArrowRight />
+            </Link>
+          </div>
         </section>
-      </aside>
+
+        <section className="panel today-section">
+          <div className="panel-heading">
+            <h2>
+              <Activity /> {t("today.recentActivity")}
+            </h2>
+          </div>
+          <div className="today-section-body">
+            {events.data?.data.length ? (
+              <ul className="activity-list">
+                {events.data.data.slice(0, 6).map((event) => (
+                  <li key={event.id}>
+                    <Link to={event.targetPath}>
+                      <span className="activity-title">{event.title}</span>
+                      <span className="activity-meta">
+                        {event.sourceName} · {formatDate(event.eventAt)}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="honest-empty compact-empty">
+                <p>{t("today.noActivity")}</p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="panel today-section">
+          <div className="panel-heading">
+            <h2>
+              <Database /> {t("today.quickLinks")}
+            </h2>
+          </div>
+          <div className="today-section-body">
+            <div className="quick-links">
+              <Link to="/developer-lab">
+                <ServerCog />
+                <span>
+                  <strong>{t("nav.developerLab")}</strong>
+                  <small>Probar proveedores</small>
+                </span>
+              </Link>
+              <Link to="/research">
+                <BookOpen />
+                <span>
+                  <strong>{t("nav.research")}</strong>
+                  <small>Explorar estudios</small>
+                </span>
+              </Link>
+              <Link to="/markets">
+                <Landmark />
+                <span>
+                  <strong>{t("nav.markets")}</strong>
+                  <small>Precios y tendencias</small>
+                </span>
+              </Link>
+              <Link to="/map">
+                <Globe2 />
+                <span>
+                  <strong>{t("nav.map")}</strong>
+                  <small>Cobertura por país</small>
+                </span>
+              </Link>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

@@ -87,7 +87,11 @@ export function ProviderDetail({
                       </td>
                       <td>{model.usageRank?.category}</td>
                       <td>
-                        <CapabilityChips tags={model.capabilities} compact />
+                        <CapabilityChips
+                          tags={model.capabilities}
+                          compact
+                          max={3}
+                        />
                       </td>
                       <td>
                         {model.contextLength
