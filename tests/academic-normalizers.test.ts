@@ -168,19 +168,28 @@ describe("Semantic Scholar", () => {
 });
 
 describe("CORE", () => {
-  it("usa el enlace de descarga y el idioma declarado", () => {
+  it("acepta el identificador numérico y enlaza a la página estable de la obra", () => {
     const records = normalizeCore(
       {
         results: [
           {
-            id: "99",
+            // CORE numera sus obras: el id llega como número, no como cadena.
+            id: 154565414,
             title: "Open access study on LLM safety",
             abstract: null,
             authors: [{ name: "A. Author" }],
             publishedDate: "2026-01-15T00:00:00",
             yearPublished: 2026,
             doi: "10.5555/y",
-            downloadUrl: "https://core.ac.uk/download/99.pdf",
+            downloadUrl: "https://core.ac.uk/download/482295825.pdf",
+            links: [
+              {
+                type: "download",
+                url: "https://core.ac.uk/download/482295825.pdf",
+              },
+              { type: "display", url: "https://core.ac.uk/works/154565414" },
+            ],
+            sourceFulltextUrls: ["https://repo.example.org/paper.pdf"],
             language: { code: "en" },
             documentType: "research",
           },
@@ -188,10 +197,29 @@ describe("CORE", () => {
       },
       now,
     );
-    expect(records[0].originalUrl).toBe("https://core.ac.uk/download/99.pdf");
+    expect(records).toHaveLength(1);
+    expect(records[0].externalId).toBe("154565414");
+    // El enlace de descarga caduca («BlobNotFound»): no puede ser el principal.
+    expect(records[0].originalUrl).toBe("https://core.ac.uk/works/154565414");
+    expect(records[0].data.pdfUrl).toBe(
+      "https://core.ac.uk/download/482295825.pdf",
+    );
+    expect(records[0].data.repositoryUrl).toBe(
+      "https://repo.example.org/paper.pdf",
+    );
+    expect(records[0].data.doiUrl).toBe("https://doi.org/10.5555/y");
     expect(records[0].language).toBe("en");
     expect(records[0].data.openAccess).toBe(true);
     expect(records[0].summary).toBeNull();
+  });
+
+  it("construye la página de la obra cuando la fuente no envía links", () => {
+    const records = normalizeCore(
+      { results: [{ id: 445762, title: "Sin links" }] },
+      now,
+    );
+    expect(records[0].originalUrl).toBe("https://core.ac.uk/works/445762");
+    expect(records[0].data.pdfUrl).toBeNull();
   });
 });
 

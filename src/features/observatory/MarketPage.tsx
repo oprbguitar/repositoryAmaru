@@ -7,6 +7,7 @@ import {
   ExternalLink,
   FileText,
   Landmark,
+  LineChart,
   Timer,
   TrendingDown,
   TrendingUp,
@@ -124,6 +125,23 @@ export function MarketPage() {
   );
   const fxBcrp = items.filter((record) => record.sourceId === "bcrp");
   const filings = items.filter((record) => record.recordKind === "filing");
+  /** Última observación publicada de cada serie macro de FRED. */
+  const macroSeries = useMemo(() => {
+    const latest = new Map<string, ObservatoryRecord>();
+    for (const record of items) {
+      if (record.data.indicatorType !== "macro_series") continue;
+      const seriesId = text(record.data.seriesId);
+      if (!seriesId) continue;
+      const current = latest.get(seriesId);
+      if (
+        !current ||
+        String(record.data.referenceDate ?? "") >
+          String(current.data.referenceDate ?? "")
+      )
+        latest.set(seriesId, record);
+    }
+    return [...latest.values()];
+  }, [items]);
   const chosen = selected ?? fundamentals[0] ?? fxBcrp[0] ?? filings[0] ?? null;
 
   const companies = useMemo(
@@ -451,6 +469,49 @@ export function MarketPage() {
           )}
         </section>
 
+        <section className="panel">
+          <div className="panel-heading">
+            <h2>
+              <LineChart className="inline-icon" /> Series macroeconómicas
+            </h2>
+            <span>FRED · última observación publicada</span>
+          </div>
+          {macroSeries.length ? (
+            <div className="macro-grid">
+              {macroSeries.map((record) => (
+                <button
+                  type="button"
+                  key={record.id}
+                  className={`macro-card${chosen?.id === record.id ? " selected" : ""}`}
+                  onClick={() => setSelected(record)}
+                >
+                  <span>{text(record.data.seriesTitle) ?? record.title}</span>
+                  <strong>
+                    {typeof record.data.value === "number"
+                      ? record.data.value.toLocaleString("es-PE", {
+                          maximumFractionDigits: 2,
+                        })
+                      : missing}
+                  </strong>
+                  <small>{text(record.data.unit) ?? ""}</small>
+                  <small className="macro-card-date">
+                    {formatDate(text(record.data.referenceDate))}
+                  </small>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="honest-empty">
+              <p>
+                Sin series de FRED indexadas. Configura FRED_API_KEY en
+                Configuración › Integraciones y ejecuta «Sincronizar mercado».
+              </p>
+            </div>
+          )}
+        </section>
+      </div>
+
+      <div className="market-chart-grid">
         <section className="panel record-list">
           <div className="panel-heading">
             <h2>

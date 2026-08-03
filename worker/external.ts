@@ -6,6 +6,12 @@ import {
   normalizeSemanticScholar,
 } from "../lib/external/academic";
 import {
+  type FredSeries,
+  normalizeFred,
+  normalizeGuardian,
+  normalizeNewsApi,
+} from "../lib/external/news-and-series";
+import {
   normalizeArxivXml,
   normalizeBcrp,
   normalizeCrossref,
@@ -49,6 +55,9 @@ export type ExternalEnv = {
   FINNHUB_API_KEY?: string;
   SEMANTIC_SCHOLAR_API_KEY?: string;
   CORE_API_KEY?: string;
+  GUARDIAN_API_KEY?: string;
+  NEWSAPI_API_KEY?: string;
+  FRED_API_KEY?: string;
 };
 
 export type SourceRow = {
@@ -109,6 +118,9 @@ const CREDENTIALED_MODULE_SOURCE_IDS = [
   "finnhub",
   "semantic-scholar",
   "core",
+  "guardian",
+  "newsapi",
+  "fred",
 ] as const;
 
 const USER_AGENT =
@@ -426,6 +438,134 @@ async function coreAdapter(
   });
 }
 
+/** Consultas de prensa: una general y dos específicas del sector. */
+const NEWS_QUERIES = [
+  '"artificial intelligence"',
+  '"large language model" OR "generative AI"',
+  '"inteligencia artificial"',
+] as const;
+
+async function guardianAdapter(
+  now: string,
+  env: ExternalEnv,
+): Promise<AdapterResult> {
+  return runAcademicQueries(NEWS_QUERIES, async (term) => {
+    const query = new URL("https://content.guardianapis.com/search");
+    query.searchParams.set("q", term);
+    query.searchParams.set("page-size", "25");
+    query.searchParams.set("order-by", "newest");
+    query.searchParams.set("show-fields", "trailText,byline");
+    query.searchParams.set("api-key", env.GUARDIAN_API_KEY ?? "");
+    const response = await getResponse(query.toString());
+    return {
+      records: normalizeGuardian(await response.json(), now),
+      status: response.status,
+      remaining: rateLimit(response.headers),
+    };
+  });
+}
+
+async function newsApiAdapter(
+  now: string,
+  env: ExternalEnv,
+): Promise<AdapterResult> {
+  return runAcademicQueries(NEWS_QUERIES, async (term) => {
+    const query = new URL("https://newsapi.org/v2/everything");
+    query.searchParams.set("q", term);
+    query.searchParams.set("pageSize", "25");
+    query.searchParams.set("sortBy", "publishedAt");
+    // La clave viaja en cabecera, no en la URL.
+    const response = await fetch(query.toString(), {
+      headers: {
+        accept: "application/json",
+        "user-agent": USER_AGENT,
+        "x-api-key": env.NEWSAPI_API_KEY ?? "",
+      },
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!response.ok)
+      throw new SourceHttpError(
+        `La fuente respondió HTTP ${response.status}.`,
+        response.status,
+        rateLimit(response.headers),
+      );
+    return {
+      records: normalizeNewsApi(await response.json(), now),
+      status: response.status,
+      remaining: rateLimit(response.headers),
+    };
+  });
+}
+
+/**
+ * Series macroeconómicas que enmarcan el gasto en IA: tipo de interés, precios,
+ * producto y el índice tecnológico de referencia. Los identificadores son los
+ * oficiales de FRED y se verifican contra la API antes de publicarse aquí.
+ */
+const FRED_SERIES: FredSeries[] = [
+  {
+    id: "FEDFUNDS",
+    title: "Tasa de fondos federales",
+    unit: "%",
+    note: "Tasa efectiva de fondos federales publicada por la Reserva Federal; marca el costo del capital que financia la inversión en centros de datos.",
+  },
+  {
+    id: "NASDAQCOM",
+    title: "Índice NASDAQ Composite",
+    unit: "Índice (5 feb. 1971 = 100)",
+    note: "Cierre diario del NASDAQ Composite, donde cotizan la mayoría de las empresas de IA rastreadas en este módulo.",
+  },
+  {
+    id: "CPIAUCSL",
+    title: "Índice de precios al consumidor (EE. UU.)",
+    unit: "Índice (1982-1984 = 100)",
+    note: "IPC de todos los artículos en zonas urbanas de Estados Unidos; contexto de precios para comparar costos en dólares corrientes.",
+  },
+  {
+    id: "GDP",
+    title: "Producto interno bruto (EE. UU.)",
+    unit: "Miles de millones de USD",
+    note: "PIB nominal trimestral publicado por la Oficina de Análisis Económico.",
+  },
+];
+
+async function fredAdapter(
+  now: string,
+  env: ExternalEnv,
+): Promise<AdapterResult> {
+  const records: NormalizedExternalRecord[] = [];
+  const failures: string[] = [];
+  let lastStatus = 200;
+  for (const series of FRED_SERIES) {
+    try {
+      const query = new URL(
+        "https://api.stlouisfed.org/fred/series/observations",
+      );
+      query.searchParams.set("series_id", series.id);
+      query.searchParams.set("file_type", "json");
+      query.searchParams.set("sort_order", "desc");
+      query.searchParams.set("limit", "24");
+      query.searchParams.set("api_key", env.FRED_API_KEY ?? "");
+      const response = await getResponse(query.toString());
+      lastStatus = response.status;
+      records.push(...normalizeFred(await response.json(), series, now));
+    } catch (error) {
+      failures.push(
+        `${series.id}: ${error instanceof Error ? error.message : "fallo"}`,
+      );
+      if (error instanceof SourceHttpError) lastStatus = error.status;
+    }
+  }
+  if (!records.length)
+    throw new SourceHttpError(
+      failures.join("; ").slice(0, 400) ||
+        "FRED no devolvió observaciones para ninguna serie.",
+      lastStatus,
+      null,
+    );
+  return { records, httpStatus: 200, rateLimitRemaining: null };
+}
+
 async function githubAdapter(
   now: string,
   env: ExternalEnv,
@@ -691,6 +831,12 @@ export async function runAdapter(
       return semanticScholarAdapter(now, env);
     case "core":
       return coreAdapter(now, env);
+    case "guardian":
+      return guardianAdapter(now, env);
+    case "newsapi":
+      return newsApiAdapter(now, env);
+    case "fred":
+      return fredAdapter(now, env);
     case "github":
       return githubAdapter(now, env);
     case "official-feed":
@@ -1074,7 +1220,7 @@ export async function synchronizeScope(
     public: PUBLIC_SOURCE_IDS,
     providers: ["openrouter", "hugging-face", ...KEY_SOURCE_IDS],
     models: ["openrouter", "hugging-face", ...KEY_SOURCE_IDS],
-    news: ["openai-news"],
+    news: ["openai-news", "guardian", "newsapi"],
     research: [
       "arxiv",
       "openalex",
@@ -1086,7 +1232,7 @@ export async function synchronizeScope(
       "core",
     ],
     github: ["github"],
-    market: ["sec-edgar", "sec-xbrl", "bcrp", "frankfurter", "finnhub"],
+    market: ["sec-edgar", "sec-xbrl", "bcrp", "frankfurter", "finnhub", "fred"],
     map: ["openalex-institutions", "openalex"],
     videos: ["youtube", "facebook-videos"],
     failed: [],

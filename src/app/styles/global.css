@@ -6907,3 +6907,81 @@ html[data-theme="light"] .provider-card-select {
     max-width: none;
   }
 }
+
+/* ===========================================================================
+   Series macroeconómicas (FRED) y filtro de fuentes en Noticias
+   =========================================================================== */
+.macro-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+.macro-card {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+}
+.macro-card:hover {
+  border-color: var(--accent);
+}
+.macro-card.selected {
+  border-color: var(--accent);
+  background: var(--accent-quiet);
+}
+.macro-card > span {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.35;
+}
+.macro-card strong {
+  font-size: var(--text-xl);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.macro-card small {
+  color: var(--text-subtle);
+  font-size: 10px;
+}
+.macro-card-date {
+  color: var(--text-subtle);
+}
+
+.news-source-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  border: 0;
+}
+.news-source-filter button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--control-sm);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.news-source-filter button:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+.news-source-filter button.active {
+  border-color: var(--accent);
+  background: var(--accent-quiet);
+  color: var(--text);
+  font-weight: 600;
+}

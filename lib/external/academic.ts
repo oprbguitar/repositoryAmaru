@@ -20,6 +20,12 @@ function count(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+/** Identificador que la fuente puede entregar como cadena o como número. */
+function identifier(value: unknown): string | null {
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return text(value);
+}
+
 /** Convierte un año suelto en fecha ISO solo cuando no hay fecha completa. */
 function yearToIso(year: unknown): string | null {
   const parsed = Number(text(year) ?? year);
@@ -388,10 +394,23 @@ export function normalizeCore(
   const parsed = coreSchema.safeParse(payload);
   if (!parsed.success) return [];
   return (parsed.data.results ?? []).flatMap((entry) => {
-    const id = text(entry.id) ?? text(entry.coreId);
+    // CORE numera sus obras: `id` llega como número, no como cadena. Exigir
+    // una cadena descartaba en silencio todos los resultados.
+    const id = identifier(entry.id) ?? identifier(entry.coreId);
     const title = text(entry.title);
     if (!id || !title) return [];
     const language = (entry.language ?? {}) as Record<string, unknown>;
+    const links = toArray(entry.links).map(
+      (item) => item as Record<string, unknown>,
+    );
+    const linkOfType = (type: string) =>
+      text(links.find((item) => text(item.type) === type)?.url);
+    const doi = text(entry.doi);
+    // `downloadUrl` redirige a un blob firmado que caduca: al abrirlo días
+    // después CORE responde «BlobNotFound». El enlace estable es la página de
+    // la obra (`links[type=display]`), así que ese es el enlace principal y el
+    // PDF queda como dato secundario, declarado como lo que es.
+    const downloadUrl = linkOfType("download") ?? text(entry.downloadUrl);
     return [
       {
         sourceId: "core",
@@ -399,10 +418,7 @@ export function normalizeCore(
         externalId: id,
         title,
         summary: plainText(entry.abstract),
-        originalUrl:
-          text(entry.downloadUrl) ??
-          text(entry.doi) ??
-          `https://core.ac.uk/works/${id}`,
+        originalUrl: linkOfType("display") ?? `https://core.ac.uk/works/${id}`,
         sourceName: "CORE",
         sourceType: "open_access_index",
         publishedAt:
@@ -416,11 +432,18 @@ export function normalizeCore(
         lastSuccessfulSyncAt: now,
         providerId: null,
         data: {
-          doi: text(entry.doi),
+          doi,
+          doiUrl: doi ? `https://doi.org/${doi}` : null,
           authors: toArray(entry.authors)
             .map((item) => text((item as Record<string, unknown>).name))
             .filter((item): item is string => item !== null),
           publisher: text(entry.publisher),
+          // Enlace temporal al PDF alojado por CORE: puede caducar.
+          pdfUrl: downloadUrl,
+          // PDF en el repositorio de origen, que no depende de CORE.
+          repositoryUrl: toArray(entry.sourceFulltextUrls)
+            .map((item) => text(item))
+            .find((item): item is string => item !== null),
           // CORE agrega repositorios institucionales: todo es acceso abierto.
           openAccess: true,
           citationCount: null,

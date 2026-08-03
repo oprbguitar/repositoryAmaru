@@ -8,15 +8,49 @@ import { newestNewsFirst } from "./newsSort";
 import { RecordContext } from "./RecordContext";
 import { SyncButton } from "./SyncButton";
 
+/**
+ * Un feed oficial del proveedor y un artículo de prensa no tienen el mismo
+ * valor probatorio: la etiqueta lo dice en lugar de llamar «fuente oficial» a
+ * todo lo que llega al módulo.
+ */
+function originLabel(record: ObservatoryRecord): string {
+  return record.sourceType === "official_feed"
+    ? "Fuente oficial"
+    : "Prensa (agregador)";
+}
+
 export function NewsPage() {
   const [selected, setSelected] = useState<ObservatoryRecord | null>(null);
+  const [source, setSource] = useState("all");
   const records = useQuery({
     queryKey: ["records", "news"],
-    queryFn: () => getRecords({ kind: "news", limit: 120 }),
+    queryFn: () => getRecords({ kind: "news", limit: 200 }),
   });
-  const items = useMemo(
+  const all = useMemo(
     () => newestNewsFirst(records.data?.data ?? []),
     [records.data],
+  );
+  const sourceOptions = useMemo(() => {
+    const counts = new Map<
+      string,
+      { id: string; label: string; count: number }
+    >();
+    for (const record of all) {
+      const current = counts.get(record.sourceId);
+      if (current) current.count += 1;
+      else
+        counts.set(record.sourceId, {
+          id: record.sourceId,
+          // NewsAPI nombra la fuente por medio; el prefijo identifica la API.
+          label: record.sourceName.split(" · ")[0],
+          count: 1,
+        });
+    }
+    return [...counts.values()].sort((left, right) => right.count - left.count);
+  }, [all]);
+  const items = useMemo(
+    () => (source === "all" ? all : all.filter((r) => r.sourceId === source)),
+    [all, source],
   );
   const chosen =
     items.find((item) => item.id === selected?.id) ?? items[0] ?? null;
@@ -29,8 +63,8 @@ export function NewsPage() {
               <Newspaper /> Noticias
             </h1>
             <p>
-              Actualizaciones oficiales recuperadas desde RSS, Atom y changelogs
-              registrados.
+              Comunicados y changelogs oficiales vía RSS y Atom, más prensa
+              recuperada de agregadores con licencia de uso personal.
             </p>
           </div>
           <SyncButton
@@ -39,9 +73,31 @@ export function NewsPage() {
             onRefetch={() => records.refetch()}
           />
         </header>
+        {sourceOptions.length > 1 ? (
+          <fieldset className="news-source-filter">
+            <legend className="visually-hidden">Filtrar por fuente</legend>
+            <button
+              type="button"
+              className={source === "all" ? "active" : ""}
+              onClick={() => setSource("all")}
+            >
+              Todas <span className="tab-count">{all.length}</span>
+            </button>
+            {sourceOptions.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={source === option.id ? "active" : ""}
+                onClick={() => setSource(option.id)}
+              >
+                {option.label} <span className="tab-count">{option.count}</span>
+              </button>
+            ))}
+          </fieldset>
+        ) : null}
         <section className="record-list panel">
           <div className="panel-heading">
-            <h2>Actualizaciones oficiales — más recientes primero</h2>
+            <h2>Más recientes primero</h2>
             <span>{items.length} registros · ordenados por publicación</span>
           </div>
           {items.length ? (
@@ -52,7 +108,11 @@ export function NewsPage() {
               >
                 <div className="record-source">
                   <span>{record.sourceName}</span>
-                  <span className="state-badge verified">Fuente oficial</span>
+                  <span
+                    className={`state-badge ${record.sourceType === "official_feed" ? "verified" : "provisional"}`}
+                  >
+                    {originLabel(record)}
+                  </span>
                   <span className="state-badge verified">
                     {verificationLabel(record)}
                   </span>
