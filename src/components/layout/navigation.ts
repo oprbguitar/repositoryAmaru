@@ -3,6 +3,7 @@ import {
   Beaker,
   BookOpen,
   Bot,
+  Boxes,
   Building2,
   GitBranch,
   GitFork,
@@ -29,6 +30,12 @@ export const navigation = [
     icon: Building2,
   },
   { label: "Modelos", labelKey: "nav.models", path: "/models", icon: Bot },
+  {
+    label: "APIs y proyectos",
+    labelKey: "nav.apiCatalog",
+    path: "/api-catalog",
+    icon: Boxes,
+  },
   {
     label: "Evolución IA",
     labelKey: "nav.evolution",

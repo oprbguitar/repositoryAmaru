@@ -51,9 +51,9 @@ import {
 
 type Env = {
   DB: D1Database;
-  RAW_BUCKET: R2Bucket;
+  RAW_BUCKET?: R2Bucket;
   CACHE: KVNamespace;
-  INDEX_QUEUE: Queue<IndexJob>;
+  INDEX_QUEUE?: Queue<IndexJob>;
   ASSETS: Fetcher;
   AI?: Ai;
   APP_ENV: string;
@@ -690,7 +690,7 @@ async function persistImport(
 
   for (const document of batch.documents) {
     let rawObjectKey: string | null = null;
-    if (document.rawContentBase64) {
+    if (document.rawContentBase64 && env.RAW_BUCKET) {
       rawObjectKey = `local/${document.sha256}/${encodeURIComponent(document.fileName)}`;
       await env.RAW_BUCKET.put(
         rawObjectKey,
@@ -1097,23 +1097,40 @@ async function runSynchronization(
   );
 }
 
+async function dispatchSynchronization(
+  env: Env,
+  sourceIds: string[],
+  reason: "scheduled" | "manual",
+): Promise<void> {
+  if (sourceIds.length === 0) return;
+  if (env.INDEX_QUEUE) {
+    await env.INDEX_QUEUE.sendBatch(
+      sourceIds.map((sourceId) => ({
+        body: { sourceId, requestedAt: new Date().toISOString(), reason },
+      })),
+    );
+    return;
+  }
+  // No Queues binding on this plan: synchronize inline so the data still lands.
+  for (const sourceId of sourceIds) {
+    try {
+      await synchronizeSource(sourceId, env as ExternalEnv);
+    } catch (error) {
+      console.error("inline_sync_failed", {
+        sourceId,
+        error: error instanceof Error ? error.message : "unknown",
+      });
+    }
+  }
+}
+
 async function ensureInitialSynchronization(env: Env): Promise<void> {
   const state = await env.DB.prepare(
     "SELECT value FROM app_settings WHERE key = 'initial_public_sync'",
   ).first<{ value: string }>();
   if (state?.value) return;
   const sourceIds = await dueSourceIds(env as ExternalEnv);
-  if (sourceIds.length) {
-    await env.INDEX_QUEUE.sendBatch(
-      sourceIds.map((sourceId) => ({
-        body: {
-          sourceId,
-          requestedAt: new Date().toISOString(),
-          reason: "scheduled" as const,
-        },
-      })),
-    );
-  }
+  await dispatchSynchronization(env, sourceIds, "scheduled");
   await env.DB.prepare(
     "INSERT OR REPLACE INTO app_settings (key, value, updated_at) VALUES ('initial_public_sync', 'queued', CURRENT_TIMESTAMP)",
   ).run();
@@ -1457,17 +1474,7 @@ export default {
 
   async scheduled(_controller: ScheduledController, env: Env): Promise<void> {
     const sourceIds = await dueSourceIds(env as ExternalEnv);
-    if (sourceIds.length > 0) {
-      await env.INDEX_QUEUE.sendBatch(
-        sourceIds.map((sourceId) => ({
-          body: {
-            sourceId,
-            requestedAt: new Date().toISOString(),
-            reason: "scheduled",
-          },
-        })),
-      );
-    }
+    await dispatchSynchronization(env, sourceIds, "scheduled");
   },
 
   async queue(batch: MessageBatch<IndexJob>, env: Env): Promise<void> {

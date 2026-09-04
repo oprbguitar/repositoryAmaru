@@ -3,7 +3,9 @@
   "name": "amaru-ai-observatory",
   "main": "./worker/index.ts",
   "compatibility_date": "2026-07-18",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1
@@ -11,7 +13,9 @@
   "assets": {
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": [
+      "/api/*"
+    ]
   },
   "vars": {
     "APP_ENV": "development",
@@ -71,7 +75,9 @@
     "remote": true
   },
   "triggers": {
-    "crons": ["*/15 * * * *"]
+    "crons": [
+      "*/15 * * * *"
+    ]
   },
   "env": {
     "production": {
@@ -89,6 +95,38 @@
         "ENABLE_RAG_TESTS": "true",
         "ENABLE_MEDIA_TESTS": "true",
         "ENABLE_VIDEO_TESTS": "true"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "amaru-observatory",
+          "database_id": "f2ea2b35-f53b-48d1-b4d8-5e013401df04",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "CACHE",
+          "id": "4a96b8fc252b4ba0ba63e24d95df8072"
+        }
+      ],
+      "assets": {
+        "binding": "ASSETS",
+        "not_found_handling": "single-page-application",
+        "run_worker_first": [
+          "/api/*"
+        ]
+      },
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1
+      },
+      "compatibility_flags": [
+        "nodejs_compat"
+      ],
+      "ai": {
+        "binding": "AI",
+        "remote": true
       }
     }
   }

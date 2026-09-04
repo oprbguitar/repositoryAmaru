@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
+import { ApiCatalogPage } from "../features/api-catalog/ApiCatalogPage";
 import { PlaceholderWorkspace } from "../features/common/PlaceholderWorkspace";
 import { DeveloperLabPage } from "../features/developer-lab/DeveloperLabPage";
 import { EvolutionPage } from "../features/evolution/EvolutionPage";
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="/today" element={<TodayPage />} />
         <Route path="/providers/*" element={<ProvidersPage />} />
         <Route path="/models/*" element={<ModelsRankingPage />} />
+        <Route path="/api-catalog/*" element={<ApiCatalogPage />} />
         <Route path="/evolution/*" element={<EvolutionPage />} />
         <Route path="/developer-lab/*" element={<DeveloperLabPage />} />
         <Route path="/map/*" element={<GlobalMapPage />} />
