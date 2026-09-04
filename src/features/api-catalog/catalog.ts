@@ -16,11 +16,32 @@ export type PlatformId =
   | "deepgram"
   | "elevenlabs"
   | "openrouter"
-  | "together";
+  | "together"
+  | "mistral"
+  | "cohere"
+  | "deepseek"
+  | "xai"
+  | "cloudflare-ai"
+  | "assemblyai"
+  | "fireworks"
+  | "replicate"
+  | "stability"
+  | "perplexity";
 
-export type Modality = "texto" | "voz" | "vision" | "embeddings";
+export type Modality =
+  | "texto"
+  | "voz"
+  | "vision"
+  | "embeddings"
+  | "imagen"
+  | "video";
 
-export type Category = "hyperscaler" | "directo" | "especialista" | "agregador";
+export type Category =
+  | "hyperscaler"
+  | "directo"
+  | "especialista"
+  | "agregador"
+  | "borde";
 
 export type Platform = {
   id: PlatformId;
@@ -52,6 +73,10 @@ export type Rate = {
   outputPerMTok: number | null;
   /** USD por minuto de audio; null si no aplica. */
   perAudioMinute: number | null;
+  /** USD por unidad generada, para lo que no se cobra por token ni por minuto. */
+  perUnit?: number;
+  /** Qué es una unidad: "imagen", "segundo de video", "1.000 documentos". */
+  unitLabel?: string;
   note: string;
 };
 
@@ -537,13 +562,498 @@ export const PLATFORMS: Platform[] = [
       },
     ],
   },
+  {
+    id: "mistral",
+    name: "Mistral AI",
+    vendor: "Mistral",
+    category: "directo",
+    modalities: ["texto", "vision", "embeddings"],
+    summary:
+      "Modelos europeos con pesos abiertos en varias de sus versiones, y la opción de desplegarlos en tu propia infraestructura.",
+    strengths: [
+      "Los modelos abiertos se pueden autoalojar si el dato no puede salir",
+      "Empresa europea: encaja mejor con exigencias del RGPD",
+      "Muy buena relación calidad-precio en la franja media",
+      "Fuerte en francés y español, no solo en inglés",
+    ],
+    tradeoffs: [
+      "El catálogo cambia de nombres con frecuencia",
+      "Ecosistema de herramientas más chico que el de OpenAI",
+    ],
+    region: "Europa · API pública y despliegue propio",
+    billing: "Pago por token, o licencia para autoalojar",
+    docsUrl: "https://docs.mistral.ai/",
+    pricingUrl: "https://mistral.ai/pricing",
+    rates: [
+      {
+        model: "Mistral Large",
+        modality: "texto",
+        inputPerMTok: 2,
+        outputPerMTok: 6,
+        perAudioMinute: null,
+        note: "Salida más barata que sus competidores directos",
+      },
+      {
+        model: "Mistral Small",
+        modality: "texto",
+        inputPerMTok: 0.2,
+        outputPerMTok: 0.6,
+        perAudioMinute: null,
+        note: "Filtrado y clasificación con licencia abierta",
+      },
+      {
+        model: "Mistral Embed",
+        modality: "embeddings",
+        inputPerMTok: 0.1,
+        outputPerMTok: null,
+        perAudioMinute: null,
+        note: "Vectorización con datos alojados en Europa",
+      },
+    ],
+  },
+  {
+    id: "cohere",
+    name: "Cohere",
+    vendor: "Cohere",
+    category: "directo",
+    modalities: ["texto", "embeddings"],
+    summary:
+      "Orientada a empresa, con el mejor reordenador de resultados del mercado y embeddings multilingües sólidos.",
+    strengths: [
+      "Rerank mejora la precisión de un buscador sin cambiar el modelo",
+      "Embeddings multilingües entrenados para más de cien idiomas",
+      "Despliegue privado dentro de la nube del cliente",
+    ],
+    tradeoffs: [
+      "Menos competitiva en generación libre que en recuperación",
+      "Rerank se cobra aparte y suele olvidarse al presupuestar",
+    ],
+    region: "Global · API pública y despliegue privado",
+    billing: "Pago por token; Rerank por búsqueda",
+    docsUrl: "https://docs.cohere.com/",
+    pricingUrl: "https://cohere.com/pricing",
+    rates: [
+      {
+        model: "Command R+",
+        modality: "texto",
+        inputPerMTok: 2.5,
+        outputPerMTok: 10,
+        perAudioMinute: null,
+        note: "Generación con citas para RAG",
+      },
+      {
+        model: "Command R",
+        modality: "texto",
+        inputPerMTok: 0.15,
+        outputPerMTok: 0.6,
+        perAudioMinute: null,
+        note: "El caballo de batalla barato para RAG",
+      },
+      {
+        model: "Embed Multilingual v3",
+        modality: "embeddings",
+        inputPerMTok: 0.1,
+        outputPerMTok: null,
+        perAudioMinute: null,
+        note: "Indexado que cruza idiomas sin traducir",
+      },
+      {
+        model: "Rerank v3",
+        modality: "texto",
+        inputPerMTok: null,
+        outputPerMTok: null,
+        perAudioMinute: null,
+        perUnit: 0.002,
+        unitLabel: "búsqueda",
+        note: "Reordena los resultados antes de generar",
+      },
+    ],
+  },
+  {
+    id: "deepseek",
+    name: "DeepSeek",
+    vendor: "DeepSeek",
+    category: "directo",
+    modalities: ["texto"],
+    summary:
+      "Modelos de razonamiento a una fracción del precio del resto, con caché de contexto agresiva y descuento por horario.",
+    strengths: [
+      "El precio por token más bajo entre los modelos de razonamiento",
+      "La caché de contexto abarata muchísimo el prompt repetido",
+      "Descuento adicional en las horas de baja demanda",
+    ],
+    tradeoffs: [
+      "Los datos se procesan en China: descarta muchos casos corporativos",
+      "Latencia irregular en horas pico",
+      "Menos garantías contractuales que un proveedor occidental",
+    ],
+    region: "China · API pública",
+    billing: "Pago por token, con caché y descuento horario",
+    docsUrl: "https://api-docs.deepseek.com/",
+    pricingUrl: "https://api-docs.deepseek.com/quick_start/pricing",
+    rates: [
+      {
+        model: "DeepSeek Chat",
+        modality: "texto",
+        inputPerMTok: 0.27,
+        outputPerMTok: 1.1,
+        perAudioMinute: null,
+        note: "Calidad alta a precio de modelo pequeño",
+      },
+      {
+        model: "DeepSeek Chat (cacheado)",
+        modality: "texto",
+        inputPerMTok: 0.07,
+        outputPerMTok: 1.1,
+        perAudioMinute: null,
+        note: "Lectura de caché a un cuarto del precio",
+      },
+      {
+        model: "DeepSeek Reasoner",
+        modality: "texto",
+        inputPerMTok: 0.55,
+        outputPerMTok: 2.19,
+        perAudioMinute: null,
+        note: "Razonamiento largo; cuidado con los tokens de pensamiento",
+      },
+    ],
+  },
+  {
+    id: "xai",
+    name: "xAI Grok",
+    vendor: "xAI",
+    category: "directo",
+    modalities: ["texto", "vision"],
+    summary:
+      "Modelos con acceso en vivo al flujo de X, útiles cuando lo que importa es lo que se está diciendo ahora.",
+    strengths: [
+      "Contexto de actualidad sin montar tu propio raspado",
+      "Ventana de contexto amplia para análisis de hilos largos",
+    ],
+    tradeoffs: [
+      "Precio de salida alto frente a la competencia",
+      "El sesgo de la fuente se hereda: X no es una muestra neutral",
+      "Ecosistema de integraciones todavía delgado",
+    ],
+    region: "Global · API pública",
+    billing: "Pago por token",
+    docsUrl: "https://docs.x.ai/",
+    pricingUrl: "https://x.ai/api",
+    rates: [
+      {
+        model: "Grok (estándar)",
+        modality: "texto",
+        inputPerMTok: 3,
+        outputPerMTok: 15,
+        perAudioMinute: null,
+        note: "Análisis con contexto de actualidad",
+      },
+      {
+        model: "Grok mini",
+        modality: "texto",
+        inputPerMTok: 0.3,
+        outputPerMTok: 0.5,
+        perAudioMinute: null,
+        note: "Clasificación de menciones en volumen",
+      },
+    ],
+  },
+  {
+    id: "cloudflare-ai",
+    name: "Workers AI",
+    vendor: "Cloudflare",
+    category: "borde",
+    modalities: ["texto", "voz", "imagen", "embeddings"],
+    summary:
+      "Inferencia ejecutada en el borde de la red, en la misma función que sirve tu aplicación, sin servidor que administrar.",
+    strengths: [
+      "Corre junto al código de la app: cero latencia de red interna",
+      "Se factura por neurona, con una capa gratuita diaria real",
+      "Vectorize y R2 en el mismo entorno, sin salir de la plataforma",
+      "Es la nube donde ya está desplegado este observatorio",
+    ],
+    tradeoffs: [
+      "Catálogo limitado a modelos abiertos de tamaño medio",
+      "No hay modelos frontera: para eso hay que salir a otro proveedor",
+      "El límite de tiempo de ejecución acota las tareas largas",
+    ],
+    region: "Global · 300+ ciudades en el borde",
+    billing: "Por neuronas consumidas, con capa gratuita diaria",
+    docsUrl: "https://developers.cloudflare.com/workers-ai/",
+    pricingUrl:
+      "https://developers.cloudflare.com/workers-ai/platform/pricing/",
+    rates: [
+      {
+        model: "Llama 3.1 8B (Workers AI)",
+        modality: "texto",
+        inputPerMTok: 0.28,
+        outputPerMTok: 0.83,
+        perAudioMinute: null,
+        note: "Inferencia pegada a la aplicación",
+      },
+      {
+        model: "Whisper (Workers AI)",
+        modality: "voz",
+        inputPerMTok: null,
+        outputPerMTok: null,
+        perAudioMinute: 0.0005,
+        note: "Transcripción en el borde, muy barata",
+      },
+      {
+        model: "BGE base (embeddings)",
+        modality: "embeddings",
+        inputPerMTok: 0.02,
+        outputPerMTok: null,
+        perAudioMinute: null,
+        note: "Vectorización para Vectorize",
+      },
+    ],
+  },
+  {
+    id: "assemblyai",
+    name: "AssemblyAI",
+    vendor: "AssemblyAI",
+    category: "especialista",
+    modalities: ["voz"],
+    summary:
+      "Transcripción con una capa de análisis encima: temas, sentimiento, resumen y detección de datos sensibles.",
+    strengths: [
+      "El resumen y los temas vienen resueltos, sin un segundo modelo",
+      "Redacción automática de datos personales dentro del audio",
+      "Precisión alta en llamadas con ruido de fondo",
+    ],
+    tradeoffs: [
+      "Cada capa de análisis se cobra por separado y suma rápido",
+      "Menos control sobre el prompt que armando el pipeline a mano",
+    ],
+    region: "Global · API pública",
+    billing: "Por hora de audio, más extras por cada análisis",
+    docsUrl: "https://www.assemblyai.com/docs",
+    pricingUrl: "https://www.assemblyai.com/pricing",
+    rates: [
+      {
+        model: "Universal (STT)",
+        modality: "voz",
+        inputPerMTok: null,
+        outputPerMTok: null,
+        perAudioMinute: 0.0062,
+        note: "≈ USD 0.37 por hora transcrita",
+      },
+      {
+        model: "Streaming (STT en vivo)",
+        modality: "voz",
+        inputPerMTok: null,
+        outputPerMTok: null,
+        perAudioMinute: 0.0075,
+        note: "Transcripción en tiempo real",
+      },
+    ],
+  },
+  {
+    id: "fireworks",
+    name: "Fireworks AI",
+    vendor: "Fireworks",
+    category: "agregador",
+    modalities: ["texto", "imagen", "embeddings"],
+    summary:
+      "Inferencia rápida sobre modelos abiertos, con ajuste fino que se cobra solo cuando el modelo está sirviendo.",
+    strengths: [
+      "Ajuste fino sin costo fijo por tener el modelo desplegado",
+      "Salida estructurada garantizada contra un esquema JSON",
+      "Buen desempeño en los modelos abiertos grandes",
+    ],
+    tradeoffs: [
+      "La calidad depende del modelo abierto que elijas",
+      "Sin los controles de cumplimiento de una nube corporativa",
+    ],
+    region: "Global · API pública",
+    billing: "Pago por token; imágenes por unidad generada",
+    docsUrl: "https://docs.fireworks.ai/",
+    pricingUrl: "https://fireworks.ai/pricing",
+    rates: [
+      {
+        model: "Llama 70B (Fireworks)",
+        modality: "texto",
+        inputPerMTok: 0.9,
+        outputPerMTok: 0.9,
+        perAudioMinute: null,
+        note: "Precio simétrico, salida estructurada incluida",
+      },
+      {
+        model: "Mixtral 8x7B",
+        modality: "texto",
+        inputPerMTok: 0.5,
+        outputPerMTok: 0.5,
+        perAudioMinute: null,
+        note: "Mezcla de expertos a costo contenido",
+      },
+      {
+        model: "FLUX schnell",
+        modality: "imagen",
+        inputPerMTok: null,
+        outputPerMTok: null,
+        perAudioMinute: null,
+        perUnit: 0.0014,
+        unitLabel: "imagen",
+        note: "Generación de imagen a costo casi nulo",
+      },
+    ],
+  },
+  {
+    id: "replicate",
+    name: "Replicate",
+    vendor: "Replicate",
+    category: "agregador",
+    modalities: ["imagen", "video", "voz", "texto"],
+    summary:
+      "Miles de modelos de la comunidad detrás de una API común, facturados por segundo de cómputo real.",
+    strengths: [
+      "Acceso inmediato a modelos de imagen y video recién salidos",
+      "Se paga por segundo de ejecución, sin servidor encendido de más",
+      "Se puede publicar un modelo propio con la misma interfaz",
+    ],
+    tradeoffs: [
+      "Arranque en frío de varios segundos en modelos poco usados",
+      "La calidad y el mantenimiento varían mucho entre modelos",
+      "Costos difíciles de predecir hasta medir la ejecución real",
+    ],
+    region: "Global · API pública",
+    billing: "Por segundo de GPU, o por unidad en modelos con precio fijo",
+    docsUrl: "https://replicate.com/docs",
+    pricingUrl: "https://replicate.com/pricing",
+    rates: [
+      {
+        model: "FLUX dev (imagen)",
+        modality: "imagen",
+        inputPerMTok: null,
+        outputPerMTok: null,
+        perAudioMinute: null,
+        perUnit: 0.025,
+        unitLabel: "imagen",
+        note: "Calidad alta para catálogo y marketing",
+      },
+      {
+        model: "Modelo de video",
+        modality: "video",
+        inputPerMTok: null,
+        outputPerMTok: null,
+        perAudioMinute: null,
+        perUnit: 0.09,
+        unitLabel: "segundo de video",
+        note: "≈ USD 5.40 por minuto generado",
+      },
+      {
+        model: "Whisper (Replicate)",
+        modality: "voz",
+        inputPerMTok: null,
+        outputPerMTok: null,
+        perAudioMinute: 0.0027,
+        note: "Transcripción por segundo de cómputo",
+      },
+    ],
+  },
+  {
+    id: "stability",
+    name: "Stability AI",
+    vendor: "Stability",
+    category: "especialista",
+    modalities: ["imagen", "video"],
+    summary:
+      "Generación y edición de imagen con licencia clara para uso comercial, y pesos descargables en varios modelos.",
+    strengths: [
+      "Licencia comercial explícita, algo que no todos ofrecen",
+      "Edición dirigida: relleno, borrado y cambio de fondo",
+      "Los pesos abiertos permiten autoalojar si el volumen lo justifica",
+    ],
+    tradeoffs: [
+      "Calidad por debajo de los modelos de imagen más nuevos",
+      "El sistema de créditos oscurece el costo real por imagen",
+    ],
+    region: "Global · API pública y pesos descargables",
+    billing: "Por créditos consumidos, equivalentes a imágenes",
+    docsUrl: "https://platform.stability.ai/docs",
+    pricingUrl: "https://platform.stability.ai/pricing",
+    rates: [
+      {
+        model: "Stable Image Core",
+        modality: "imagen",
+        inputPerMTok: null,
+        outputPerMTok: null,
+        perAudioMinute: null,
+        perUnit: 0.03,
+        unitLabel: "imagen",
+        note: "Generación estándar para producción",
+      },
+      {
+        model: "Edición dirigida",
+        modality: "imagen",
+        inputPerMTok: null,
+        outputPerMTok: null,
+        perAudioMinute: null,
+        perUnit: 0.04,
+        unitLabel: "operación",
+        note: "Relleno, borrado y cambio de fondo",
+      },
+    ],
+  },
+  {
+    id: "perplexity",
+    name: "Perplexity API",
+    vendor: "Perplexity",
+    category: "especialista",
+    modalities: ["texto"],
+    summary:
+      "Modelos que buscan en la web antes de responder y devuelven las fuentes citadas junto al texto.",
+    strengths: [
+      "Respuestas con cita verificable, sin montar tu propio buscador",
+      "Índice actualizado: sirve para preguntas sobre lo que pasó hoy",
+      "Reemplaza un pipeline entero de búsqueda más resumen",
+    ],
+    tradeoffs: [
+      "Se cobra la búsqueda además de los tokens",
+      "No controlas qué fuentes entran al índice",
+      "Poco útil si la pregunta es sobre datos internos",
+    ],
+    region: "Global · API pública",
+    billing: "Pago por token más un cargo por búsqueda",
+    docsUrl: "https://docs.perplexity.ai/",
+    pricingUrl: "https://docs.perplexity.ai/guides/pricing",
+    rates: [
+      {
+        model: "Sonar",
+        modality: "texto",
+        inputPerMTok: 1,
+        outputPerMTok: 1,
+        perAudioMinute: null,
+        note: "Búsqueda con citas, precio simétrico",
+      },
+      {
+        model: "Sonar Pro",
+        modality: "texto",
+        inputPerMTok: 3,
+        outputPerMTok: 15,
+        perAudioMinute: null,
+        note: "Investigación con varias rondas de búsqueda",
+      },
+      {
+        model: "Cargo por búsqueda",
+        modality: "texto",
+        inputPerMTok: null,
+        outputPerMTok: null,
+        perAudioMinute: null,
+        perUnit: 0.005,
+        unitLabel: "búsqueda",
+        note: "Se suma a los tokens en cada consulta",
+      },
+    ],
+  },
 ];
 
 /* -------------------------------------------------------------------------- */
 /*  Proyectos construibles sobre el catálogo                                  */
 /* -------------------------------------------------------------------------- */
 
-export type ProjectKind = "voz" | "texto" | "mixto";
+export type ProjectKind = "voz" | "texto" | "imagen" | "mixto";
 export type Effort = "días" | "semanas" | "meses";
 
 export type Project = {
@@ -729,6 +1239,206 @@ export const PROJECTS: Project[] = [
     marginRisk:
       "El costo por usuario es estable, pero un puñado de usuarios intensivos puede consumir el margen de todo el resto.",
   },
+  {
+    id: "tickets-soporte",
+    title: "Clasificador y enrutador de tickets de soporte",
+    kind: "texto",
+    effort: "semanas",
+    pitch:
+      "Lee cada ticket entrante, le pone categoría, urgencia e idioma, y lo manda a la cola correcta sin que nadie lo triage a mano.",
+    pipeline: [
+      "El ticket entra por webhook desde la mesa de ayuda",
+      "Un modelo pequeño devuelve categoría, urgencia y sentimiento en JSON",
+      "Los casos con urgencia alta escalan a un modelo mayor para redactar el resumen",
+      "El ticket se enruta y se anota con la etiqueta y el resumen",
+    ],
+    platforms: ["mistral", "groq", "cloudflare-ai"],
+    billingUnit: "1.000 tickets clasificados",
+    unitCost: 0.45,
+    unitPrice: 9,
+    marginRisk:
+      "Barato salvo que el cliente pida reclasificar el histórico completo cada vez que cambia la taxonomía.",
+  },
+  {
+    id: "facturas-vision",
+    title: "Extracción de datos de facturas y comprobantes",
+    kind: "mixto",
+    effort: "semanas",
+    pitch:
+      "Toma la foto o el PDF de un comprobante y devuelve emisor, RUC, fecha, detalle y totales listos para contabilidad.",
+    pipeline: [
+      "Normalización de la imagen y recorte de la zona con datos",
+      "Un modelo con visión extrae los campos contra un esquema fijo",
+      "Validación aritmética: los ítems deben sumar el total declarado",
+      "Lo que no valida se marca para revisión humana, no se inventa",
+    ],
+    platforms: ["google-vertex", "azure-openai", "mistral"],
+    billingUnit: "1.000 comprobantes",
+    unitCost: 3.8,
+    unitPrice: 30,
+    marginRisk:
+      "Las fotos malas disparan reintentos; conviene rechazar la imagen antes de gastar la llamada al modelo.",
+  },
+  {
+    id: "analisis-llamadas",
+    title: "Análisis y puntuación de llamadas de ventas",
+    kind: "voz",
+    effort: "semanas",
+    pitch:
+      "Transcribe cada llamada, mide si el vendedor siguió el guion y devuelve una puntuación con los momentos exactos.",
+    pipeline: [
+      "Transcripción con separación de hablantes para saber quién dijo qué",
+      "Comprobación del guion punto por punto sobre la transcripción",
+      "Puntuación con la marca de tiempo que justifica cada nota",
+      "Tablero semanal por vendedor y por motivo de pérdida",
+    ],
+    platforms: ["assemblyai", "deepgram", "anthropic"],
+    billingUnit: "1 hora de llamada analizada",
+    unitCost: 0.55,
+    unitPrice: 6,
+    marginRisk:
+      "El costo sube si se analiza la llamada entera en vez de los tramos donde hay conversación real.",
+  },
+  {
+    id: "catalogo-imagenes",
+    title: "Fotografía de producto generada para catálogo",
+    kind: "imagen",
+    effort: "semanas",
+    pitch:
+      "Convierte una foto plana de producto en varias tomas de catálogo con fondo, luz y encuadre consistentes.",
+    pipeline: [
+      "Recorte del producto y separación del fondo original",
+      "Generación de variantes con el mismo prompt de estilo de marca",
+      "Filtro automático que descarta las que deforman el producto",
+      "Entrega en los tamaños que pide cada canal de venta",
+    ],
+    platforms: ["fireworks", "replicate", "stability"],
+    billingUnit: "100 imágenes entregadas",
+    unitCost: 3.75,
+    unitPrice: 45,
+    marginRisk:
+      "Se generan tres o cuatro variantes por cada imagen aceptada: el costo real es el de las descartadas.",
+  },
+  {
+    id: "vigilancia-citas",
+    title: "Vigilancia normativa con citas verificables",
+    kind: "texto",
+    effort: "semanas",
+    pitch:
+      "Responde preguntas sobre normativa y noticias recientes citando la fuente, sin que nadie tenga que buscar a mano.",
+    pipeline: [
+      "La pregunta va a un modelo que busca en la web antes de responder",
+      "La respuesta llega con las fuentes que la sostienen",
+      "Un segundo paso verifica que cada afirmación tenga cita real",
+      "Lo verificado se archiva con fecha para poder auditarlo después",
+    ],
+    platforms: ["perplexity", "anthropic", "xai"],
+    billingUnit: "1.000 consultas",
+    unitCost: 9.5,
+    unitPrice: 55,
+    marginRisk:
+      "El cargo por búsqueda se paga aunque la respuesta no sirva; conviene cachear las preguntas repetidas.",
+  },
+  {
+    id: "deduplicacion",
+    title: "Deduplicación semántica del archivo documental",
+    kind: "texto",
+    effort: "días",
+    pitch:
+      "Encuentra los documentos que dicen lo mismo con otras palabras y deja una sola versión buena de cada uno.",
+    pipeline: [
+      "Vectorización única de todo el archivo con embeddings baratos",
+      "Agrupación por cercanía para detectar los casi duplicados",
+      "Un modelo decide cuál versión es la vigente y por qué",
+      "Informe de espacio recuperado y de conflictos por resolver",
+    ],
+    platforms: ["cohere", "cloudflare-ai", "openai"],
+    billingUnit: "100.000 documentos",
+    unitCost: 8.4,
+    unitPrice: 60,
+    marginRisk:
+      "Es un trabajo de una sola vez: el margen bueno no se repite salvo que el cliente contrate el mantenimiento.",
+  },
+  {
+    id: "boletin-a-podcast",
+    title: "Boletín convertido en podcast diario",
+    kind: "voz",
+    effort: "días",
+    pitch:
+      "Toma las noticias del día ya filtradas y publica un episodio narrado, con la misma voz todas las mañanas.",
+    pipeline: [
+      "Selección de las notas del día por puntuación de relevancia",
+      "Redacción del guion con duración objetivo fija",
+      "Narración con voz sintética consistente entre episodios",
+      "Publicación del audio y del feed RSS sin intervención",
+    ],
+    platforms: ["groq", "elevenlabs", "deepgram"],
+    billingUnit: "1 episodio de 10 minutos",
+    unitCost: 1.05,
+    unitPrice: 12,
+    marginRisk:
+      "La voz de estudio domina el costo; una voz Flash baja el gasto a la mitad sin que casi nadie lo note.",
+  },
+  {
+    id: "moderacion-tiempo-real",
+    title: "Moderación de contenido en tiempo real",
+    kind: "mixto",
+    effort: "meses",
+    pitch:
+      "Revisa texto e imágenes en el momento de publicarse y bloquea lo que viola las reglas antes de que se vea.",
+    pipeline: [
+      "Un clasificador en el borde resuelve los casos evidentes en milisegundos",
+      "Lo dudoso escala a un modelo con visión para mirar la imagen",
+      "Las decisiones límite van a una cola de revisión humana",
+      "Cada decisión queda registrada para poder apelarla",
+    ],
+    platforms: ["cloudflare-ai", "google-vertex", "openai"],
+    billingUnit: "100.000 publicaciones revisadas",
+    unitCost: 21,
+    unitPrice: 120,
+    marginRisk:
+      "Si el clasificador del borde escala más del 5%, el costo se duplica: hay que vigilar esa tasa a diario.",
+  },
+  {
+    id: "traduccion-lote",
+    title: "Traducción de documentación técnica en lote",
+    kind: "texto",
+    effort: "semanas",
+    pitch:
+      "Traduce manuales enteros manteniendo el glosario de la empresa y el formato original intacto.",
+    pipeline: [
+      "Troceado que respeta títulos, tablas y bloques de código",
+      "Traducción con el glosario de la empresa inyectado en el prompt",
+      "Verificación de que los términos del glosario se respetaron",
+      "Reensamblado del documento con el formato original",
+    ],
+    platforms: ["mistral", "deepseek", "together"],
+    billingUnit: "1.000 páginas traducidas",
+    unitCost: 2.6,
+    unitPrice: 35,
+    marginRisk:
+      "Traducir de nuevo el documento completo por un cambio menor destruye el margen: conviene traducir solo lo que cambió.",
+  },
+  {
+    id: "asistente-voz-web",
+    title: "Asistente de voz embebido en el sitio",
+    kind: "voz",
+    effort: "meses",
+    pitch:
+      "Un botón de micrófono en la web que responde hablando, con la latencia baja que exige una conversación real.",
+    pipeline: [
+      "Captura del audio en el navegador y envío por streaming",
+      "Transcripción en el borde para no cruzar medio mundo por cada frase",
+      "Respuesta de un modelo rápido con el contexto de la página",
+      "Síntesis de voz en streaming: se oye antes de terminar de generar",
+    ],
+    platforms: ["cloudflare-ai", "groq", "deepgram"],
+    billingUnit: "1.000 conversaciones de 3 minutos",
+    unitCost: 14.5,
+    unitPrice: 90,
+    marginRisk:
+      "Las conversaciones que se alargan sin resolver nada consumen el margen: hay que cortarlas por tiempo.",
+  },
 ];
 
 /* -------------------------------------------------------------------------- */
@@ -761,7 +1471,9 @@ export function textRunCost(
 export function textRates(): Array<Rate & { platform: Platform }> {
   return PLATFORMS.flatMap((platform) =>
     platform.rates
-      .filter((rate) => rate.modality === "texto")
+      // Solo lo que se cobra por token: Rerank y el cargo por búsqueda son
+      // de modalidad texto pero se facturan por unidad, y falsearían el total.
+      .filter((rate) => rate.modality === "texto" && rate.inputPerMTok !== null)
       .map((rate) => ({ ...rate, platform })),
   ).sort((left, right) => (left.inputPerMTok ?? 0) - (right.inputPerMTok ?? 0));
 }
@@ -775,6 +1487,15 @@ export function voiceRates(): Array<Rate & { platform: Platform }> {
   ).sort(
     (left, right) => (left.perAudioMinute ?? 0) - (right.perAudioMinute ?? 0),
   );
+}
+
+/** Tarifas que se cobran por unidad (imagen, video, búsqueda), de la más barata. */
+export function unitRates(): Array<Rate & { platform: Platform }> {
+  return PLATFORMS.flatMap((platform) =>
+    platform.rates
+      .filter((rate) => rate.perUnit !== undefined)
+      .map((rate) => ({ ...rate, platform })),
+  ).sort((left, right) => (left.perUnit ?? 0) - (right.perUnit ?? 0));
 }
 
 export function catalogStats() {

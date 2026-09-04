@@ -5,6 +5,7 @@ import {
   Coins,
   ExternalLink,
   FileText,
+  Image as ImageIcon,
   Layers,
   Mic,
   Percent,
@@ -27,8 +28,10 @@ import {
   type Project,
   type ProjectKind,
   projectMargin,
+  type Rate,
   textRates,
   textRunCost,
+  unitRates,
   voiceRates,
 } from "./catalog";
 
@@ -41,6 +44,7 @@ const CATEGORY_LABEL: Record<Category, string> = {
   directo: "Proveedor directo",
   especialista: "Especialista",
   agregador: "Agregador",
+  borde: "Borde",
 };
 
 const CATEGORY_TINT: Record<Category, string> = {
@@ -48,11 +52,13 @@ const CATEGORY_TINT: Record<Category, string> = {
   directo: "var(--accent)",
   especialista: "var(--purple)",
   agregador: "var(--ok)",
+  borde: "var(--warn)",
 };
 
 const KIND_LABEL: Record<ProjectKind, string> = {
   voz: "Voz",
   texto: "Texto",
+  imagen: "Imagen",
   mixto: "Mixto",
 };
 
@@ -68,6 +74,17 @@ function money(value: number): string {
   if (value < 0.01) return `$${value.toFixed(5)}`;
   if (value < 1) return `$${value.toFixed(3)}`;
   return usd.format(value);
+}
+
+/** Cada modalidad se cobra distinto: token, minuto de audio o unidad generada. */
+function rateLabel(rate: Rate): string {
+  if (rate.perUnit !== undefined) {
+    return `${money(rate.perUnit)} / ${rate.unitLabel ?? "unidad"}`;
+  }
+  if (rate.perAudioMinute !== null) {
+    return `${money(rate.perAudioMinute)} / min de audio`;
+  }
+  return `${money(rate.inputPerMTok ?? 0)} entrada · ${money(rate.outputPerMTok ?? 0)} salida / M tokens`;
 }
 
 export function ApiCatalogPage() {
@@ -574,6 +591,39 @@ export function ApiCatalogPage() {
               </tbody>
             </table>
           </div>
+          <h3 className="catalog-voice-title">
+            <ImageIcon /> Referencia por unidad generada
+          </h3>
+          <div className="catalog-table-wrap">
+            <table className="catalog-table">
+              <thead>
+                <tr>
+                  <th>Servicio</th>
+                  <th>Plataforma</th>
+                  <th>Precio</th>
+                  <th>Por 1.000</th>
+                  <th>Nota</th>
+                </tr>
+              </thead>
+              <tbody>
+                {unitRates().map((rate) => (
+                  <tr key={`${rate.platform.id}-${rate.model}`}>
+                    <td>
+                      <strong>{rate.model}</strong>
+                    </td>
+                    <td>{rate.platform.name}</td>
+                    <td>
+                      {money(rate.perUnit ?? 0)} / {rate.unitLabel ?? "unidad"}
+                    </td>
+                    <td>{money((rate.perUnit ?? 0) * 1000)}</td>
+                    <td>
+                      <small>{rate.note}</small>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       ) : null}
     </CollapsibleLayout>
@@ -634,11 +684,7 @@ function PlatformPanel({ platform }: { platform: Platform }) {
           {platform.rates.map((rate) => (
             <li key={rate.model}>
               <strong>{rate.model}</strong>
-              <span>
-                {rate.perAudioMinute !== null
-                  ? `${money(rate.perAudioMinute)} / min de audio`
-                  : `${money(rate.inputPerMTok ?? 0)} entrada · ${money(rate.outputPerMTok ?? 0)} salida / M tokens`}
-              </span>
+              <span>{rateLabel(rate)}</span>
               <small>{rate.note}</small>
             </li>
           ))}
