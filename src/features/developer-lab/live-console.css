@@ -270,3 +270,25 @@
     animation: none;
   }
 }
+.lc-field-inline {
+  max-inline-size: 220px;
+}
+.lc-answer-title {
+  order: -1;
+  margin: 0 0 var(--space-1);
+  color: var(--accent);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.lc-output {
+  display: flex;
+  flex-direction: column;
+}
+.lc-output .lc-reasoning {
+  order: -2;
+}
+.lc-reasoning[open] pre {
+  max-block-size: 30vh;
+  overflow: auto;
+}

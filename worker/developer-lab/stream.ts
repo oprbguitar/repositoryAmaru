@@ -50,7 +50,7 @@ function openAiBody(input: StreamInput, modelId: string, withUsage: boolean) {
     model: modelId,
     messages,
     temperature: input.temperature ?? 0.7,
-    max_tokens: input.maxOutputTokens ?? 1024,
+    max_tokens: input.maxOutputTokens ?? 4096,
     stream: true,
     ...(withUsage ? { stream_options: { include_usage: true } } : {}),
   };
@@ -95,7 +95,7 @@ export async function buildUpstreamRequest(
             ],
             options: {
               temperature: input.temperature ?? 0.7,
-              num_predict: input.maxOutputTokens ?? 1024,
+              num_predict: input.maxOutputTokens ?? 4096,
             },
           }),
         },
@@ -128,7 +128,7 @@ export async function buildUpstreamRequest(
         },
         body: JSON.stringify({
           model: stripVendorPrefix(input.modelId),
-          max_tokens: input.maxOutputTokens ?? 1024,
+          max_tokens: input.maxOutputTokens ?? 4096,
           temperature: Math.min(input.temperature ?? 0.7, 1),
           ...(input.system ? { system: input.system } : {}),
           messages: [{ role: "user", content: input.prompt }],
@@ -153,7 +153,7 @@ export async function buildUpstreamRequest(
           contents: [{ role: "user", parts: [{ text: input.prompt }] }],
           generationConfig: {
             temperature: input.temperature ?? 0.7,
-            maxOutputTokens: input.maxOutputTokens ?? 1024,
+            maxOutputTokens: input.maxOutputTokens ?? 4096,
           },
         }),
       },
@@ -221,7 +221,7 @@ async function persistRun(env: TestbenchEnv, row: PersistRow) {
       row.status,
       row.input.compareGroupId ?? null,
       row.input.temperature ?? 0.7,
-      row.input.maxOutputTokens ?? 1024,
+      row.input.maxOutputTokens ?? 4096,
       row.input.prompt.length,
       row.input.system?.length ?? 0,
       usage?.inputTokens ?? null,

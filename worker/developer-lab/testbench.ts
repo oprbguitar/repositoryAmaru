@@ -388,7 +388,12 @@ async function executeOpenAiCompatible(
   input: ExecuteInput,
   baseUrl: string,
   credential: string | null,
-): Promise<{ outputText: string; usage: Usage }> {
+): Promise<{
+  outputText: string;
+  reasoningText: string | null;
+  finishReason: string | null;
+  usage: Usage;
+}> {
   const content: unknown = input.imageBase64
     ? [
         { type: "text", text: input.prompt },
@@ -409,7 +414,7 @@ async function executeOpenAiCompatible(
       model: input.modelId,
       messages: [{ role: "user", content }],
       temperature: input.temperature ?? 0.7,
-      max_tokens: input.maxOutputTokens ?? 1024,
+      max_tokens: input.maxOutputTokens ?? 4096,
       stream: false,
     }),
     signal: AbortSignal.timeout(120_000),
@@ -425,8 +430,13 @@ async function executeOpenAiCompatible(
   const choice = (payload.choices as Array<Record<string, unknown>>)?.[0];
   const message = choice?.message as Record<string, unknown> | undefined;
   const usage = (payload.usage ?? {}) as Record<string, unknown>;
+  const reasoning = message?.reasoning_content ?? message?.reasoning;
   return {
     outputText: extractText(message?.content),
+    reasoningText:
+      typeof reasoning === "string" && reasoning ? reasoning : null,
+    finishReason:
+      typeof choice?.finish_reason === "string" ? choice.finish_reason : null,
     usage: {
       inputTokens:
         typeof usage.prompt_tokens === "number" ? usage.prompt_tokens : null,
@@ -461,7 +471,7 @@ async function executeAnthropic(
     },
     body: JSON.stringify({
       model: stripVendorPrefix(input.modelId),
-      max_tokens: input.maxOutputTokens ?? 1024,
+      max_tokens: input.maxOutputTokens ?? 4096,
       temperature: input.temperature ?? 0.7,
       messages: [{ role: "user", content }],
     }),
@@ -651,7 +661,7 @@ async function executeWorkersAi(
   const result = (await env.AI.run(input.modelId as Parameters<Ai["run"]>[0], {
     messages: [{ role: "user", content: input.prompt }],
     temperature: input.temperature ?? 0.7,
-    max_tokens: input.maxOutputTokens ?? 1024,
+    max_tokens: input.maxOutputTokens ?? 4096,
   })) as Record<string, unknown>;
   const usage = (result.usage ?? {}) as Record<string, unknown>;
   return {
@@ -679,6 +689,8 @@ export async function executeTestbench(
   const startedAt = performance.now();
   const service = new ProviderCredentialService(env);
   let outputText: string | null = null;
+  let reasoningText: string | null = null;
+  let finishReason: string | null = null;
   let outputFile: TestbenchResult["outputFile"] = null;
   let usage: Usage = { inputTokens: null, outputTokens: null };
 
@@ -717,6 +729,8 @@ export async function executeTestbench(
       credential,
     );
     outputText = result.outputText;
+    reasoningText = result.reasoningText;
+    finishReason = result.finishReason;
     usage = result.usage;
   } else if (LOCAL_PROVIDERS.has(input.providerId)) {
     if (provider.connection.kind !== "local")
@@ -728,6 +742,8 @@ export async function executeTestbench(
     const baseUrl = input.providerId === "ollama" ? `${trimmed}/v1` : trimmed;
     const result = await executeOpenAiCompatible(input, baseUrl, null);
     outputText = result.outputText;
+    reasoningText = result.reasoningText;
+    finishReason = result.finishReason;
     usage = result.usage;
   } else {
     throw new Error(
@@ -768,6 +784,8 @@ export async function executeTestbench(
     modelId: input.modelId,
     testType: input.testType,
     outputText,
+    reasoningText,
+    finishReason,
     outputFile,
     usage,
     costUsd,

@@ -64,6 +64,9 @@ export type TestbenchResult = {
   modelId: string;
   testType: TestType;
   outputText: string | null;
+  /** Chain of thought returned by reasoning models (reasoning_content). */
+  reasoningText?: string | null;
+  finishReason?: string | null;
   outputFile: { base64: string; mimeType: string } | null;
   usage: { inputTokens: number | null; outputTokens: number | null };
   costUsd: number | null;

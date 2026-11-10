@@ -253,3 +253,73 @@
     transition: none;
   }
 }
+.lm-explain {
+  padding: var(--space-3);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+}
+.lm-explain h4 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--accent-2);
+}
+.lm-explain dl {
+  display: grid;
+  grid-template-columns: minmax(120px, max-content) 1fr;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  font-size: var(--text-sm);
+}
+.lm-explain dt {
+  color: var(--text);
+  font-weight: 600;
+}
+.lm-explain dd {
+  margin: 0;
+  color: var(--text-muted);
+}
+.lm-jobs {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lm-job {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+}
+.lm-job-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+.lm-job-head strong {
+  overflow-wrap: anywhere;
+}
+.lm-job-state {
+  margin-inline-start: auto;
+  font-size: var(--text-xs);
+  color: var(--accent-2);
+}
+.lm-job-paused .lm-job-state {
+  color: var(--warn);
+}
+.lm-job-error .lm-job-state,
+.lm-job-error .lm-mono {
+  color: var(--danger);
+}
+.lm-job-paused .lm-bar i {
+  background: var(--warn);
+}
+@media (max-width: 640px) {
+  .lm-explain dl {
+    grid-template-columns: 1fr;
+  }
+}

@@ -6,17 +6,25 @@ import {
   Pause,
   RefreshCw,
   Search,
+  X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
-  type DownloadProgress,
   ensurePermission,
   pickRootFolder,
   readLibrary,
-  runDownload,
   supportsFolderAccess,
 } from "./downloader";
+import {
+  type DownloadJob,
+  dismissDownload,
+  isDownloading,
+  pauseDownload,
+  startDownload,
+  useDownloads,
+} from "./downloadManager";
+import { explainQuant, FORMAT_TERMS, runtimeMemoryHint } from "./glossary";
 import {
   compareRevision,
   getCommits,
@@ -46,7 +54,7 @@ import {
   selectGgufPackage,
   selectSafetensorsPackage,
 } from "./selection";
-import { loadRootHandle, putInventory, saveRootHandle } from "./store";
+import { loadRootHandle, saveRootHandle } from "./store";
 import "./local-models.css";
 
 const FULL = "__full__";
@@ -86,11 +94,10 @@ export function LocalModelManager() {
   const [choice, setChoice] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [progress, setProgress] = useState<DownloadProgress | null>(null);
   const [library, setLibrary] = useState<LibraryEntry[]>([]);
   const [checks, setChecks] = useState<Record<string, VersionCheck>>({});
-  const abortRef = useRef<AbortController | null>(null);
   const supported = supportsFolderAccess();
+  const jobs = useDownloads();
 
   const refreshLibrary = useCallback(
     async (handle: FileSystemDirectoryHandle) => {
@@ -98,6 +105,15 @@ export function LocalModelManager() {
     },
     [],
   );
+
+  // Re-read the library whenever a background job finishes or pauses.
+  const finishedKey = jobs
+    .filter((job) => job.status !== "running")
+    .map((job) => `${job.folder}:${job.finishedAt}`)
+    .join("|");
+  useEffect(() => {
+    if (root && finishedKey) refreshLibrary(root).catch(() => undefined);
+  }, [root, finishedKey, refreshLibrary]);
 
   useEffect(() => {
     if (!supported) return;
@@ -209,38 +225,11 @@ export function LocalModelManager() {
             now,
           });
     }
-    const controller = new AbortController();
-    abortRef.current = controller;
-    setBusy(true);
-    try {
-      const result = await runDownload({
-        root,
-        folder,
-        manifest,
-        signal: controller.signal,
-        onProgress: setProgress,
-      });
-      await putInventory({
-        folder,
-        repo: result.repo,
-        revision: result.revision,
-        variant: result.variant,
-        format: result.format,
-        totalBytes: result.totalBytes,
-        complete: manifestStatus(result) === "complete",
-        state: "stored",
-        ollamaName: null,
-        updatedAt: result.updatedAt,
-      });
-    } catch (cause) {
-      if ((cause as Error).name !== "AbortError")
-        setError((cause as Error).message);
-    } finally {
-      abortRef.current = null;
-      setBusy(false);
-      setProgress(null);
-      await refreshLibrary(root);
+    if (isDownloading(folder)) {
+      setError("Ese modelo ya se está descargando.");
+      return;
     }
+    startDownload({ root, folder, manifest });
   }
 
   async function checkVersion(entry: LibraryEntry) {
@@ -265,11 +254,8 @@ export function LocalModelManager() {
   }
 
   const pkg = analysis ? packageFor(analysis) : null;
-  const pct = progress?.total ? (progress.done / progress.total) * 100 : 0;
-  const eta =
-    progress && progress.bytesPerSecond > 0
-      ? (progress.total - progress.done) / progress.bytesPerSecond
-      : null;
+  const quant = choice && choice !== FULL ? explainQuant(choice) : null;
+  const format = FORMAT_TERMS[choice === FULL ? "safetensors" : "gguf"];
 
   return (
     <section className="lm-manager" aria-labelledby="lm-title">
@@ -357,42 +343,56 @@ export function LocalModelManager() {
                   {sizeProfileFor(pkg.totalBytes).range})
                 </p>
               ) : null}
+              <aside className="lm-explain" aria-label="Qué significa">
+                <h4>¿Qué significa?</h4>
+                <dl>
+                  <dt>{format.term}</dt>
+                  <dd>{format.text}</dd>
+                  {quant ? (
+                    <>
+                      <dt>{quant.term}</dt>
+                      <dd>{quant.text}</dd>
+                      <dt>Calidad</dt>
+                      <dd>{quant.quality}</dd>
+                      <dt>Recomendado para</dt>
+                      <dd>{quant.use}</dd>
+                    </>
+                  ) : null}
+                  {pkg ? (
+                    <>
+                      <dt>Perfil {sizeProfileFor(pkg.totalBytes).label}</dt>
+                      <dd>
+                        {sizeProfileFor(pkg.totalBytes).hint}{" "}
+                        {runtimeMemoryHint(pkg.totalBytes)}
+                      </dd>
+                    </>
+                  ) : null}
+                </dl>
+              </aside>
               <div className="lm-actions">
                 <button
                   type="button"
                   className="lm-btn lm-btn-primary"
-                  disabled={!root || !pkg || busy}
+                  disabled={!root || !pkg}
                   onClick={() => download()}
                 >
                   <Download aria-hidden />
                   {root ? "Descargar" : "Elige una carpeta primero"}
                 </button>
-                {busy && abortRef.current ? (
-                  <button
-                    type="button"
-                    className="lm-btn"
-                    onClick={() => abortRef.current?.abort()}
-                  >
-                    <Pause aria-hidden /> Pausar
-                  </button>
-                ) : null}
+                <span className="lm-note">
+                  Puedes lanzar varias descargas y seguir navegando: continúan
+                  en segundo plano.
+                </span>
               </div>
             </div>
           ) : null}
 
-          {progress ? (
-            <div className="lm-progress" aria-live="polite">
-              <div className="lm-bar">
-                <i style={{ inlineSize: `${pct}%` }} />
-              </div>
-              <p className="lm-mono">
-                {progress.phase === "verifying" ? "Verificando" : "Descargando"}{" "}
-                {progress.fileIndex + 1}/{progress.fileCount} · {progress.file}{" "}
-                · {formatBytes(progress.done)} / {formatBytes(progress.total)} ·{" "}
-                {formatBytes(progress.bytesPerSecond)}/s · faltan{" "}
-                {formatDuration(eta)}
-              </p>
-            </div>
+          {jobs.length ? (
+            <ul className="lm-jobs" aria-live="polite">
+              {jobs.map((job) => (
+                <JobRow key={job.folder} job={job} />
+              ))}
+            </ul>
           ) : null}
 
           {root ? (
@@ -432,7 +432,7 @@ export function LocalModelManager() {
                             <button
                               type="button"
                               className="lm-btn"
-                              disabled={busy}
+                              disabled={isDownloading(entry.folder)}
                               onClick={() => download(entry)}
                             >
                               Reanudar
@@ -477,5 +477,65 @@ export function LocalModelManager() {
         </>
       )}
     </section>
+  );
+}
+
+const JOB_LABELS = {
+  running: "Descargando",
+  done: "Completado",
+  paused: "En pausa",
+  error: "Error",
+} as const;
+
+/** One background download with live progress and pause/close controls. */
+function JobRow({ job }: { job: DownloadJob }) {
+  const p = job.progress;
+  const total = p?.total ?? job.totalBytes;
+  const done = job.status === "done" ? total : (p?.done ?? 0);
+  const pct = total ? (done / total) * 100 : 0;
+  const eta =
+    p && p.bytesPerSecond > 0 ? (p.total - p.done) / p.bytesPerSecond : null;
+  const phase =
+    job.status === "running" && p?.phase === "verifying"
+      ? "Verificando SHA-256"
+      : JOB_LABELS[job.status];
+  return (
+    <li className={`lm-job lm-job-${job.status}`}>
+      <div className="lm-job-head">
+        <strong>{job.repo}</strong>
+        <small className="lm-mono">{job.variant}</small>
+        <span className="lm-job-state">{phase}</span>
+        {job.status === "running" ? (
+          <button
+            type="button"
+            className="lm-btn"
+            onClick={() => pauseDownload(job.folder)}
+          >
+            <Pause aria-hidden /> Pausar
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="lm-btn"
+            aria-label="Quitar de la lista"
+            onClick={() => dismissDownload(job.folder)}
+          >
+            <X aria-hidden />
+          </button>
+        )}
+      </div>
+      <div className="lm-bar">
+        <i style={{ inlineSize: `${pct}%` }} />
+      </div>
+      <p className="lm-mono">
+        {job.error
+          ? job.error
+          : `${formatBytes(done)} / ${formatBytes(total)} · ${pct.toFixed(1)} %${
+              job.status === "running" && p
+                ? ` · ${formatBytes(p.bytesPerSecond)}/s · faltan ${formatDuration(eta)} · archivo ${p.fileIndex + 1}/${p.fileCount}`
+                : ""
+            }`}
+      </p>
+    </li>
   );
 }

@@ -38,6 +38,7 @@ export function LiveConsole({
   const [modelId, setModelId] = useState("");
   const [prompt, setPrompt] = useState("");
   const [system, setSystem] = useState("");
+  const [maxTokens, setMaxTokens] = useState(4096);
   const [text, setText] = useState("");
   const [reasoning, setReasoning] = useState("");
   const [done, setDone] = useState<DoneEvent | null>(null);
@@ -78,6 +79,7 @@ export function LiveConsole({
           modelId: activeModel,
           prompt,
           system: system.trim() || undefined,
+          maxOutputTokens: maxTokens,
         },
         (event) => {
           if (event.type === "delta") {
@@ -152,6 +154,24 @@ export function LiveConsole({
             </select>
           </label>
         </div>
+        <label className="lc-field lc-field-inline">
+          Máximo de salida (tokens)
+          <input
+            type="number"
+            min={256}
+            max={65536}
+            step={256}
+            value={maxTokens}
+            onChange={(event) =>
+              setMaxTokens(
+                Math.min(
+                  65536,
+                  Math.max(256, Number(event.target.value) || 4096),
+                ),
+              )
+            }
+          />
+        </label>
         <label className="lc-field">
           Instrucción de sistema (opcional)
           <input
@@ -205,7 +225,7 @@ export function LiveConsole({
 
         <output className="lc-output" aria-live="polite">
           {reasoning ? (
-            <details className="lc-reasoning">
+            <details className="lc-reasoning" open={running && !text}>
               <summary>Razonamiento del modelo</summary>
               <pre>{reasoning}</pre>
             </details>
@@ -214,10 +234,20 @@ export function LiveConsole({
             {text}
             {running ? <span className="lc-caret" aria-hidden /> : null}
           </pre>
+          {text ? <h3 className="lc-answer-title">Respuesta</h3> : null}
           {!text && !running ? (
-            <span className="lc-placeholder">
-              La respuesta aparecerá aquí token a token.
-            </span>
+            done?.finishReason === "length" ? (
+              <span className="lc-error">
+                El modelo gastó todo el máximo de salida razonando y no llegó a
+                responder. Sube el «Máximo de salida» y vuelve a ejecutar.
+              </span>
+            ) : (
+              <span className="lc-placeholder">
+                {done
+                  ? "El proveedor no devolvió texto de respuesta."
+                  : "La respuesta aparecerá aquí token a token."}
+              </span>
+            )
           ) : null}
         </output>
 

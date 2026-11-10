@@ -515,7 +515,7 @@ function TestWorkspace({ providers }: { providers: DeveloperLabProvider[] }) {
   } | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [temperature, setTemperature] = useState(0.7);
-  const [maxOutputTokens, setMaxOutputTokens] = useState(1024);
+  const [maxOutputTokens, setMaxOutputTokens] = useState(4096);
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [timelineOpen, setTimelineOpen] = useState(true);
 
@@ -871,7 +871,25 @@ function TestWorkspace({ providers }: { providers: DeveloperLabProvider[] }) {
                 <track kind="captions" />
               </video>
             ) : (
-              <pre className="developer-result-text">{result.outputText}</pre>
+              <>
+                {result.reasoningText ? (
+                  <details className="developer-result-reasoning">
+                    <summary>Razonamiento del modelo</summary>
+                    <pre>{result.reasoningText}</pre>
+                  </details>
+                ) : null}
+                {result.outputText ? (
+                  <pre className="developer-result-text">
+                    {result.outputText}
+                  </pre>
+                ) : (
+                  <p className="developer-result-warning" role="status">
+                    {result.finishReason === "length"
+                      ? "El modelo agotó el «Máximo de salida» antes de responder (lo gastó razonando). Sube el máximo de salida en Parámetros técnicos y vuelve a ejecutar."
+                      : "El proveedor no devolvió texto de respuesta."}
+                  </p>
+                )}
+              </>
             )}
           </div>
         ) : (
