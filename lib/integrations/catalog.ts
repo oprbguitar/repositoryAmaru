@@ -8,19 +8,36 @@
  * el mismo binding.
  */
 
+import { EXTRA_INTEGRATIONS } from "./catalog-extra";
+
 export type IntegrationCategory =
   | "market"
   | "video"
   | "code"
   | "research"
   | "news"
-  | "analysis";
+  | "analysis"
+  | "models"
+  | "opendata"
+  | "patents"
+  | "social";
+
+export type ProbeOutcome = { httpStatus: number; ok: boolean; detail: string };
 
 export type IntegrationProbe = {
   /** URL real que se consulta para verificar la credencial. */
-  url: (credential: string) => string;
+  url?: (credential: string) => string;
   /** Cabeceras adicionales (por ejemplo Authorization). */
   headers?: (credential: string) => Record<string, string>;
+  /** Otros bindings que la prueba necesita (pares id + secreto). */
+  needs?: string[];
+  /** Una respuesta 2xx cuyo cuerpo cumpla esto se considera fallida. */
+  rejectBody?: RegExp;
+  /** Prueba a medida (intercambio OAuth, POST, Basic). Recibe los secretos de `needs`. */
+  run?: (
+    credential: string,
+    secrets: Record<string, string>,
+  ) => Promise<ProbeOutcome>;
 };
 
 export type IntegrationDefinition = {
@@ -35,6 +52,12 @@ export type IntegrationDefinition = {
   documentationUrl: string;
   freeTierNote: string;
   probe: IntegrationProbe | null;
+  /** Longitud mínima del valor (por defecto 8; identificadores cortos usan menos). */
+  minLength?: number;
+  /** Verificación real del endpoint de prueba: respuesta sin clave y fecha. */
+  verified?: string;
+  /** Advertencia sobre el alcance de la prueba. */
+  probeNote?: string;
 };
 
 export const INTEGRATION_CATEGORIES: Array<{
@@ -68,6 +91,26 @@ export const INTEGRATION_CATEGORIES: Array<{
     id: "news",
     label: "Noticias",
     description: "Agregadores de prensa con licencia de uso personal.",
+  },
+  {
+    id: "models",
+    label: "Modelos y hubs",
+    description: "Catálogos de modelos y datasets.",
+  },
+  {
+    id: "opendata",
+    label: "Datos abiertos",
+    description: "Portales de datos públicos.",
+  },
+  {
+    id: "patents",
+    label: "Patentes",
+    description: "Oficinas y buscadores de patentes.",
+  },
+  {
+    id: "social",
+    label: "Redes sociales",
+    description: "Conversación pública en redes.",
   },
   {
     id: "analysis",
@@ -156,7 +199,7 @@ export const INTEGRATIONS: IntegrationDefinition[] = [
   {
     binding: "X_BEARER_TOKEN",
     name: "X (API v2)",
-    category: "video",
+    category: "social",
     unlocks: "Búsqueda reciente oficial de X.",
     sourceIds: [],
     apiKeyUrl: "https://developer.x.com/en/portal/dashboard",
@@ -188,7 +231,7 @@ export const INTEGRATIONS: IntegrationDefinition[] = [
   {
     binding: "HUGGINGFACE_TOKEN",
     name: "Hugging Face",
-    category: "code",
+    category: "models",
     unlocks: "Catálogo de modelos, datasets y spaces con límites ampliados.",
     sourceIds: ["hugging-face"],
     apiKeyUrl: "https://huggingface.co/settings/tokens",
@@ -275,6 +318,81 @@ export const INTEGRATIONS: IntegrationDefinition[] = [
     probe: {
       url: () => "https://integrate.api.nvidia.com/v1/models",
       headers: (credential) => ({ authorization: `Bearer ${credential}` }),
+    },
+  },
+  ...EXTRA_INTEGRATIONS,
+  {
+    binding: "ALPHA_VANTAGE_API_KEY",
+    name: "Alpha Vantage",
+    category: "market",
+    unlocks:
+      "Respaldo de precios diarios de «Mercado IA» (cierres que alimentan indicadores y proyecciones).",
+    sourceIds: [],
+    apiKeyUrl: "https://www.alphavantage.co/support/#api-key",
+    documentationUrl: "https://www.alphavantage.co/documentation/",
+    freeTierNote:
+      "Plan gratuito: 25 peticiones al día. La prueba no rechaza claves inválidas (el endpoint responde igual).",
+    probe: {
+      url: (credential) =>
+        `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=NVDA&apikey=${encodeURIComponent(credential)}`,
+    },
+  },
+  {
+    binding: "FMP_API_KEY",
+    name: "Financial Modeling Prep",
+    category: "market",
+    unlocks: "Respaldo de precios diarios de «Mercado IA».",
+    sourceIds: [],
+    apiKeyUrl:
+      "https://site.financialmodelingprep.com/developer/docs/dashboard",
+    documentationUrl: "https://site.financialmodelingprep.com/developer/docs",
+    freeTierNote: "Plan gratuito: 250 peticiones al día.",
+    probe: {
+      url: (credential) =>
+        `https://financialmodelingprep.com/stable/quote?symbol=NVDA&apikey=${encodeURIComponent(credential)}`,
+    },
+  },
+  {
+    binding: "POLYGON_API_KEY",
+    name: "Polygon.io",
+    category: "market",
+    unlocks: "Respaldo de precios diarios de «Mercado IA» (cierres EOD).",
+    sourceIds: [],
+    apiKeyUrl: "https://polygon.io/dashboard/api-keys",
+    documentationUrl: "https://polygon.io/docs/stocks",
+    freeTierNote:
+      "Plan gratuito: 5 peticiones por minuto, datos de fin de día.",
+    probe: {
+      url: (credential) =>
+        `https://api.polygon.io/v2/aggs/ticker/NVDA/prev?apiKey=${encodeURIComponent(credential)}`,
+    },
+  },
+  {
+    binding: "MARKETSTACK_API_KEY",
+    name: "Marketstack",
+    category: "market",
+    unlocks: "Respaldo de precios diarios de «Mercado IA» (EOD).",
+    sourceIds: [],
+    apiKeyUrl: "https://marketstack.com/dashboard",
+    documentationUrl: "https://marketstack.com/documentation",
+    freeTierNote: "Plan gratuito: 100 peticiones al mes y solo HTTP.",
+    probe: {
+      url: (credential) =>
+        `http://api.marketstack.com/v1/eod?access_key=${encodeURIComponent(credential)}&symbols=NVDA&limit=1`,
+    },
+  },
+  {
+    binding: "TIINGO_API_KEY",
+    name: "Tiingo",
+    category: "market",
+    unlocks: "Respaldo de precios diarios de «Mercado IA».",
+    sourceIds: [],
+    apiKeyUrl: "https://www.tiingo.com/account/api/token",
+    documentationUrl: "https://www.tiingo.com/documentation/end-of-day",
+    freeTierNote: "Plan gratuito: 1 000 peticiones al día.",
+    probe: {
+      url: (credential) =>
+        `https://api.tiingo.com/tiingo/daily/NVDA/prices?token=${encodeURIComponent(credential)}`,
     },
   },
 ];

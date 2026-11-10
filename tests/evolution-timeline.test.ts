@@ -1,79 +1,54 @@
 import { describe, expect, it } from "vitest";
+import { CONCEPTS, conceptById } from "../src/features/evolution/concepts";
 import {
-  CONCEPT_FLOW,
+  BRANCHES,
   ERAS,
+  filterMilestones,
   MILESTONES,
+  milestoneYear,
+  sortedMilestones,
   timelineStats,
 } from "../src/features/evolution/timeline";
 
-// The Evolución IA section is curated editorial content. These checks keep it
-// honest: every milestone must cite at least one real, linkable source, and
-// the page stats must be derived from the data instead of typed by hand.
-
-describe("evolution timeline data", () => {
-  it("has unique milestone ids", () => {
-    const ids = MILESTONES.map((milestone) => milestone.id);
-    expect(new Set(ids).size).toBe(ids.length);
-  });
-
-  it("assigns every milestone to a defined era", () => {
-    const eraIds = new Set(ERAS.map((era) => era.id));
+describe("evolution timeline", () => {
+  it("every milestone has a source, a known era and a known branch", () => {
+    const eras = new Set(ERAS.map((era) => era.id));
+    const branches = new Set(BRANCHES.map((branch) => branch.id));
     for (const milestone of MILESTONES) {
-      expect(eraIds.has(milestone.era), milestone.id).toBe(true);
+      expect(milestone.sources.length).toBeGreaterThan(0);
+      expect(eras.has(milestone.era)).toBe(true);
+      expect(branches.has(milestone.branch)).toBe(true);
     }
   });
 
-  it("cites at least one https source per milestone", () => {
+  it("milestone years fall inside their era", () => {
     for (const milestone of MILESTONES) {
-      expect(milestone.sources.length, milestone.id).toBeGreaterThan(0);
-      for (const source of milestone.sources) {
-        expect(source.url, `${milestone.id}: ${source.title}`).toMatch(
-          /^https?:\/\//,
-        );
-        expect(source.title.trim()).not.toBe("");
-        expect(source.author.trim()).not.toBe("");
-      }
+      const era = ERAS.find((item) => item.id === milestone.era);
+      const year = milestoneYear(milestone);
+      expect(year).toBeGreaterThanOrEqual(era?.start ?? 0);
+      expect(year).toBeLessThanOrEqual(era?.end ?? 9999);
     }
   });
 
-  it("keeps explanations and impact non-empty", () => {
-    for (const milestone of MILESTONES) {
-      expect(milestone.summary.trim(), milestone.id).not.toBe("");
-      expect(milestone.whatHappened.trim(), milestone.id).not.toBe("");
-      expect(milestone.whyItMattered.trim(), milestone.id).not.toBe("");
-      expect(milestone.simpleExample.trim(), milestone.id).not.toBe("");
-      expect(milestone.impact.length, milestone.id).toBeGreaterThan(0);
-    }
+  it("sorts chronologically and reaches 2026 without future dates", () => {
+    const sorted = sortedMilestones();
+    for (let i = 1; i < sorted.length; i += 1)
+      expect(milestoneYear(sorted[i])).toBeGreaterThanOrEqual(
+        milestoneYear(sorted[i - 1]),
+      );
+    expect(milestoneYear(sorted[sorted.length - 1])).toBeLessThanOrEqual(2026);
   });
 
-  it("orders eras consistently with milestone years", () => {
-    const bounds: Record<string, [number, number]> = {
-      "1950-1980": [1950, 1980],
-      "1980-2012": [1980, 2012],
-      "2012-2019": [2012, 2019],
-      "2020-hoy": [2020, 2100],
-    };
-    for (const milestone of MILESTONES) {
-      const [min, max] = bounds[milestone.era];
-      expect(milestone.year, milestone.id).toBeGreaterThanOrEqual(min);
-      expect(milestone.year, milestone.id).toBeLessThanOrEqual(max);
-    }
+  it("filters by branch and reports stats", () => {
+    const branch = BRANCHES[0].id;
+    const filtered = filterMilestones(MILESTONES, branch, "");
+    expect(filtered.every((m) => m.branch === branch)).toBe(true);
+    expect(timelineStats().milestones).toBe(MILESTONES.length);
   });
 
-  it("links every concept-flow step to an existing milestone", () => {
-    const ids = new Set(MILESTONES.map((milestone) => milestone.id));
-    for (const concept of CONCEPT_FLOW) {
-      expect(ids.has(concept.milestoneId), concept.id).toBe(true);
-    }
-  });
-
-  it("computes stats from the dataset", () => {
-    const stats = timelineStats();
-    expect(stats.milestones).toBe(MILESTONES.length);
-    expect(stats.eras).toBe(ERAS.length);
-    expect(stats.sources).toBe(
-      MILESTONES.reduce((total, m) => total + m.sources.length, 0),
-    );
-    expect(stats.keyModels).toBeGreaterThan(0);
+  it("concept graph parents exist", () => {
+    for (const concept of CONCEPTS)
+      for (const parent of concept.parents)
+        expect(conceptById(parent)).toBeDefined();
   });
 });

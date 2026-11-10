@@ -34,6 +34,7 @@ import {
   recommendProject,
   saveProject,
 } from "./api";
+import { LaboratoryTimeline } from "./LaboratoryTimeline";
 import { randomProjectInputs } from "./randomProject";
 
 const DEFAULT_INPUTS: ProjectInputs = {
@@ -471,10 +472,7 @@ export function LaboratoryPage() {
           <h1>
             <Beaker /> Mi laboratorio
           </h1>
-          <p>
-            Convierte una necesidad en un proyecto trazable con alternativas
-            basadas en datos indexados reales.
-          </p>
+          <p>Tus proyectos, su historia y alternativas con datos reales.</p>
         </div>
         <div className="heading-actions">
           <button
@@ -625,6 +623,12 @@ export function LaboratoryPage() {
           </div>
         )}
       </section>
+
+      <LaboratoryTimeline
+        projects={savedProjects}
+        activeId={activeProjectId}
+        onSelect={setActiveProjectId}
+      />
 
       {wizardOpen ? (
         <section className="panel wizard-panel">

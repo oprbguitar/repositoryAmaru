@@ -456,6 +456,10 @@ export type IntegrationStatus = {
   lastTestStatus: "ok" | "failed" | null;
   lastTestMessage: string | null;
   testable: boolean;
+  verified?: string | null;
+  probeNote?: string | null;
+  needs?: string[];
+  minLength?: number;
   sources: Array<{
     id: string;
     status: string;

@@ -1,3 +1,4 @@
+import { DAILY_PROVIDERS } from "../lib/market/providers";
 import type { MarketQuote, MarketQuotesResponse } from "../types/api";
 import { type IntegrationsEnv, resolveSecret } from "./integrations";
 
@@ -134,12 +135,79 @@ async function recordSourceOutcome(
     .catch(() => undefined);
 }
 
+/**
+ * Respaldo cuando Finnhub no está configurado o no devuelve nada: usa el primer
+ * proveedor diario configurado. Son cierres diarios, no intradía, y así se
+ * declara en la fuente de cada cotización.
+ */
+async function getBackupQuotes(env: MarketEnv): Promise<MarketQuote[]> {
+  const retrievedAt = new Date().toISOString();
+  const from = new Date(Date.now() - 14 * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+  const to = retrievedAt.slice(0, 10);
+  for (const provider of DAILY_PROVIDERS) {
+    const key = await resolveSecret(env, provider.binding);
+    if (!key) continue;
+    const quotes: MarketQuote[] = [];
+    for (const entry of MARKET_SYMBOLS) {
+      try {
+        const response = await fetch(
+          provider.url(entry.symbol, key, from, to),
+          {
+            headers: { accept: "application/json" },
+            signal: AbortSignal.timeout(15_000),
+          },
+        );
+        if (!response.ok) continue;
+        const closes = provider.parse(await response.json().catch(() => null));
+        const last = closes[closes.length - 1];
+        const previous = closes[closes.length - 2];
+        if (!last) continue;
+        quotes.push({
+          symbol: entry.symbol,
+          companyName: entry.name,
+          providerId: entry.providerId,
+          price: last.value,
+          changeAbsolute: previous ? last.value - previous.value : null,
+          changePercent: previous
+            ? (last.value / previous.value - 1) * 100
+            : null,
+          dayHigh: null,
+          dayLow: null,
+          dayOpen: null,
+          previousClose: previous?.value ?? null,
+          quotedAt: `${last.date}T00:00:00.000Z`,
+          retrievedAt,
+          sourceName: `${provider.name} (cierre diario)`,
+          originalUrl: provider.sourceUrl(entry.symbol),
+        });
+      } catch {
+        // Símbolo sin dato: se omite, no se rellena.
+      }
+    }
+    if (quotes.length) return quotes;
+  }
+  return [];
+}
+
 export async function getMarketQuotes(
   env: MarketEnv,
   options: { force?: boolean } = {},
 ): Promise<MarketQuotesResponse> {
   const token = await resolveSecret(env, "FINNHUB_API_KEY");
   if (!token) {
+    const backup = await getBackupQuotes(env);
+    if (backup.length) {
+      return {
+        configured: true,
+        quotes: backup,
+        reason:
+          "Finnhub no está configurado: se muestran cierres diarios del proveedor de respaldo (no son precios intradía).",
+        refreshedAt: backup[0].retrievedAt,
+        fromCache: false,
+      };
+    }
     return {
       configured: false,
       quotes: [],
@@ -168,6 +236,18 @@ export async function getMarketQuotes(
       failures.push(
         `${entry.symbol}: ${error instanceof Error ? error.message : "fallo desconocido"}`,
       );
+    }
+  }
+  if (!quotes.length) {
+    const backup = await getBackupQuotes(env);
+    if (backup.length) {
+      return {
+        configured: true,
+        quotes: backup,
+        reason: `Finnhub no devolvió precios (${failures.join("; ").slice(0, 160)}): se muestran cierres diarios del respaldo.`,
+        refreshedAt: retrievedAt,
+        fromCache: false,
+      };
     }
   }
   await persistQuotes(env, quotes).catch((error) =>

@@ -25,6 +25,7 @@ export function normalizeTopics(values: readonly string[]): string[] {
 function cleanKeyword(value: string): string | null {
   const cleaned = value
     .replace(/["():[\]\\]/g, " ")
+    .replace(/\b(AND|OR|NOT)\b/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 40);
@@ -108,7 +109,9 @@ const ALLOWED_QUALIFIERS = new Set([
  */
 export function isSafeSearchQuery(query: string): boolean {
   if (query.length < 2 || query.length > 300) return false;
-  if (/[\u0000-\u001f<>`\\]/.test(query)) return false;
+  if (query.includes("`") || query.includes("\\")) return false;
+  for (let index = 0; index < query.length; index += 1)
+    if (query.charCodeAt(index) < 32) return false;
   const withoutQuotes = query.replace(/"[^"]*"/g, '"x"');
   for (const token of withoutQuotes.split(/\s+/)) {
     const separator = token.indexOf(":");

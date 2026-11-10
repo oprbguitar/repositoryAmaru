@@ -7,7 +7,14 @@
  * import and ONE array entry below — nothing else in `worker/index.ts`
  * needs to change.
  */
+
 import type { ExternalEnv } from "./external";
+import { githubRouter } from "./routes/github";
+import { libraryAnalysesRouter } from "./routes/library-analyses";
+import { llmMapRouter } from "./routes/llm-map";
+import { localModelsRouter } from "./routes/local-models";
+import { marketForecastRouter } from "./routes/market-forecast";
+import { modelHubRouter } from "./routes/model-hub";
 
 export type ExtraEnv = ExternalEnv & {
   CACHE: KVNamespace;
@@ -22,4 +29,11 @@ export type ExtraRouter = (
   url: URL,
 ) => Promise<Response | null>;
 
-export const extraRouters: ExtraRouter[] = [];
+export const extraRouters: ExtraRouter[] = [
+  marketForecastRouter,
+  llmMapRouter,
+  githubRouter,
+  libraryAnalysesRouter,
+  localModelsRouter,
+  modelHubRouter,
+];

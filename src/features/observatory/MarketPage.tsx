@@ -17,6 +17,7 @@ import { Link } from "react-router-dom";
 import type { MarketQuote, ObservatoryRecord } from "../../../types/api";
 import { SyncActionButton } from "../../components/common/SyncActionButton";
 import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
+import { ForecastPanel } from "../market/ForecastPanel";
 import { getMarketQuotes, getRecords, synchronize } from "./api";
 import { formatDate, missing } from "./format";
 import {
@@ -265,9 +266,9 @@ export function MarketPage() {
             <Landmark /> Mercado IA
           </h1>
           <p>
-            Cotizaciones intradía (Finnhub), fundamentos oficiales (SEC XBRL),
-            filings y tipos de cambio del BCRP y del BCE. Cada dato enlaza a su
-            fuente original.
+            Cotizaciones intradía (Finnhub, con respaldo diario), proyecciones
+            etiquetadas, fundamentos oficiales (SEC XBRL), filings y tipos de
+            cambio del BCRP y del BCE. Cada dato enlaza a su fuente original.
           </p>
         </div>
         <SyncActionButton
@@ -354,6 +355,8 @@ export function MarketPage() {
           </div>
         )}
       </section>
+
+      <ForecastPanel />
 
       <div className="market-chart-grid">
         <section className="panel">

@@ -161,6 +161,10 @@ export async function listIntegrations(
           : null,
       lastTestMessage: row?.last_test_message ?? null,
       testable: definition.probe !== null,
+      verified: definition.verified ?? null,
+      probeNote: definition.probeNote ?? null,
+      needs: definition.probe?.needs ?? [],
+      minLength: definition.minLength ?? 8,
       sources,
     };
   });
@@ -206,7 +210,7 @@ export async function saveIntegration(
   const definition = getIntegration(binding);
   if (!definition) throw new Error("Integración desconocida.");
   const value = credential.trim();
-  if (value.length < 8)
+  if (value.length < (definition.minLength ?? 8))
     throw new Error("La credencial no tiene una longitud válida.");
   const sealed = await sealSecret(value, env.DEVELOPER_LAB_ENCRYPTION_KEY);
   const now = new Date().toISOString();
@@ -300,23 +304,48 @@ export async function testIntegration(
   let status: "ok" | "failed" = "failed";
   let message: string;
   try {
-    const response = await fetch(definition.probe.url(credential), {
-      headers: {
-        accept: "application/json",
-        "user-agent":
-          "AMARU-AI-Observatory/0.1 (local-first research application)",
-        ...(definition.probe.headers?.(credential) ?? {}),
-      },
-      signal: AbortSignal.timeout(15_000),
-    });
-    httpStatus = response.status;
-    if (response.ok) {
-      status = "ok";
-      message = `Conexión verificada (HTTP ${response.status}).`;
+    const probe = definition.probe;
+    const secrets: Record<string, string> = {};
+    for (const other of probe.needs ?? [])
+      secrets[other] = await resolveSecret(env, other);
+    const missing = (probe.needs ?? []).filter((other) => !secrets[other]);
+    if (missing.length) {
+      return {
+        binding,
+        status: "not_configured",
+        httpStatus: null,
+        latencyMs: 0,
+        message: `Falta también ${missing.join(", ")}.`,
+        testedAt,
+      };
+    }
+    let ok: boolean;
+    let detail = "";
+    if (probe.run) {
+      const result = await probe.run(credential, secrets);
+      httpStatus = result.httpStatus;
+      ok = result.ok;
+      detail = result.detail;
     } else {
-      const detail = await response.text().catch(() => "");
+      const response = await fetch(probe.url?.(credential) ?? "", {
+        headers: {
+          accept: "application/json",
+          "user-agent":
+            "AMARU-AI-Observatory/0.1 (local-first research application)",
+          ...(probe.headers?.(credential) ?? {}),
+        },
+        signal: AbortSignal.timeout(15_000),
+      });
+      httpStatus = response.status;
+      detail = await response.text().catch(() => "");
+      ok = response.ok && !(probe.rejectBody?.test(detail) ?? false);
+    }
+    if (ok) {
+      status = "ok";
+      message = `Conexión verificada (HTTP ${httpStatus}).`;
+    } else {
       message =
-        `La API respondió HTTP ${response.status}. ${detail.slice(0, 160)}`.trim();
+        `La API respondió HTTP ${httpStatus}. ${detail.slice(0, 160)}`.trim();
     }
   } catch (error) {
     message =

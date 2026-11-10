@@ -1,222 +1,414 @@
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, GitFork, Star } from "lucide-react";
-import { useState } from "react";
-import type { GithubRankingEntry } from "../../../types/api";
-import { SyncActionButton } from "../../components/common/SyncActionButton";
-import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
-import { getGithubRankings, synchronize } from "./api";
-import { formatDate, formatNumber, missing } from "./format";
+import { ExternalLink, GitFork, Plus, Star, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  findRepoType,
+  INTERNATIONAL_TOPICS,
+  REPO_GROUPS,
+} from "../../../lib/github/collections";
+import {
+  buildSearchQuery,
+  githubSearchUrl,
+  normalizeTopic,
+} from "../../../lib/github/query";
+import type {
+  QuerySpec,
+  RepoDetail,
+  SearchSort,
+} from "../../../lib/github/types";
+import {
+  GithubApiError,
+  githubApi,
+  readStored,
+  writeStored,
+} from "../github/api";
+import { ProfilePanel } from "../github/ProfilePanel";
+import { RepoInspector } from "../github/RepoInspector";
+import { RepoViewer } from "../github/RepoViewer";
+import { formatDate, formatNumber } from "./format";
+import "../github/github.css";
 
-const VIEWS: Array<{ id: string; label: string }> = [
-  { id: "stars", label: "Más estrellas" },
-  { id: "growth", label: "Mayor crecimiento" },
-  { id: "active", label: "Más activos" },
-  { id: "new", label: "Nuevos" },
-  { id: "open-local", label: "Open y local" },
-  { id: "rag", label: "RAG" },
-  { id: "agents", label: "Agentes" },
-  { id: "audio", label: "Audio" },
-  { id: "vision", label: "Visión" },
-  { id: "peru-latam", label: "Perú y LATAM" },
-];
+type Source =
+  | { kind: "type"; id: string }
+  | { kind: "topic"; topic: string }
+  | { kind: "personal" }
+  | { kind: "custom"; label: string; spec: QuerySpec };
+
+const TOPICS_KEY = "amaru-github-topics";
+const SORT_LABELS: Record<SearchSort, string> = {
+  stars: "Más estrellas",
+  updated: "Actualizados",
+  forks: "Más forks",
+  "best-match": "Mejor coincidencia",
+};
+
+function sourceLabel(source: Source): string {
+  if (source.kind === "type") return findRepoType(source.id)?.label ?? "Tipo";
+  if (source.kind === "topic") return `topic:${source.topic}`;
+  if (source.kind === "personal") return "Mis topics";
+  return source.label;
+}
 
 export function GitHubPage() {
-  const [view, setView] = useState("stars");
-  const [selected, setSelected] = useState<GithubRankingEntry | null>(null);
-  const [syncing, setSyncing] = useState(false);
-  const rankings = useQuery({
-    queryKey: ["github-rankings", view],
-    queryFn: () => getGithubRankings(view),
+  const [source, setSource] = useState<Source>({
+    kind: "type",
+    id: "design-systems",
   });
-  const data = rankings.data?.data;
-  const chosen = selected ?? data?.entries[0] ?? null;
+  const [sort, setSort] = useState<SearchSort>("stars");
+  const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<RepoDetail | null>(null);
+  const [myTopics, setMyTopics] = useState<string[]>(() =>
+    readStored(TOPICS_KEY, []),
+  );
+  const [matchAll, setMatchAll] = useState(false);
+  const [draft, setDraft] = useState("");
 
-  async function runSync() {
-    setSyncing(true);
-    try {
-      await synchronize("github");
-      await rankings.refetch();
-    } finally {
-      setSyncing(false);
-    }
+  const spec = useMemo<QuerySpec | null>(() => {
+    if (source.kind === "type") return findRepoType(source.id)?.spec ?? null;
+    if (source.kind === "topic") return { topics: [source.topic] };
+    if (source.kind === "custom") return source.spec;
+    if (!myTopics.length) return null;
+    return matchAll
+      ? { topics: myTopics, minStars: 10 }
+      : { anyTopics: myTopics, minStars: 10 };
+  }, [source, myTopics, matchAll]);
+  const query = spec ? buildSearchQuery(spec) : "";
+
+  const status = useQuery({
+    queryKey: ["gh-status"],
+    queryFn: githubApi.status,
+    staleTime: 30_000,
+    retry: false,
+  });
+  const results = useQuery({
+    queryKey: ["gh-search", query, sort, page],
+    queryFn: () => githubApi.search(query, sort, page),
+    enabled: !!query,
+    staleTime: 300_000,
+    retry: false,
+    placeholderData: (previous) => previous,
+  });
+  const items = results.data?.data.items ?? [];
+  const chosen = items.find((item) => item.fullName === selected) ?? null;
+  const rate =
+    results.error instanceof GithubApiError ? results.error.rateLimit : null;
+  const limited =
+    results.error instanceof GithubApiError &&
+    results.error.code === "rate_limited";
+  const tokenOn = status.data?.data.tokenConfigured;
+  const searchRate = status.data?.data.search;
+
+  function pick(next: Source) {
+    setSource(next);
+    setPage(1);
+    setSelected(null);
+    setViewing(null);
+  }
+  function saveTopics(next: string[]) {
+    setMyTopics(next);
+    writeStored(TOPICS_KEY, next);
+  }
+  function addTopic(value: string) {
+    const topic = normalizeTopic(value);
+    if (topic && !myTopics.includes(topic))
+      saveTopics([...myTopics, topic].slice(0, 20));
   }
 
-  const panel = chosen ? (
-    <aside className="context-panel scroll-region">
-      <div className="context-title">
-        <GitFork />
-        <strong>Información contextual</strong>
-      </div>
-      <section>
-        <h2 className="context-record-title">{chosen.fullName}</h2>
-        <p>{chosen.description ?? missing}</p>
-        <small className="coverage-note">
-          Resumen automático basado en la descripción del repositorio
-        </small>
-      </section>
-      <section>
-        <h3>Métricas</h3>
-        <dl className="context-facts">
-          <dt>Estrellas</dt>
-          <dd>{formatNumber(chosen.stars)}</dd>
-          <dt>Forks</dt>
-          <dd>{formatNumber(chosen.forks)}</dd>
-          <dt>Issues abiertas</dt>
-          <dd>{formatNumber(chosen.openIssues)}</dd>
-          <dt>Lenguaje</dt>
-          <dd>{chosen.language ?? missing}</dd>
-          <dt>Licencia</dt>
-          <dd>{chosen.license ?? missing}</dd>
-          <dt>Último push</dt>
-          <dd>{formatDate(chosen.pushedAt)}</dd>
-          <dt>Creado</dt>
-          <dd>{formatDate(chosen.createdAt)}</dd>
-        </dl>
-      </section>
-      {chosen.topics.length ? (
-        <section>
-          <h3>Topics</h3>
-          <p>{chosen.topics.slice(0, 12).join(" · ")}</p>
-        </section>
-      ) : null}
-      <section>
-        <h3>Fuentes</h3>
-        <a
-          className="source-link-button"
-          href={chosen.url}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Abrir repositorio <ExternalLink />
-        </a>
-        <p>
-          {chosen.sourceName} · recuperado {formatDate(chosen.retrievedAt)}
-        </p>
-      </section>
-    </aside>
-  ) : (
-    <aside className="context-panel scroll-region">
-      <div className="context-title">
-        <GitFork />
-        <strong>Información contextual</strong>
-      </div>
-      <section>
-        <p>Selecciona un repositorio para revisar sus métricas y fuentes.</p>
-      </section>
-    </aside>
-  );
+  const detailQuery = useQuery({
+    queryKey: ["gh-repo", chosen?.owner, chosen?.name],
+    queryFn: () => githubApi.repo(chosen?.owner ?? "", chosen?.name ?? ""),
+    enabled: false,
+  });
 
   return (
-    <CollapsibleLayout storageKey="github" panel={panel}>
-      <header className="page-heading">
-        <div>
-          <h1>
-            <GitFork /> GitHub — repositorios de IA
-          </h1>
-          <p>
-            Ranking por estrellas obtenido de GitHub REST (sort=stars). El
-            crecimiento requiere al menos dos snapshots en fechas distintas.
-          </p>
-        </div>
-        <SyncActionButton
-          label="Sincronizar GitHub"
-          busy={syncing}
-          onClick={runSync}
-        />
+    <div className="gh-page">
+      <header className="gh-header">
+        <h1>
+          <GitFork /> Explorador de repositorios
+        </h1>
+        <p className="gh-limit" data-state={tokenOn ? "ok" : "warn"}>
+          {status.isLoading
+            ? "Comprobando GitHub…"
+            : status.data?.data.reachable === false
+              ? "GitHub no responde ahora."
+              : tokenOn
+                ? "Con GITHUB_TOKEN"
+                : "Sin GITHUB_TOKEN: 10 búsquedas por minuto y 60 consultas por hora"}
+          {searchRate?.remaining != null && searchRate.limit != null
+            ? ` · búsquedas restantes ${searchRate.remaining}/${searchRate.limit}`
+            : ""}
+        </p>
       </header>
-      <div className="ranking-tabs" role="tablist">
-        {VIEWS.map((entry) => (
-          <button
-            key={entry.id}
-            type="button"
-            role="tab"
-            aria-selected={view === entry.id}
-            className={view === entry.id ? "active" : ""}
-            onClick={() => {
-              setView(entry.id);
-              setSelected(null);
-            }}
-          >
-            {entry.label}
-          </button>
-        ))}
-      </div>
-      <section className="panel data-table-panel">
-        <div className="panel-heading">
-          <h2>{VIEWS.find((entry) => entry.id === view)?.label}</h2>
-          <span>{data?.entries.length ?? 0} repositorios</span>
-        </div>
-        {data?.entries.length ? (
-          <div className="data-table-scroll">
-            <table className="observatory-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Repositorio</th>
-                  <th>Estrellas</th>
-                  {view === "growth" ? <th>Crecimiento</th> : null}
-                  <th>Forks</th>
-                  <th>Lenguaje</th>
-                  <th>Licencia</th>
-                  <th>Último push</th>
-                  <th>Fuente</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.entries.map((entry) => (
-                  <tr
-                    key={entry.id}
-                    className={chosen?.id === entry.id ? "selected" : ""}
-                    onClick={() => setSelected(entry)}
-                  >
-                    <td>{entry.rank}</td>
-                    <td>
-                      <strong>{entry.fullName}</strong>
-                      <small>{entry.description ?? missing}</small>
-                    </td>
-                    <td>
-                      <Star /> {formatNumber(entry.stars)}
-                    </td>
-                    {view === "growth" ? (
-                      <td>
-                        {entry.growth
-                          ? `+${formatNumber(entry.growth.starGrowth)} (${formatDate(entry.growth.periodStart)} → ${formatDate(entry.growth.periodEnd)})`
-                          : "Crecimiento todavía no calculable"}
-                      </td>
-                    ) : null}
-                    <td>{formatNumber(entry.forks)}</td>
-                    <td>{entry.language ?? missing}</td>
-                    <td>{entry.license ?? missing}</td>
-                    <td>{formatDate(entry.pushedAt)}</td>
-                    <td>
-                      <a
-                        href={entry.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        {entry.sourceName} <ExternalLink />
-                      </a>
-                    </td>
-                  </tr>
+
+      <div className="gh-grid" data-viewing={viewing ? "true" : "false"}>
+        <nav className="gh-rail" aria-label="Tipos de repositorio">
+          {REPO_GROUPS.map((group) => (
+            <details
+              key={group.id}
+              open={
+                source.kind === "type" &&
+                group.types.some((t) => t.id === source.id)
+              }
+            >
+              <summary>{group.label}</summary>
+              <ul>
+                {group.types.map((type) => (
+                  <li key={type.id}>
+                    <button
+                      type="button"
+                      className="gh-rail-item"
+                      aria-current={
+                        source.kind === "type" && source.id === type.id
+                      }
+                      title={type.hint}
+                      onClick={() => pick({ kind: "type", id: type.id })}
+                    >
+                      {type.label}
+                    </button>
+                  </li>
                 ))}
-              </tbody>
-            </table>
+              </ul>
+            </details>
+          ))}
+          <details>
+            <summary>Topics internacionales</summary>
+            <p className="gh-topics">
+              {INTERNATIONAL_TOPICS.map((topic) => (
+                <button
+                  key={topic}
+                  type="button"
+                  className="gh-chip"
+                  aria-pressed={
+                    source.kind === "topic" && source.topic === topic
+                  }
+                  onClick={() => pick({ kind: "topic", topic })}
+                >
+                  {topic}
+                </button>
+              ))}
+            </p>
+          </details>
+          <details open={source.kind === "personal"}>
+            <summary>Mis topics ({myTopics.length})</summary>
+            <form
+              className="gh-row"
+              onSubmit={(event) => {
+                event.preventDefault();
+                addTopic(draft);
+                setDraft("");
+              }}
+            >
+              <input
+                className="gh-input"
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                placeholder="p. ej. design-system"
+                aria-label="Nuevo topic"
+              />
+              <button
+                type="submit"
+                className="gh-btn"
+                aria-label="Agregar topic"
+                disabled={!normalizeTopic(draft)}
+              >
+                <Plus />
+              </button>
+            </form>
+            <p className="gh-topics">
+              {myTopics.map((topic) => (
+                <span key={topic} className="gh-chip gh-chip-removable">
+                  {topic}
+                  <button
+                    type="button"
+                    aria-label={`Quitar ${topic}`}
+                    onClick={() =>
+                      saveTopics(myTopics.filter((t) => t !== topic))
+                    }
+                  >
+                    <X />
+                  </button>
+                </span>
+              ))}
+            </p>
+            <label className="gh-check">
+              <input
+                type="checkbox"
+                checked={matchAll}
+                onChange={(event) => setMatchAll(event.target.checked)}
+              />
+              Exigir todos los topics
+            </label>
+            <button
+              type="button"
+              className="gh-btn"
+              disabled={!myTopics.length}
+              onClick={() => pick({ kind: "personal" })}
+            >
+              Buscar con mis topics
+            </button>
+            {!myTopics.length ? (
+              <p className="gh-note">
+                Aún no agregaste topics. Se guardan solo en este navegador.
+              </p>
+            ) : null}
+          </details>
+          <ProfilePanel
+            onAddTopic={addTopic}
+            onSearch={(suggestion) =>
+              pick({
+                kind: "custom",
+                label: suggestion.label,
+                spec: suggestion.spec,
+              })
+            }
+          />
+        </nav>
+
+        {viewing ? (
+          <div className="gh-center">
+            <RepoViewer detail={viewing} onClose={() => setViewing(null)} />
           </div>
         ) : (
-          <div className="honest-empty">
-            <h2>
-              {view === "growth"
-                ? "Crecimiento todavía no calculable"
-                : "Sin repositorios indexados para esta vista"}
-            </h2>
-            <p>
-              {data?.reason ??
-                "GitHub funciona sin token con cuota reducida; sincroniza desde el botón superior."}
-            </p>
-          </div>
+          <section className="gh-center" aria-label="Resultados">
+            <div className="gh-toolbar">
+              <strong>{sourceLabel(source)}</strong>
+              <select
+                className="gh-input"
+                value={sort}
+                aria-label="Ordenar"
+                onChange={(event) => {
+                  setSort(event.target.value as SearchSort);
+                  setPage(1);
+                }}
+              >
+                {(Object.keys(SORT_LABELS) as SearchSort[]).map((key) => (
+                  <option key={key} value={key}>
+                    {SORT_LABELS[key]}
+                  </option>
+                ))}
+              </select>
+              <span className="gh-count">
+                {results.data
+                  ? `${formatNumber(results.data.data.totalCount)} repos`
+                  : ""}
+              </span>
+            </div>
+            {query ? (
+              <p className="gh-query">
+                <code>{query}</code>
+                <a
+                  href={githubSearchUrl(query, sort)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Abrir en GitHub <ExternalLink />
+                </a>
+              </p>
+            ) : null}
+            {limited ? (
+              <p className="gh-note gh-note-warn" role="alert">
+                Límite de GitHub alcanzado.{" "}
+                {rate?.resetAt
+                  ? `Se reinicia a las ${new Date(rate.resetAt).toLocaleTimeString("es-PE")}. `
+                  : ""}
+                {tokenOn
+                  ? ""
+                  : "Configura GITHUB_TOKEN en Integraciones para subir el límite."}
+              </p>
+            ) : results.error ? (
+              <p className="gh-note gh-note-warn" role="alert">
+                {results.error instanceof Error
+                  ? results.error.message
+                  : "Error al buscar."}
+              </p>
+            ) : null}
+            {results.data?.data.stale ? (
+              <p className="gh-note gh-note-warn">
+                Copia en caché del{" "}
+                {new Date(results.data.data.fetchedAt).toLocaleString("es-PE")}:
+                GitHub está limitando las consultas.
+              </p>
+            ) : null}
+            {!query ? (
+              <p className="gh-empty">
+                Agrega topics en «Mis topics» o elige un tipo de repositorio.
+              </p>
+            ) : results.isLoading ? (
+              <p className="gh-empty">Buscando en GitHub…</p>
+            ) : !items.length && !results.error ? (
+              <p className="gh-empty">
+                GitHub no devolvió repositorios para esta consulta.
+              </p>
+            ) : (
+              <ul className="gh-list-main" aria-busy={results.isFetching}>
+                {items.map((item, index) => (
+                  <li
+                    key={item.id}
+                    style={
+                      { "--i": Math.min(index, 12) } as React.CSSProperties
+                    }
+                  >
+                    <button
+                      type="button"
+                      className="gh-row-btn"
+                      aria-current={chosen?.fullName === item.fullName}
+                      onClick={() => setSelected(item.fullName)}
+                    >
+                      <span className="gh-row-name">{item.fullName}</span>
+                      <span className="gh-row-desc">
+                        {item.description ?? "Sin descripción"}
+                      </span>
+                      <span className="gh-row-meta">
+                        <Star /> {formatNumber(item.stars)}
+                        <span>{item.language ?? "—"}</span>
+                        <span>{item.license?.spdxId ?? "sin licencia"}</span>
+                        <span>{formatDate(item.pushedAt)}</span>
+                        {item.archived ? <b>archivado</b> : null}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {items.length ? (
+              <div className="gh-pager">
+                <button
+                  type="button"
+                  className="gh-btn"
+                  disabled={page <= 1 || results.isFetching}
+                  onClick={() => setPage(page - 1)}
+                >
+                  Anterior
+                </button>
+                <span>Página {page}</span>
+                <button
+                  type="button"
+                  className="gh-btn"
+                  disabled={
+                    results.isFetching ||
+                    page * 25 >=
+                      Math.min(1000, results.data?.data.totalCount ?? 0)
+                  }
+                  onClick={() => setPage(page + 1)}
+                >
+                  Siguiente
+                </button>
+              </div>
+            ) : null}
+          </section>
         )}
-      </section>
-    </CollapsibleLayout>
+
+        <div className="gh-side">
+          <RepoInspector
+            repo={chosen}
+            onOpen={async () => {
+              const detail = await detailQuery.refetch();
+              if (detail.data) setViewing(detail.data.data);
+            }}
+          />
+        </div>
+      </div>
+    </div>
   );
 }

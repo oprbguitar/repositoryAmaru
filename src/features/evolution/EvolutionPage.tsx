@@ -1,373 +1,420 @@
 import {
-  ArrowDownUp,
-  ArrowRight,
-  BookOpen,
-  Brain,
-  CalendarRange,
-  Code2,
-  ExternalLink,
+  ArrowUpRight,
+  FileDown,
   FileText,
-  Flag,
   GitBranch,
-  LineChart,
+  Network,
+  Printer,
   Search,
-  ShieldCheck,
-  Star,
+  Sparkles,
+  Sprout,
   X,
 } from "lucide-react";
 import type React from "react";
-import { useMemo, useState } from "react";
-import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BranchTree } from "./BranchTree";
+import { ConceptGraph } from "./ConceptGraph";
+import "./evolution.css";
 import {
-  CONCEPT_FLOW,
+  branchesWithCounts,
+  buildTimelineMarkdown,
+  buildTimelineWordHtml,
+  downloadText,
+} from "./exportTimeline";
+import {
+  BRANCHES,
+  type BranchId,
+  branchById,
   ERAS,
   type EraId,
+  filterMilestones,
+  formatMilestoneDate,
   MILESTONES,
-  type Milestone,
+  milestoneYear,
+  sortedMilestones,
+  TIMELINE_VERIFIED_AT,
   timelineStats,
 } from "./timeline";
 
-type EraFilter = EraId | "all";
-type TimelineSort = "asc" | "desc";
-
-/** One badge tint per milestone type, drawn from the semantic palette. */
-const TYPE_TINTS: Record<Milestone["type"], string> = {
-  Concepto: "var(--info)",
-  Evento: "var(--ok)",
-  Técnica: "var(--purple)",
-  Contexto: "var(--warn)",
-  Hito: "var(--accent)",
-  Modelo: "var(--info)",
-  Arquitectura: "var(--accent)",
-  Paradigma: "var(--purple)",
-  Tendencia: "var(--ok)",
-};
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" &&
+  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 export function EvolutionPage() {
-  const [era, setEra] = useState<EraFilter>("all");
+  const pageRef = useRef<HTMLDivElement>(null);
+  const [branch, setBranch] = useState<BranchId | "all">("all");
   const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<TimelineSort>("asc");
-  const [selectedId, setSelectedId] = useState<string>("transformers");
+  const [treeBranch, setTreeBranch] = useState<BranchId>("arch");
+  const [concept, setConcept] = useState("transformer");
+  const [activeEra, setActiveEra] = useState<EraId>(ERAS[0].id);
+  const [flashId, setFlashId] = useState<string | null>(null);
 
   const stats = useMemo(timelineStats, []);
-
-  const items = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase("es");
-    const filtered = MILESTONES.filter(
-      (milestone) =>
-        (era === "all" || milestone.era === era) &&
-        [milestone.title, milestone.description, ...milestone.tags]
-          .join(" ")
-          .toLocaleLowerCase("es")
-          .includes(normalized),
-    );
-    return [...filtered].sort((left, right) =>
-      sort === "asc" ? left.year - right.year : right.year - left.year,
-    );
-  }, [era, query, sort]);
-
-  const chosen =
-    items.find((milestone) => milestone.id === selectedId) ?? items[0] ?? null;
-
-  const panel = chosen ? (
-    <aside className="context-panel scroll-region">
-      <div className="context-title">
-        <GitBranch />
-        <strong>
-          {chosen.yearLabel} · {chosen.title}
-        </strong>
-      </div>
-      <section>
-        <ul className="resource-tags evo-panel-tags">
-          {chosen.tags.map((tag) => (
-            <li key={tag}>{tag}</li>
-          ))}
-        </ul>
-      </section>
-      <section>
-        <h3>
-          <FileText /> Resumen
-        </h3>
-        <p>{chosen.summary}</p>
-      </section>
-      <section>
-        <h3>
-          <LineChart /> Impacto
-        </h3>
-        <ul className="evo-impact">
-          {chosen.impact.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-      </section>
-      <section>
-        <h3>
-          <Brain /> Conceptos relacionados
-        </h3>
-        <ul className="resource-tags evo-panel-tags">
-          {chosen.concepts.map((concept) => (
-            <li key={concept}>{concept}</li>
-          ))}
-        </ul>
-      </section>
-      {chosen.keyModels.length ? (
-        <section>
-          <h3>
-            <Star /> Modelos y sistemas clave
-          </h3>
-          <p>{chosen.keyModels.join(" · ")}</p>
-        </section>
-      ) : null}
-      <section>
-        <h3>
-          <BookOpen /> Fuentes
-        </h3>
-        <ul className="evo-sources">
-          {chosen.sources.map((source) => (
-            <li key={source.url}>
-              <div>
-                <strong>{source.title}</strong>
-                <small>{source.author}</small>
-              </div>
-              <a
-                className="secondary-button compact"
-                href={source.url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Abrir fuente <ExternalLink />
-              </a>
-            </li>
-          ))}
-        </ul>
-      </section>
-    </aside>
-  ) : (
-    <aside className="context-panel scroll-region">
-      <div className="context-title">
-        <GitBranch />
-        <strong>Cronología</strong>
-      </div>
-      <section>
-        <p>Selecciona un hito para ver su resumen, impacto y fuentes.</p>
-      </section>
-    </aside>
+  const visible = useMemo(
+    () => sortedMilestones(filterMilestones(MILESTONES, branch, query)),
+    [branch, query],
+  );
+  const counts = useMemo(
+    () => branchesWithCounts(filterMilestones(MILESTONES, "all", query)),
+    [query],
   );
 
+  const scrollToId = useCallback((id: string) => {
+    document.getElementById(id)?.scrollIntoView({
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+      block: "start",
+    });
+  }, []);
+
+  // Reveal timeline events as they enter the viewport (skipped with reduced motion).
+  const visibleKey = visible.map((m) => m.id).join(",");
+  useEffect(() => {
+    const root = pageRef.current;
+    if (
+      !root ||
+      prefersReducedMotion() ||
+      typeof IntersectionObserver === "undefined"
+    )
+      return;
+    root.classList.add("evo-animate");
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-in");
+            observer.unobserve(entry.target);
+          }
+        }
+      },
+      { root, rootMargin: "0px 0px -8% 0px" },
+    );
+    for (const node of root.querySelectorAll(".evo-tl-event:not(.is-in)"))
+      observer.observe(node);
+    return () => observer.disconnect();
+  }, [visibleKey]);
+
+  // Track which era is in view to mark it as selected in the rail.
+  useEffect(() => {
+    const root = pageRef.current;
+    if (!root || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const hit = entries.find((entry) => entry.isIntersecting);
+        if (hit) setActiveEra(hit.target.getAttribute("data-era") as EraId);
+      },
+      { root, rootMargin: "-25% 0px -65% 0px" },
+    );
+    for (const node of root.querySelectorAll("[data-era]"))
+      observer.observe(node);
+    return () => observer.disconnect();
+  }, [visibleKey]);
+
+  useEffect(() => {
+    if (!flashId) return;
+    const timer = window.setTimeout(() => setFlashId(null), 1800);
+    return () => window.clearTimeout(timer);
+  }, [flashId]);
+
+  function openMilestone(id: string) {
+    setBranch("all");
+    setQuery("");
+    setFlashId(id);
+    window.setTimeout(() => scrollToId(`evo-m-${id}`), 30);
+  }
+
+  function showBranchInTimeline(id: BranchId) {
+    setBranch(id);
+    setQuery("");
+    window.setTimeout(() => scrollToId("evo-timeline"), 30);
+  }
+
+  function printPdf() {
+    document.body.classList.add("evo-print");
+    const cleanup = () => {
+      document.body.classList.remove("evo-print");
+      window.removeEventListener("afterprint", cleanup);
+    };
+    window.addEventListener("afterprint", cleanup);
+    window.print();
+  }
+
+  const filterLabel =
+    branch === "all" ? "todas" : branchById(branch).label.toLowerCase();
+  const fileStem = `evolucion-ia-${TIMELINE_VERIFIED_AT}`;
+
   return (
-    <CollapsibleLayout storageKey="evolution" panel={panel}>
-      <header className="page-heading resource-heading">
-        <span className="page-icon">
-          <GitBranch />
-        </span>
-        <div>
-          <h1>Evolución de la IA</h1>
+    <div className="evo-page scroll-region" ref={pageRef}>
+      <header className="evo-hero">
+        <div className="evo-hero-text">
+          <span className="evo-kicker">
+            <GitBranch aria-hidden="true" /> Cronología curada · verificada al{" "}
+            <time dateTime={TIMELINE_VERIFIED_AT}>
+              {formatMilestoneDate(TIMELINE_VERIFIED_AT)}
+            </time>
+          </span>
+          <h1>Evolución de la inteligencia artificial</h1>
           <p>
-            Wiki visual y cronología explicada. Contenido curado: cada hito cita
-            sus fuentes originales.
+            De la neurona lógica de 1943 a los modelos de clase Mythos de 2026:
+            arquitecturas, entrenamiento, cómputo, multimodalidad, agentes,
+            ecosistema abierto y regulación. Cada hito enlaza su fuente
+            primaria; lo que solo aparece en prensa se marca «por verificar».
           </p>
+        </div>
+        <dl className="evo-stats">
+          {[
+            ["Hitos", stats.milestones],
+            ["Eras", stats.eras],
+            ["Ramas", stats.branches],
+            ["Especialidades", stats.specialties],
+          ].map(([label, value]) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+        </dl>
+        <div
+          className="evo-export"
+          role="group"
+          aria-label="Exportar cronología"
+        >
+          <span>
+            Exportar{" "}
+            {visible.length === MILESTONES.length
+              ? "todo"
+              : `${visible.length} hitos (${filterLabel})`}
+          </span>
+          <button
+            type="button"
+            className="evo-btn"
+            onClick={() =>
+              downloadText(
+                `${fileStem}.md`,
+                buildTimelineMarkdown(visible),
+                "text/markdown",
+              )
+            }
+          >
+            <FileDown aria-hidden="true" /> Markdown
+          </button>
+          <button
+            type="button"
+            className="evo-btn"
+            onClick={() =>
+              downloadText(
+                `${fileStem}.doc`,
+                buildTimelineWordHtml(visible),
+                "application/msword",
+              )
+            }
+          >
+            <FileText aria-hidden="true" /> Word
+          </button>
+          <button type="button" className="evo-btn" onClick={printPdf}>
+            <Printer aria-hidden="true" /> PDF
+          </button>
         </div>
       </header>
 
-      <div className="resource-stats">
-        {[
-          {
-            icon: Flag,
-            label: "Hitos",
-            value: stats.milestones,
-            hint: "momentos clave",
-            accent: "var(--accent)",
-          },
-          {
-            icon: CalendarRange,
-            label: "Eras",
-            value: stats.eras,
-            hint: "períodos definidos",
-            accent: "var(--info)",
-          },
-          {
-            icon: Brain,
-            label: "Modelos clave",
-            value: stats.keyModels,
-            hint: "referencias destacadas",
-            accent: "var(--purple)",
-          },
-          {
-            icon: ShieldCheck,
-            label: "Fuentes citadas",
-            value: stats.sources,
-            hint: "documentos y enlaces",
-            accent: "var(--ok)",
-          },
-        ].map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <article
-              className="panel resource-stat"
-              key={stat.label}
-              style={{ "--stat-accent": stat.accent } as React.CSSProperties}
-            >
-              <span className="resource-stat-head">
-                <span className="resource-stat-icon">
-                  <Icon />
-                </span>
-                {stat.label}
-              </span>
-              <strong>{stat.value}</strong>
-              <small>{stat.hint}</small>
-              <span className="resource-stat-bar" aria-hidden="true" />
-            </article>
-          );
-        })}
-      </div>
-
-      <div className="resource-controls">
-        <div className="resource-tabs" role="tablist">
+      <nav className="evo-era-rail" aria-label="Eras de la cronología">
+        {ERAS.map((era, index) => (
           <button
+            key={era.id}
             type="button"
-            role="tab"
-            aria-selected={era === "all"}
-            className={era === "all" ? "active" : ""}
-            onClick={() => setEra("all")}
+            aria-current={activeEra === era.id ? "true" : undefined}
+            style={{ "--i": index } as React.CSSProperties}
+            onClick={() => scrollToId(`evo-era-${era.id}`)}
           >
-            Todas <em>{MILESTONES.length}</em>
+            <span className="evo-mono">
+              {era.start === era.end
+                ? era.start
+                : `${era.start}–${String(era.end).slice(2)}`}
+            </span>
+            <strong>{era.name}</strong>
           </button>
-          {ERAS.map((entry) => (
-            <button
-              key={entry.id}
-              type="button"
-              role="tab"
-              aria-selected={era === entry.id}
-              className={era === entry.id ? "active" : ""}
-              onClick={() => setEra(entry.id)}
-            >
-              {entry.label}{" "}
-              <em>{MILESTONES.filter((m) => m.era === entry.id).length}</em>
-            </button>
-          ))}
-        </div>
-        <label className="module-search resource-search">
-          <Search />
-          <input
-            aria-label="Buscar hito"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Buscar hito…"
-          />
-          {query ? (
-            <button
-              type="button"
-              className="search-clear"
-              aria-label="Limpiar búsqueda"
-              onClick={() => setQuery("")}
-            >
-              <X />
-            </button>
-          ) : null}
-        </label>
-        <label className="resource-sort">
-          <ArrowDownUp />
-          <span>Ordenar</span>
-          <select
-            aria-label="Ordenar hitos por año"
-            value={sort}
-            onChange={(event) => setSort(event.target.value as TimelineSort)}
-          >
-            <option value="asc">Año ↑</option>
-            <option value="desc">Año ↓</option>
-          </select>
-        </label>
-      </div>
-
-      <section className="panel evo-timeline" aria-label="Cronología de la IA">
-        {items.length ? (
-          <ol>
-            {items.map((milestone) => (
-              <li
-                key={milestone.id}
-                className={chosen?.id === milestone.id ? "selected" : ""}
-              >
-                <button
-                  type="button"
-                  aria-pressed={chosen?.id === milestone.id}
-                  onClick={() => setSelectedId(milestone.id)}
-                >
-                  <span className="evo-dot" aria-hidden="true" />
-                  <span className="evo-year">{milestone.yearLabel}</span>
-                  <span className="evo-body">
-                    <strong>{milestone.title}</strong>
-                    <small>{milestone.description}</small>
-                  </span>
-                  <span
-                    className="evo-type"
-                    style={
-                      {
-                        "--type-tint": TYPE_TINTS[milestone.type],
-                      } as React.CSSProperties
-                    }
-                  >
-                    {milestone.type}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <div className="honest-empty">
-            <h2>No hay hitos para esta búsqueda</h2>
-            <p>Prueba otra era u otro término.</p>
-          </div>
-        )}
-      </section>
-
-      {chosen ? (
-        <section className="evo-explainer" aria-label="Explicación del hito">
-          <article className="panel">
-            <h3>
-              <FileText /> Qué pasó
-            </h3>
-            <p>{chosen.whatHappened}</p>
-          </article>
-          <article className="panel">
-            <h3>
-              <Star /> Por qué importó
-            </h3>
-            <p>{chosen.whyItMattered}</p>
-          </article>
-          <article className="panel">
-            <h3>
-              <Code2 /> Ejemplo simple
-            </h3>
-            <p>{chosen.simpleExample}</p>
-          </article>
-        </section>
-      ) : null}
+        ))}
+        <button
+          type="button"
+          className="evo-rail-extra"
+          onClick={() => scrollToId("evo-tree")}
+        >
+          <Sprout aria-hidden="true" />
+          <strong>Árbol</strong>
+        </button>
+        <button
+          type="button"
+          className="evo-rail-extra"
+          onClick={() => scrollToId("evo-concepts")}
+        >
+          <Network aria-hidden="true" />
+          <strong>Conceptos</strong>
+        </button>
+      </nav>
 
       <section
-        className="evo-concepts"
-        aria-label="Evolución de conceptos clave"
+        className="evo-timeline-section"
+        id="evo-timeline"
+        aria-label="Cronología por eras"
       >
-        <h3>Evolución de conceptos clave</h3>
-        <div className="evo-concept-flow">
-          {CONCEPT_FLOW.map((concept, index) => (
-            <div className="evo-concept-step" key={concept.id}>
-              {index > 0 ? <ArrowRight aria-hidden="true" /> : null}
+        <div className="evo-toolbar">
+          <div
+            className="evo-branch-filter"
+            role="group"
+            aria-label="Filtrar por rama"
+          >
+            <button
+              type="button"
+              aria-pressed={branch === "all"}
+              onClick={() => setBranch("all")}
+            >
+              Todas <em>{counts.reduce((n, b) => n + b.count, 0)}</em>
+            </button>
+            {counts.map((b) => (
+              <button
+                key={b.id}
+                type="button"
+                aria-pressed={branch === b.id}
+                disabled={b.count === 0}
+                style={{ "--branch": b.tone } as React.CSSProperties}
+                onClick={() => setBranch(b.id)}
+              >
+                <i aria-hidden="true" /> {b.label} <em>{b.count}</em>
+              </button>
+            ))}
+          </div>
+          <label className="evo-search">
+            <Search aria-hidden="true" />
+            <input
+              aria-label="Buscar hito"
+              value={query}
+              placeholder="Buscar hito, modelo o año…"
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            {query ? (
               <button
                 type="button"
-                className={`panel evo-concept${chosen?.id === concept.milestoneId ? " active" : ""}`}
-                onClick={() => {
-                  setEra("all");
-                  setQuery("");
-                  setSelectedId(concept.milestoneId);
-                }}
+                aria-label="Limpiar búsqueda"
+                onClick={() => setQuery("")}
               >
-                <strong>{concept.label}</strong>
-                <small>{concept.hint}</small>
+                <X aria-hidden="true" />
               </button>
-            </div>
-          ))}
+            ) : null}
+          </label>
         </div>
+
+        {visible.length === 0 ? (
+          <div className="evo-empty">
+            <h2>No hay hitos para este filtro</h2>
+            <p>Prueba otra rama u otro término de búsqueda.</p>
+            <button
+              type="button"
+              className="evo-btn"
+              onClick={() => {
+                setBranch("all");
+                setQuery("");
+              }}
+            >
+              Limpiar filtros
+            </button>
+          </div>
+        ) : null}
+
+        {ERAS.map((era) => {
+          const items = visible.filter((m) => m.era === era.id);
+          if (!items.length) return null;
+          return (
+            <section
+              key={era.id}
+              className="evo-era"
+              id={`evo-era-${era.id}`}
+              data-era={era.id}
+            >
+              <header className="evo-era-head">
+                <span className="evo-era-chip evo-mono">
+                  {era.start === era.end
+                    ? era.start
+                    : `${era.start} – ${era.end}`}
+                </span>
+                <h2>{era.name}</h2>
+                <p>{era.summary}</p>
+              </header>
+              <ol className="evo-tl">
+                {items.map((m) => {
+                  const b = branchById(m.branch);
+                  return (
+                    <li
+                      key={m.id}
+                      id={`evo-m-${m.id}`}
+                      className={`evo-tl-event${flashId === m.id ? " is-flash" : ""}`}
+                      style={{ "--branch": b.tone } as React.CSSProperties}
+                    >
+                      <span className="evo-tl-dot evo-mono" aria-hidden="true">
+                        {milestoneYear(m)}
+                      </span>
+                      <article>
+                        <header>
+                          <span className="evo-tl-branch">{b.label}</span>
+                          <time className="evo-mono" dateTime={m.date}>
+                            {formatMilestoneDate(m.date)}
+                          </time>
+                          {m.status === "por-verificar" ? (
+                            <span
+                              className="evo-tl-verify"
+                              title="Fecha o detalle confirmados solo por fuentes secundarias"
+                            >
+                              Por verificar
+                            </span>
+                          ) : null}
+                        </header>
+                        <h3>{m.title}</h3>
+                        <p>{m.description}</p>
+                        <p className="evo-tl-impact">
+                          <Sparkles aria-hidden="true" />
+                          <span>
+                            <b>Impacto.</b> {m.impact}
+                          </span>
+                        </p>
+                        <ul className="evo-tl-sources">
+                          {m.sources.map((s) => (
+                            <li key={s.url}>
+                              <a
+                                href={s.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                title={s.author}
+                              >
+                                {s.title} <ArrowUpRight aria-hidden="true" />
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      </article>
+                    </li>
+                  );
+                })}
+              </ol>
+            </section>
+          );
+        })}
       </section>
-    </CollapsibleLayout>
+
+      <BranchTree
+        selected={treeBranch}
+        onSelect={setTreeBranch}
+        onShowInTimeline={showBranchInTimeline}
+      />
+
+      <ConceptGraph
+        selected={concept}
+        onSelect={setConcept}
+        onOpenMilestone={openMilestone}
+      />
+
+      <footer className="evo-footnote">
+        Contenido editorial curado a mano con {stats.sources} fuentes enlazadas
+        ({BRANCHES.length} ramas, {ERAS.length} eras). Las cifras de cada hito
+        provienen de su fuente citada.
+      </footer>
+    </div>
   );
 }

@@ -62,8 +62,8 @@
 .tm-table tbody tr:hover {
   background: var(--surface-hover);
 }
-.tm-num {
-  text-align: right !important;
+.tm-table .tm-num {
+  text-align: right;
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }

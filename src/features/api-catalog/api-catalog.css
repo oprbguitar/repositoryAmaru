@@ -1,0 +1,57 @@
+/* API catalogue — live OpenRouter price block. Tokens only. */
+.acl-live {
+  display: grid;
+  gap: var(--space-2);
+}
+.acl-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+.acl-table th,
+.acl-table td {
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--line-soft);
+  text-align: left;
+}
+.acl-table th {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+.acl-table th:not(:first-child),
+.acl-table td:not(:first-child) {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.acl-table td:first-child {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.acl-note {
+  margin: 0;
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+}
+.acl-note a {
+  color: var(--accent);
+}
+.acl-live button svg {
+  width: 12px;
+  height: 12px;
+}
+.acl-live button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .acl-live button:not(:disabled) svg {
+    transition: transform var(--dur-med) var(--ease-out);
+  }
+  .acl-live button:not(:disabled):hover svg {
+    transform: rotate(90deg);
+  }
+}

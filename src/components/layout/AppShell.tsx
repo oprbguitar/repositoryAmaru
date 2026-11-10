@@ -12,7 +12,6 @@ import {
   PowerOff,
   Search,
   Settings2,
-  SlidersHorizontal,
   Sun,
   SunMoon,
 } from "lucide-react";
@@ -46,7 +45,6 @@ import {
 import { summarizeSources } from "./sourceSummary";
 import {
   type AppTheme,
-  isLightTheme,
   type NavMode,
   readStorage,
   resolveInitialTheme,
@@ -395,7 +393,7 @@ export function AppShell() {
                 aria-label={t("shell.display")}
                 ref={display.menuRef}
               >
-                <div role="group" aria-label={t("shell.theme")}>
+                <div className="shell-menu-group">
                   <span className="shell-menu-heading" aria-hidden="true">
                     {t("shell.theme")}
                   </span>
@@ -434,7 +432,7 @@ export function AppShell() {
                   })}
                 </div>
                 {isDrawer ? null : (
-                  <div role="group" aria-label={t("shell.navigation")}>
+                  <div className="shell-menu-group">
                     <span className="shell-menu-heading" aria-hidden="true">
                       {t("shell.navigation")}
                     </span>
@@ -466,7 +464,7 @@ export function AppShell() {
                     </button>
                   </div>
                 )}
-                <div role="group" aria-label={t("shell.system")}>
+                <div className="shell-menu-group">
                   <span className="shell-menu-heading" aria-hidden="true">
                     {t("shell.system")}
                   </span>
@@ -570,7 +568,6 @@ export function AppShell() {
         id={sidebarId}
         className="sidebar"
         aria-label={t("shell.mainNav")}
-        // Off-canvas drawer must not be reachable by Tab while hidden.
         inert={isDrawer && !drawerOpen}
       >
         <nav>
@@ -670,9 +667,6 @@ export function AppShell() {
           setServerStopped(true);
         }}
       />
-      <span className="sr-only" aria-live="polite">
-        {isLightTheme(theme) ? "" : ""}
-      </span>
     </div>
   );
 }
@@ -733,7 +727,7 @@ function GlobalSearch({
   return (
     <form
       className="global-search"
-      role="search"
+      aria-label={t("shell.searchLabel")}
       onSubmit={(event) => {
         event.preventDefault();
         choose(expanded ? active : options.length - 1);

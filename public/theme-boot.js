@@ -2,7 +2,7 @@
 // see a flash of the dark palette. Kept as a file (not inline) because the
 // worker's CSP only allows same-origin scripts.
 try {
-  var stored = localStorage.getItem("amaru-theme");
+  const stored = localStorage.getItem("amaru-theme");
   if (
     ["dark", "light", "contrast-light", "contrast-dark"].indexOf(stored) >= 0
   ) {

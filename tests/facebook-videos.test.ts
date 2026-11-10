@@ -72,8 +72,9 @@ describe("catálogo de integraciones", () => {
 
   it("las pruebas de conexión no filtran la credencial en texto plano", () => {
     for (const integration of INTEGRATIONS) {
-      if (!integration.probe) continue;
-      const url = integration.probe.url("clave con espacios/&raros");
+      const probeUrl = integration.probe?.url;
+      if (!probeUrl) continue;
+      const url = probeUrl("clave con espacios/&raros");
       // Si la clave viaja en la URL debe ir codificada; si no, va en cabecera.
       expect(url).not.toContain("clave con espacios/&raros");
     }

@@ -77,10 +77,7 @@ export function AdminSourcesPage() {
             <h1>
               <DatabaseZap /> Configurar integraciones
             </h1>
-            <p>
-              Claves de API, controles reales de sincronización, salud y cuotas
-              de cada fuente.
-            </p>
+            <p>Claves de API, sincronización y salud de fuentes.</p>
           </div>
         </header>
 
@@ -240,18 +237,7 @@ export function AdminSourcesPage() {
         </section>
         <section>
           <h3>Secretos</h3>
-          <p>
-            Las claves guardadas desde esta pantalla se cifran con AES-GCM en la
-            base local y nunca se devuelven al navegador. Las de{" "}
-            <code>.dev.vars</code> siguen funcionando como respaldo.
-          </p>
-        </section>
-        <section>
-          <h3>Estados</h3>
-          <p>
-            Pending · Running · Completed · Partial · Failed · Rate limited ·
-            Not configured.
-          </p>
+          <p>Cifrados en la base local; nunca vuelven al navegador.</p>
         </section>
       </aside>
     </div>

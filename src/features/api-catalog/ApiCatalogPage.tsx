@@ -34,6 +34,7 @@ import {
   unitRates,
   voiceRates,
 } from "./catalog";
+import { LiveOpenRouterPrices } from "./LiveOpenRouterPrices";
 
 type Tab = "plataformas" | "proyectos" | "calculadora";
 type CategoryFilter = Category | "all";
@@ -725,6 +726,7 @@ function PlatformPanel({ platform }: { platform: Platform }) {
           </li>
         </ul>
       </section>
+      <LiveOpenRouterPrices platformId={platform.id} />
     </aside>
   );
 }

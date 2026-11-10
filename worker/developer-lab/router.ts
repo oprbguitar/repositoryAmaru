@@ -13,6 +13,7 @@ import {
   type DeveloperLabCredentialEnv,
   ProviderCredentialService,
 } from "./credential-service";
+import { listModelStats, saveRunOutput, streamRun } from "./stream";
 import {
   executeTestbench,
   listTestbenchModels,
@@ -48,6 +49,21 @@ const executeSchema = z.object({
     .optional(),
   temperature: z.number().min(0).max(2).optional(),
   maxOutputTokens: z.number().int().min(1).max(65_536).optional(),
+});
+
+const streamSchema = z.object({
+  providerId: z.string().regex(/^[a-z0-9-]+$/),
+  modelId: z.string().trim().min(1).max(200),
+  prompt: z.string().trim().min(1).max(40_000),
+  system: z.string().trim().max(20_000).optional(),
+  temperature: z.number().min(0).max(2).optional(),
+  maxOutputTokens: z.number().int().min(1).max(65_536).optional(),
+  compareGroupId: z.string().uuid().optional(),
+});
+
+const saveRunSchema = z.object({
+  output: z.string().max(400_000),
+  prompt: z.string().max(40_000).optional(),
 });
 
 function envelope<T>(
@@ -265,6 +281,51 @@ export async function developerLabRouter(
         502,
       );
     }
+  }
+  if (request.method === "POST" && path === "/api/developer-lab/stream") {
+    if (!protectedRequest(request))
+      return errorResponse("csrf_failed", "Solicitud sin protección.", 403);
+    const parsed = streamSchema.safeParse(
+      await request.json().catch(() => null),
+    );
+    if (!parsed.success)
+      return errorResponse(
+        "invalid_payload",
+        "La solicitud de streaming no es válida.",
+        400,
+      );
+    if (!getDeveloperLabProvider(parsed.data.providerId))
+      return errorResponse("not_found", "Proveedor inexistente.", 404);
+    return streamRun(
+      { ...parsed.data, system: parsed.data.system || undefined },
+      env as TestbenchEnv,
+      request.signal,
+    );
+  }
+  if (request.method === "GET" && path === "/api/developer-lab/runs/stats") {
+    const stats = await listModelStats(env as TestbenchEnv);
+    return json(envelope(stats, { total: stats.length }));
+  }
+  const saveMatch = path.match(
+    /^\/api\/developer-lab\/runs\/([0-9a-f-]{36})\/save$/,
+  );
+  if (request.method === "POST" && saveMatch) {
+    if (!protectedRequest(request))
+      return errorResponse("csrf_failed", "Solicitud sin protección.", 403);
+    const parsed = saveRunSchema.safeParse(
+      await request.json().catch(() => null),
+    );
+    if (!parsed.success)
+      return errorResponse("invalid_payload", "Salida no válida.", 400);
+    const saved = await saveRunOutput(
+      env as TestbenchEnv,
+      saveMatch[1],
+      parsed.data.output,
+      parsed.data.prompt ?? null,
+    );
+    return saved
+      ? json(envelope({ saved: true }))
+      : errorResponse("not_found", "La ejecución no existe.", 404);
   }
   const testMatch = path.match(
     /^\/api\/developer-lab\/providers\/([a-z0-9-]+)\/test$/,

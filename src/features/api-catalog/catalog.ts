@@ -5,6 +5,8 @@
  */
 
 export const PRICING_ASOF = "2026-09";
+/** Live reference prices come from OpenRouter; static rates keep PRICING_ASOF. */
+export const OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models";
 
 export type PlatformId =
   | "azure-openai"

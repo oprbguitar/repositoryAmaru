@@ -66,6 +66,8 @@ export function ShutdownDialog({
     if (open && !dialog.open) {
       setFailed(false);
       dialog.showModal();
+      // Safer default: Enter right after opening cancels instead of shutting down.
+      dialog.querySelector<HTMLElement>("[data-dialog-initial]")?.focus();
     } else if (!open && dialog.open) {
       dialog.close();
     }
@@ -111,8 +113,7 @@ export function ShutdownDialog({
           className="secondary-button"
           onClick={onClose}
           disabled={pending}
-          // Safer default: Enter on open cancels instead of shutting down.
-          autoFocus
+          data-dialog-initial
         >
           {t("shell.cancel")}
         </button>

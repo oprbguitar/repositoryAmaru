@@ -66,6 +66,8 @@ export function ProvidersPage() {
   const [filter, setFilter] = useState<ProviderFilter>("all");
   const [sort, setSort] = useState<ProviderSort>("popular");
   const [query, setQuery] = useState("");
+  const [country, setCountry] = useState("all");
+  const [openOnly, setOpenOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sheet, setSheet] = useState<ProviderRecord | null>(null);
@@ -106,18 +108,30 @@ export function ProvidersPage() {
           ? registered
           : all;
     const normalized = query.trim().toLocaleLowerCase("es");
-    const matched = base.filter((provider) =>
-      [provider.name, provider.country ?? "", ...provider.categories]
-        .join(" ")
-        .toLocaleLowerCase("es")
-        .includes(normalized),
-    );
+    const matched = base
+      .filter((provider) => country === "all" || provider.country === country)
+      .filter((provider) => !openOnly || provider.localExecutionAvailable)
+      .filter((provider) =>
+        [provider.name, provider.country ?? "", ...provider.categories]
+          .join(" ")
+          .toLocaleLowerCase("es")
+          .includes(normalized),
+      );
     return sort === "name"
       ? [...matched].sort((left, right) =>
           left.name.localeCompare(right.name, "es"),
         )
       : matched; // the API already orders by model count (popularity)
-  }, [all, connected, registered, filter, query, sort]);
+  }, [all, connected, registered, filter, query, sort, country, openOnly]);
+  const countries = useMemo(
+    () =>
+      [
+        ...new Set(all.map((provider) => provider.country).filter(Boolean)),
+      ].sort((left, right) =>
+        String(left).localeCompare(String(right), "es"),
+      ) as string[],
+    [all],
+  );
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
@@ -353,6 +367,35 @@ export function ProvidersPage() {
               <X />
             </button>
           ) : null}
+        </label>
+        <label className="resource-sort">
+          <span>País</span>
+          <select
+            aria-label="Filtrar por país"
+            value={country}
+            onChange={(event) => {
+              setCountry(event.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="all">Todos</option>
+            {countries.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="resource-sort">
+          <input
+            type="checkbox"
+            checked={openOnly}
+            onChange={(event) => {
+              setOpenOnly(event.target.checked);
+              setPage(1);
+            }}
+          />
+          <span>Ejecución local / pesos abiertos</span>
         </label>
         <label className="resource-sort">
           <span>Ordenar por</span>

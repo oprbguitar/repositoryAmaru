@@ -1,4 +1,8 @@
-import { getDeveloperLabProvider } from "../../lib/developer-lab/registry";
+import {
+  getDeveloperLabProvider,
+  providerChatBaseUrl,
+} from "../../lib/developer-lab/registry";
+import { OPENAI_COMPATIBLE_PROVIDERS } from "../../lib/developer-lab/streaming";
 import type {
   TestbenchModel,
   TestbenchResult,
@@ -17,19 +21,7 @@ export type TestbenchEnv = DeveloperLabCredentialEnv & {
   LOCALAI_BASE_URL?: string;
 };
 
-const OPENAI_COMPATIBLE = new Set([
-  "openai",
-  "openrouter",
-  "groq",
-  "mistral",
-  "nvidia",
-  "together",
-  "fireworks",
-  "cerebras",
-  "xai",
-  "deepseek",
-  "deepinfra",
-]);
+const OPENAI_COMPATIBLE = OPENAI_COMPATIBLE_PROVIDERS;
 
 const LOCAL_PROVIDERS = new Set(["ollama", "lm-studio", "vllm", "localai"]);
 
@@ -327,7 +319,7 @@ export async function listTestbenchModels(
     .sort((a, b) => a.displayName.localeCompare(b.displayName));
 }
 
-async function lookupIndexedPricing(
+export async function lookupIndexedPricing(
   providerId: string,
   modelId: string,
   env: TestbenchEnv,
@@ -357,7 +349,7 @@ export type ExecuteInput = {
 
 type Usage = { inputTokens: number | null; outputTokens: number | null };
 
-function stripVendorPrefix(modelId: string): string {
+export function stripVendorPrefix(modelId: string): string {
   return modelId.replace(/^[a-z0-9-]+\//i, "").replace(/:free$/, "");
 }
 
@@ -713,10 +705,9 @@ export async function executeTestbench(
     outputText = result.outputText;
     usage = result.usage;
   } else if (OPENAI_COMPATIBLE.has(input.providerId)) {
-    if (provider.connection.kind !== "bearer")
-      throw new Error("Configuración de conexión inesperada.");
+    const baseUrl = providerChatBaseUrl(provider);
+    if (!baseUrl) throw new Error("Configuración de conexión inesperada.");
     const credential = await service.resolveCredential(input.providerId);
-    const baseUrl = provider.connection.url.replace(/\/models$/, "");
     // OpenRouter uses "vendor/model" ids; native APIs expect the bare model id.
     const result = await executeOpenAiCompatible(
       input.providerId === "openrouter"

@@ -45,6 +45,8 @@ export type DeveloperLabProviderDefinition = {
   pricingUrl: string | null;
   apiKeyUrl: string | null;
   connection: ConnectionStrategy;
+  /** Base URL for chat/completions when it differs from `connection.url` minus `/models`. */
+  chatBaseUrl?: string;
 };
 
 const cloud = (
@@ -59,8 +61,10 @@ const compatible = (
   documentationUrl: string,
   pricingUrl: string,
   apiKeyUrl: string,
+  chatBaseUrl?: string,
 ): DeveloperLabProviderDefinition =>
   cloud({
+    ...(chatBaseUrl ? { chatBaseUrl } : {}),
     id,
     name,
     categories: ["text", "reasoning", "code", "multimodal", "agents"],
@@ -183,6 +187,8 @@ export const DEVELOPER_LAB_PROVIDERS = [
     pricingUrl: "https://cohere.com/pricing",
     apiKeyUrl: "https://dashboard.cohere.com/api-keys",
     connection: { kind: "bearer", url: "https://api.cohere.com/v1/models" },
+    // OpenAI-compatible surface, verified 2026-11-09 (401 without key).
+    chatBaseUrl: "https://api.cohere.ai/compatibility/v1",
   }),
   compatible(
     "together",
@@ -237,6 +243,98 @@ export const DEVELOPER_LAB_PROVIDERS = [
     "https://deepinfra.com/docs",
     "https://deepinfra.com/pricing",
     "https://deepinfra.com/dash/api_keys",
+  ),
+  // OpenAI-compatible providers added 2026-11-09. Each base URL was probed
+  // without credentials on that date: `/models` answered 200/401 (not 404).
+  compatible(
+    "sambanova",
+    "SambaNova",
+    "SAMBANOVA_API_KEY",
+    "https://api.sambanova.ai/v1/models",
+    "https://docs.sambanova.ai/",
+    "https://cloud.sambanova.ai/plans/pricing",
+    "https://cloud.sambanova.ai/apis",
+  ),
+  compatible(
+    "dashscope-intl",
+    "Alibaba Cloud Model Studio (DashScope intl)",
+    "DASHSCOPE_API_KEY",
+    "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/models",
+    "https://www.alibabacloud.com/help/en/model-studio/",
+    "https://www.alibabacloud.com/help/en/model-studio/models",
+    "https://modelstudio.console.alibabacloud.com/",
+  ),
+  compatible(
+    "moonshot",
+    "Moonshot AI (Kimi)",
+    "MOONSHOT_API_KEY",
+    "https://api.moonshot.ai/v1/models",
+    "https://platform.moonshot.ai/docs",
+    "https://platform.moonshot.ai/docs/pricing/chat",
+    "https://platform.moonshot.ai/console/api-keys",
+  ),
+  compatible(
+    "zai",
+    "Z.ai (GLM)",
+    "ZAI_API_KEY",
+    "https://api.z.ai/api/paas/v4/models",
+    "https://docs.z.ai/",
+    "https://docs.z.ai/guides/overview/pricing",
+    "https://z.ai/manage-apikey/apikey-list",
+  ),
+  compatible(
+    "minimax",
+    "MiniMax",
+    "MINIMAX_API_KEY",
+    "https://api.minimax.io/v1/models",
+    "https://platform.minimax.io/docs",
+    "https://platform.minimax.io/docs/guides/pricing",
+    "https://platform.minimax.io/user-center/basic-information/interface-key",
+  ),
+  cloud({
+    id: "perplexity",
+    name: "Perplexity (Sonar)",
+    categories: ["text", "reasoning", "agents"],
+    credentialBinding: "PERPLEXITY_API_KEY",
+    // No public `/models` endpoint (404 on 2026-11-09); chat is at the root.
+    supportsModelDiscovery: false,
+    supportsStreaming: true,
+    supportsUsageMetadata: true,
+    supportsQuotaInspection: false,
+    supportsFileUpload: false,
+    supportsAsyncJobs: false,
+    documentationUrl: "https://docs.perplexity.ai/",
+    pricingUrl: "https://docs.perplexity.ai/guides/pricing",
+    apiKeyUrl: "https://www.perplexity.ai/account/api/keys",
+    connection: { kind: "registered" },
+    chatBaseUrl: "https://api.perplexity.ai",
+  }),
+  compatible(
+    "huggingface-router",
+    "Hugging Face Inference Providers",
+    "HUGGINGFACE_TOKEN",
+    "https://router.huggingface.co/v1/models",
+    "https://huggingface.co/docs/inference-providers",
+    "https://huggingface.co/docs/inference-providers/pricing",
+    "https://huggingface.co/settings/tokens",
+  ),
+  compatible(
+    "novita",
+    "Novita AI",
+    "NOVITA_API_KEY",
+    "https://api.novita.ai/openai/v1/models",
+    "https://novita.ai/docs",
+    "https://novita.ai/pricing",
+    "https://novita.ai/settings/key-management",
+  ),
+  compatible(
+    "nebius",
+    "Nebius Token Factory",
+    "NEBIUS_API_KEY",
+    "https://api.tokenfactory.nebius.com/v1/models",
+    "https://docs.tokenfactory.nebius.com/",
+    "https://nebius.com/token-factory/prices",
+    "https://tokenfactory.nebius.com/",
   ),
   cloud({
     id: "replicate",
@@ -455,4 +553,14 @@ export const DEVELOPER_LAB_PROVIDERS = [
 
 export function getDeveloperLabProvider(id: string) {
   return DEVELOPER_LAB_PROVIDERS.find((provider) => provider.id === id) ?? null;
+}
+
+/** Base URL that `/chat/completions` hangs from, or null when unknown. */
+export function providerChatBaseUrl(
+  provider: DeveloperLabProviderDefinition,
+): string | null {
+  if (provider.chatBaseUrl) return provider.chatBaseUrl;
+  if (provider.connection.kind === "bearer")
+    return provider.connection.url.replace(/\/models$/, "");
+  return null;
 }

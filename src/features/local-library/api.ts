@@ -80,3 +80,11 @@ export async function updateDocument(
   if (!response.ok) throw new Error("No se pudo guardar el cambio.");
   return response.json();
 }
+
+/** Ids de documentos con análisis guardado; si falla, la biblioteca sigue funcionando. */
+export async function getAnalyzedIds(): Promise<string[]> {
+  const response = await fetch("/api/local-library-analyses");
+  if (!response.ok) return [];
+  const payload = (await response.json()) as ApiResponse<string[]>;
+  return Array.isArray(payload.data) ? payload.data : [];
+}

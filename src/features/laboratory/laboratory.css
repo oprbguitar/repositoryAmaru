@@ -1,0 +1,124 @@
+/* Historial de Mi laboratorio: línea de tiempo compacta por día. */
+.lab-history {
+  margin-top: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.lab-history > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--line-soft);
+}
+.lab-history h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-md);
+}
+.lab-history h2 svg {
+  width: 15px;
+  color: var(--accent);
+}
+.lab-history > header span,
+.lab-history-empty {
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+}
+.lab-history-empty {
+  margin: 0;
+  padding: var(--space-4);
+  text-align: center;
+}
+.lab-history ol,
+.lab-history ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lab-history ol {
+  max-height: 340px;
+  overflow: auto;
+  padding: var(--space-2) var(--space-3);
+  scrollbar-width: thin;
+}
+.lab-history h3 {
+  margin: var(--space-2) 0 var(--space-1);
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  text-transform: capitalize;
+}
+.lab-event {
+  --kc: var(--text-muted);
+  width: 100%;
+  display: grid;
+  grid-template-columns: 44px 10px minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.lab-event:hover {
+  background: var(--surface-hover);
+}
+.lab-event:active {
+  background: var(--surface-3);
+}
+.lab-event.is-selected {
+  background: var(--accent-quiet);
+}
+.lab-event:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.lab-event time {
+  color: var(--text-subtle);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+.lab-event i {
+  width: 8px;
+  height: 8px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: var(--kc);
+}
+.lab-event strong,
+.lab-event small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lab-event strong {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+.lab-event small {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+.lab-event.kind-created {
+  --kc: var(--accent);
+}
+.lab-event.kind-calculated {
+  --kc: var(--ok);
+}
+.lab-event.kind-updated {
+  --kc: var(--info);
+}
+.lab-event.kind-archived {
+  --kc: var(--text-subtle);
+}
