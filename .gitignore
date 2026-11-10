@@ -10,6 +10,7 @@ test-results/
 .env.local
 .env.local.*
 !.env.local.example
+.share.env
 local-library-export/
 developer-lab-exports/
 developer-lab-test-output/

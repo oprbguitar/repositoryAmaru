@@ -231,6 +231,12 @@ pnpm dev
 
 Open [http://127.0.0.1:5174](http://127.0.0.1:5174). The first status request queues enabled public sources once. Use **Administración → Sincronizar todas las fuentes públicas** for an immediate refresh and to inspect per-source HTTP status, quota, count, and error state.
 
+## Temporary web access from Windows
+
+Double-click `Iniciar-Observatorio-Web.cmd` to start the local app and expose it through a temporary Cloudflare Quick Tunnel. The launcher binds the app and an HTTP Basic Auth proxy to loopback only, generates a fresh password for each run, stores it briefly in the ignored `.share.env` file until the proxy loads it, displays it in the launcher console, and opens the HTTPS URL in your browser. Enter username `amaru` and the displayed password when prompted.
+
+The URL works only while the launcher remains open and changes on the next run. Anyone with both the URL and password can use the observatory, including its write-enabled developer lab. Stop sharing by closing the launcher window or pressing Ctrl+C. This is a temporary remote view of your local development instance; it does not deploy the project.
+
 The API test bench lives at [/developer-lab](http://127.0.0.1:5174/developer-lab) — see [docs/developer-lab.md](docs/developer-lab.md) and [docs/developer-lab-api-keys.md](docs/developer-lab-api-keys.md).
 
 `pnpm ingest:local` can run before `pnpm dev`: when necessary it starts a temporary local Worker, imports the batch, and shuts it down.

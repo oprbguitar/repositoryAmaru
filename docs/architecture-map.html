@@ -1,0 +1,3464 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AMARU · Mapa de arquitectura</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f6f7fb;
+    --panel: #ffffff;
+    --panel-2: #fbfbfe;
+    --ink: #14161f;
+    --ink-soft: #565c72;
+    --ink-faint: #868ca3;
+    --line: #e3e5ef;
+    --line-strong: #c9cddd;
+    --accent: #4f46e5;
+    --accent-soft: #eef0ff;
+    --edge: #b9bed2;
+    --shadow: 0 1px 2px rgba(18, 20, 33, .06), 0 8px 24px rgba(18, 20, 33, .06);
+    --radius: 12px;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d0f16;
+      --panel: #151824;
+      --panel-2: #1b1f2e;
+      --ink: #eceef6;
+      --ink-soft: #a7adc4;
+      --ink-faint: #767d96;
+      --line: #262b3c;
+      --line-strong: #39405a;
+      --accent: #8b8cff;
+      --accent-soft: #23264a;
+      --edge: #3b4159;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 12px 32px rgba(0, 0, 0, .35);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  code, .mono { font-family: var(--mono); font-size: .85em; }
+
+  .app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+
+  header.top {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    padding: 12px 20px; background: var(--panel); border-bottom: 1px solid var(--line);
+    z-index: 5;
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
+  .brand strong { font-size: 16px; letter-spacing: -.01em; }
+  .brand span { color: var(--ink-faint); font-size: 13px; }
+  .stat { color: var(--ink-soft); font-size: 12.5px; }
+  .stat b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  .control {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 32px; padding: 0 12px;
+    background: var(--panel-2); color: var(--ink-soft);
+    border: 1px solid var(--line); border-radius: 8px;
+    font: inherit; font-size: 13px; cursor: pointer;
+  }
+  .control:hover { border-color: var(--line-strong); color: var(--ink); }
+  .control:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  input.control { cursor: text; min-width: 180px; }
+
+  .body { display: flex; flex: 1; min-height: 0; }
+
+  .canvas {
+    position: relative; flex: 1; min-width: 0; overflow: hidden;
+    background:
+      radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 0) 0 0 / 28px 28px;
+    cursor: grab;
+  }
+  .canvas.dragging { cursor: grabbing; }
+  .viewport { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+  .viewport svg { position: absolute; inset: 0; overflow: visible; }
+
+  .lane-label {
+    position: absolute; font-size: 11px; font-weight: 600; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--ink-faint); white-space: nowrap;
+  }
+
+  .node {
+    position: absolute; padding: 9px 12px; border-radius: 10px;
+    background: var(--panel); border: 1px solid var(--line);
+    box-shadow: var(--shadow); cursor: pointer; overflow: hidden;
+    transition: opacity .18s, box-shadow .18s, transform .18s, border-color .18s;
+  }
+  .node::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--dot);
+  }
+  .node b {
+    display: block; font-size: 13px; font-weight: 600; line-height: 1.25;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .node small {
+    display: block; margin-top: 2px; font-family: var(--mono); font-size: 10.5px;
+    color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .node .step-badge {
+    position: absolute; top: -8px; right: -8px; width: 22px; height: 22px;
+    display: none; align-items: center; justify-content: center;
+    border-radius: 50%; background: var(--accent); color: #fff;
+    font-size: 11px; font-weight: 700; box-shadow: var(--shadow);
+  }
+  .node:hover { transform: translateY(-1px); border-color: var(--line-strong); }
+  .node.dim { opacity: .16; box-shadow: none; }
+  .node.active { border-color: var(--dot); box-shadow: 0 0 0 2px color-mix(in srgb, var(--dot) 35%, transparent), var(--shadow); }
+  .node.active .step-badge { display: flex; }
+  .node.hit { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent); }
+
+  path.edge { fill: none; stroke: var(--edge); stroke-width: 1.3; transition: opacity .18s, stroke .18s, stroke-width .18s; }
+  path.edge.dim { opacity: .07; }
+  path.edge.active { stroke: var(--accent); stroke-width: 2.4; stroke-dasharray: 7 5; animation: dash 1.1s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -24; } }
+  .edge-label { font-size: 9.5px; fill: var(--ink-faint); opacity: 0; transition: opacity .18s; pointer-events: none; }
+  .edge-label.active { opacity: 1; fill: var(--accent); font-weight: 600; }
+
+  aside.flows {
+    width: 380px; flex: none; display: flex; flex-direction: column;
+    background: var(--panel); border-left: 1px solid var(--line); min-height: 0;
+  }
+  .flows-head { padding: 16px 18px 12px; border-bottom: 1px solid var(--line); }
+  .flows-head h2 { margin: 0 0 4px; font-size: 14px; letter-spacing: -.01em; }
+  .flows-head p { margin: 0; font-size: 12.5px; color: var(--ink-faint); }
+  .flows-list { overflow-y: auto; padding: 10px; flex: 1; }
+
+  .flow { border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 8px; background: var(--panel-2); overflow: hidden; }
+  .flow.open { border-color: var(--accent); }
+  .flow > button {
+    display: block; width: 100%; text-align: left; padding: 11px 13px;
+    background: none; border: 0; color: inherit; font: inherit; cursor: pointer;
+  }
+  .flow > button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .flow-name { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; }
+  .flow-name .idx {
+    flex: none; width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center;
+    background: var(--accent-soft); color: var(--accent); font-size: 11px; font-variant-numeric: tabular-nums;
+  }
+  .flow-purpose { margin: 4px 0 0 28px; font-size: 12.5px; color: var(--ink-soft); }
+  .flow-trigger { margin: 6px 0 0 28px; font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); }
+
+  .steps { list-style: none; margin: 0; padding: 2px 13px 13px 13px; border-top: 1px dashed var(--line); }
+  .steps li { display: flex; gap: 10px; padding: 7px 0; }
+  .steps li + li { border-top: 1px solid var(--line); }
+  .steps .n {
+    flex: none; width: 20px; height: 20px; margin-top: 1px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 10.5px; font-weight: 700;
+    background: color-mix(in srgb, var(--dot) 18%, transparent); color: var(--dot);
+  }
+  .steps .txt { min-width: 0; }
+  .steps .txt b { display: block; font-size: 12.5px; font-weight: 600; }
+  .steps .txt span { display: block; font-size: 12px; color: var(--ink-soft); }
+  .steps li:hover .txt b { color: var(--accent); }
+  .steps li { cursor: pointer; }
+
+  .tooltip {
+    position: fixed; z-index: 40; max-width: 340px; padding: 11px 13px;
+    background: var(--panel); border: 1px solid var(--line-strong); border-radius: 10px;
+    box-shadow: var(--shadow); pointer-events: none; opacity: 0; transition: opacity .12s;
+  }
+  .tooltip.show { opacity: 1; }
+  .tooltip h4 { margin: 0 0 2px; font-size: 13px; }
+  .tooltip .file { font-family: var(--mono); font-size: 10.5px; color: var(--accent); word-break: break-all; }
+  .tooltip p { margin: 7px 0 0; font-size: 12.5px; color: var(--ink-soft); }
+  .tooltip .lay { display: inline-block; margin-top: 8px; padding: 1px 7px; border-radius: 20px; font-size: 10.5px; background: color-mix(in srgb, var(--dot) 16%, transparent); color: var(--dot); }
+  .tooltip code { background: color-mix(in srgb, var(--ink) 7%, transparent); padding: 0 3px; border-radius: 3px; }
+
+  .legend {
+    position: absolute; left: 14px; bottom: 14px; z-index: 3;
+    display: flex; flex-wrap: wrap; gap: 4px 10px; max-width: min(560px, 70%);
+    padding: 9px 12px; background: color-mix(in srgb, var(--panel) 90%, transparent);
+    backdrop-filter: blur(8px); border: 1px solid var(--line); border-radius: 10px;
+  }
+  .legend span { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-soft); }
+  .legend i { width: 8px; height: 8px; border-radius: 2px; background: var(--dot); }
+
+  .zoom { position: absolute; right: 14px; bottom: 14px; z-index: 3; display: flex; gap: 6px; }
+  .zoom .control { background: color-mix(in srgb, var(--panel) 90%, transparent); backdrop-filter: blur(8px); width: 32px; padding: 0; justify-content: center; }
+
+  @media (max-width: 980px) {
+    .body { flex-direction: column; }
+    .canvas { min-height: 52vh; }
+    aside.flows { width: auto; max-height: 48vh; border-left: 0; border-top: 1px solid var(--line); }
+    .legend { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <strong id="brand-name"></strong>
+      <span id="brand-stack"></span>
+    </div>
+    <span class="stat"><b id="stat-nodes"></b> componentes · <b id="stat-edges"></b> relaciones · <b id="stat-flows"></b> flujos</span>
+    <input id="search" class="control" type="search" placeholder="Buscar componente o archivo…" aria-label="Buscar componente" />
+    <button id="reset" class="control" type="button">Restablecer</button>
+    <button id="fit" class="control" type="button">Ajustar</button>
+  </header>
+
+  <div class="body">
+    <div class="canvas" id="canvas">
+      <div class="viewport" id="viewport">
+        <svg id="edges" aria-hidden="true"></svg>
+        <div id="nodes"></div>
+      </div>
+      <div class="legend" id="legend"></div>
+      <div class="zoom">
+        <button class="control" type="button" data-zoom="-1" aria-label="Alejar">−</button>
+        <button class="control" type="button" data-zoom="1" aria-label="Acercar">+</button>
+      </div>
+    </div>
+
+    <aside class="flows">
+      <div class="flows-head">
+        <h2>Flujos del sistema</h2>
+        <p>Selecciona un flujo para resaltar su ruta completa en el diagrama.</p>
+      </div>
+      <div class="flows-list" id="flows"></div>
+    </aside>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip" role="tooltip"></div>
+
+<script type="application/json" id="model">{
+  "$schema": "https://amaru.local/schemas/architecture-map/1.0.0",
+  "version": "1.0.0",
+  "generatedAt": "2026-08-04",
+  "project": {
+    "name": "AMARU · Observatorio de IA",
+    "repository": "amaru-ai-observatory",
+    "stack": [
+      "React 19",
+      "Vite 8",
+      "TypeScript",
+      "Cloudflare Workers",
+      "D1",
+      "R2",
+      "KV",
+      "Queues",
+      "Workers AI",
+      "TanStack Query",
+      "React Router 7",
+      "Tailwind 4",
+      "Zod 4",
+      "MapLibre GL"
+    ],
+    "entrypoints": {
+      "web": "src/main.tsx",
+      "worker": "worker/index.ts",
+      "scripts": "scripts/*.ts"
+    },
+    "canvas": {
+      "width": 2496,
+      "height": 1456
+    }
+  },
+  "layers": [
+    {
+      "id": "cliente",
+      "label": "Cliente (SPA)",
+      "col": 0,
+      "color": "#6366f1"
+    },
+    {
+      "id": "pantallas",
+      "label": "Pantallas / features",
+      "col": 1,
+      "color": "#0ea5e9"
+    },
+    {
+      "id": "acceso",
+      "label": "Clientes API y scripts Node",
+      "col": 2,
+      "color": "#14b8a6"
+    },
+    {
+      "id": "worker",
+      "label": "Worker: entrada y enrutado",
+      "col": 3,
+      "color": "#f59e0b"
+    },
+    {
+      "id": "servicio",
+      "label": "Servicios del Worker",
+      "col": 4,
+      "color": "#f97316"
+    },
+    {
+      "id": "libreria",
+      "label": "Librerías compartidas (lib/)",
+      "col": 5,
+      "color": "#a855f7"
+    },
+    {
+      "id": "datos",
+      "label": "Almacenamiento Cloudflare",
+      "col": 6,
+      "color": "#22c55e"
+    },
+    {
+      "id": "externo",
+      "label": "APIs externas",
+      "col": 7,
+      "color": "#ef4444"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "browser",
+      "layer": "cliente",
+      "label": "Navegador",
+      "file": "—",
+      "description": "SPA servida por el entorno de assets de Cloudflare. `not_found_handling: single-page-application` y `run_worker_first: ['/api/*']` en wrangler.jsonc.",
+      "tags": [
+        "entrada"
+      ],
+      "x": 48,
+      "y": 484,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "main",
+      "layer": "cliente",
+      "label": "Bootstrap React",
+      "file": "src/main.tsx",
+      "description": "Monta React 19: QueryClientProvider (TanStack Query), LanguageProvider y BrowserRouter.",
+      "tags": [],
+      "x": 48,
+      "y": 572,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "app-router",
+      "layer": "cliente",
+      "label": "Router de rutas",
+      "file": "src/app/App.tsx",
+      "description": "Define 15 rutas reales + 5 placeholders (/tools, /saved, /history, /search, /settings). Redirige `/` a `/today`.",
+      "tags": [],
+      "x": 48,
+      "y": 660,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "app-shell",
+      "layer": "cliente",
+      "label": "AppShell",
+      "file": "src/components/layout/AppShell.tsx",
+      "description": "Layout persistente: barra lateral con `navigation.ts`, tema claro/oscuro (`theme.ts`), paginación y layout colapsable.",
+      "tags": [],
+      "x": 48,
+      "y": 748,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "i18n",
+      "layer": "cliente",
+      "label": "i18n",
+      "file": "src/i18n/LanguageProvider.tsx",
+      "description": "Diccionario es/en (`dictionary.ts`); la navegación guarda el texto español como fallback y renderiza `labelKey`.",
+      "tags": [],
+      "x": 48,
+      "y": 836,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "query",
+      "layer": "cliente",
+      "label": "TanStack Query",
+      "file": "@tanstack/react-query",
+      "description": "Estado del servidor, caché y refetch. Los filtros viven en la URL vía React Router.",
+      "tags": [],
+      "x": 48,
+      "y": 924,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "page-today",
+      "layer": "pantallas",
+      "label": "Hoy",
+      "file": "src/features/today/TodayPage.tsx",
+      "description": "Panel de arranque: dashboard agregado, eventos en vivo y tendencia de precios (`PriceTrend.tsx`).",
+      "tags": [],
+      "x": 348,
+      "y": 88,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "page-providers",
+      "layer": "pantallas",
+      "label": "Proveedores",
+      "file": "src/features/observatory/ProvidersPage.tsx",
+      "description": "Directorio de proveedores con detalle (`ProviderDetail.tsx`), avatares y etiquetas de capacidad.",
+      "tags": [],
+      "x": 348,
+      "y": 176,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "page-models",
+      "layer": "pantallas",
+      "label": "Modelos",
+      "file": "src/features/observatory/ModelsRankingPage.tsx",
+      "description": "Rankings, ofertas por modelo y ficha de detalle; usa `lib/models/capabilities.ts`.",
+      "tags": [],
+      "x": 348,
+      "y": 264,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "page-evolution",
+      "layer": "pantallas",
+      "label": "Evolución IA",
+      "file": "src/features/evolution/EvolutionPage.tsx",
+      "description": "Línea de tiempo declarativa de hitos (`timeline.ts`), sin llamadas de red.",
+      "tags": [],
+      "x": 348,
+      "y": 352,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "page-devlab",
+      "layer": "pantallas",
+      "label": "Laboratorio de APIs",
+      "file": "src/features/developer-lab/DeveloperLabPage.tsx",
+      "description": "Configura credenciales por proveedor, lista modelos y ejecuta pruebas (chat, RAG, agentes, media, video).",
+      "tags": [
+        "credenciales"
+      ],
+      "x": 348,
+      "y": 440,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "page-openlocal",
+      "layer": "pantallas",
+      "label": "Open y local",
+      "file": "src/features/observatory/OpenLocalPage.tsx",
+      "description": "Catálogo de modelos abiertos y runtimes locales.",
+      "tags": [],
+      "x": 348,
+      "y": 528,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "page-news",
+      "layer": "pantallas",
+      "label": "Noticias",
+      "file": "src/features/observatory/NewsPage.tsx",
+      "description": "Registros `record_kind = news`, ordenados por `newsSort.ts`.",
+      "tags": [],
+      "x": 348,
+      "y": 616,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "page-research",
+      "layer": "pantallas",
+      "label": "Investigación",
+      "file": "src/features/observatory/ResearchPage.tsx",
+      "description": "Rejilla de papers de 8 índices académicos con filtros (`researchFilters.ts`).",
+      "tags": [],
+      "x": 348,
+      "y": 704,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "page-github",
+      "layer": "pantallas",
+      "label": "GitHub",
+      "file": "src/features/observatory/GitHubPage.tsx",
+      "description": "Rankings de repositorios desde `repository_snapshots`.",
+      "tags": [],
+      "x": 348,
+      "y": 792,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "page-videos",
+      "layer": "pantallas",
+      "label": "Videos",
+      "file": "src/features/videos/VideosPage.tsx",
+      "description": "Videos de YouTube y Facebook normalizados en `video_items`.",
+      "tags": [],
+      "x": 348,
+      "y": 880,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "page-map",
+      "layer": "pantallas",
+      "label": "Mapa global",
+      "file": "src/features/maps/GlobalMapPage.tsx",
+      "description": "MapLibre GL (`MapCanvas.tsx`) + panel por país (`CountryPanel.tsx`).",
+      "tags": [],
+      "x": 348,
+      "y": 968,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "page-markets",
+      "layer": "pantallas",
+      "label": "Mercado IA",
+      "file": "src/features/observatory/MarketPage.tsx",
+      "description": "Cotizaciones intradía y fundamentos SEC; gráficos en `marketCharts.tsx`.",
+      "tags": [],
+      "x": 348,
+      "y": 1056,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "page-library",
+      "layer": "pantallas",
+      "label": "Biblioteca local",
+      "file": "src/features/local-library/LocalLibraryPage.tsx",
+      "description": "Documentos ingeridos desde disco, con detalle y análisis por documento.",
+      "tags": [],
+      "x": 348,
+      "y": 1144,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "page-lab",
+      "layer": "pantallas",
+      "label": "Mi laboratorio",
+      "file": "src/features/laboratory/LaboratoryPage.tsx",
+      "description": "Formulario de proyecto + recomendador; `randomProject.ts` genera casos de ejemplo.",
+      "tags": [],
+      "x": 348,
+      "y": 1232,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "page-admin",
+      "layer": "pantallas",
+      "label": "Admin de fuentes",
+      "file": "src/features/observatory/AdminSourcesPage.tsx",
+      "description": "Salud de fuentes, panel de integraciones (`IntegrationsPanel.tsx`) y botones de sincronización.",
+      "tags": [
+        "credenciales"
+      ],
+      "x": 348,
+      "y": 1320,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "api-observatory",
+      "layer": "acceso",
+      "label": "Cliente API observatorio",
+      "file": "src/features/observatory/api.ts",
+      "description": "Envoltorio `read<T>()` sobre el sobre `ApiResponse`: dashboard, proveedores, fuentes, registros, mapa, modelos, GitHub, videos, mercado, integraciones y sync.",
+      "tags": [],
+      "x": 648,
+      "y": 440,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "api-devlab",
+      "layer": "acceso",
+      "label": "Cliente API lab",
+      "file": "src/features/developer-lab/api.ts",
+      "description": "Proveedores, configuración, test, modelos, ejecución y borrado de credencial.",
+      "tags": [],
+      "x": 648,
+      "y": 528,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "api-library",
+      "layer": "acceso",
+      "label": "Cliente API biblioteca",
+      "file": "src/features/local-library/api.ts",
+      "description": "Estado, listado, detalle, análisis (GET/POST) y PATCH de documentos.",
+      "tags": [],
+      "x": 648,
+      "y": 616,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "api-lab",
+      "layer": "acceso",
+      "label": "Cliente API proyectos",
+      "file": "src/features/laboratory/api.ts",
+      "description": "CRUD de proyectos de laboratorio y disparo del recomendador.",
+      "tags": [],
+      "x": 648,
+      "y": 704,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "script-ingest",
+      "layer": "acceso",
+      "label": "Ingesta local",
+      "file": "scripts/ingest-local-folder.ts",
+      "description": "Script Node: recorre la carpeta, canoniza rutas, extrae texto (pdfjs, mammoth, exceljs, csv-parse), hashea y envía el lote al endpoint interno.",
+      "tags": [
+        "node"
+      ],
+      "x": 648,
+      "y": 792,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "script-watch",
+      "layer": "acceso",
+      "label": "Watcher",
+      "file": "scripts/watch-local-folder.ts",
+      "description": "chokidar sobre la carpeta local; vuelve a lanzar la ingesta ante cambios.",
+      "tags": [
+        "node"
+      ],
+      "x": 648,
+      "y": 880,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "script-ops",
+      "layer": "acceso",
+      "label": "Utilidades",
+      "file": "scripts/seed-local.ts · export-local-library.ts · check-source-health.ts",
+      "description": "Semillas locales, exportación de la biblioteca y comprobación de salud de fuentes.",
+      "tags": [
+        "node"
+      ],
+      "x": 648,
+      "y": 968,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "worker-fetch",
+      "layer": "worker",
+      "label": "Entrada del Worker",
+      "file": "worker/index.ts (default.fetch)",
+      "description": "Separa `/api/*` de assets, dispara `ensureInitialSynchronization` en `/api/status` vía waitUntil y envuelve todo con cabeceras de seguridad.",
+      "tags": [
+        "entrada"
+      ],
+      "x": 948,
+      "y": 440,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "api-router",
+      "layer": "worker",
+      "label": "apiRouter",
+      "file": "worker/index.ts:1360",
+      "description": "Orquesta el orden: developer lab → módulos → status/records/providers/sources/dashboard/live-events/sync → integraciones → import interno → biblioteca local.",
+      "tags": [],
+      "x": 948,
+      "y": 528,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "module-router",
+      "layer": "worker",
+      "label": "moduleRouter",
+      "file": "worker/modules.ts",
+      "description": "Rutas de módulo: mapa, rankings, ofertas, detalle de modelo, precios, GitHub, videos, cotizaciones y proyectos de laboratorio.",
+      "tags": [],
+      "x": 948,
+      "y": 616,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "devlab-router",
+      "layer": "worker",
+      "label": "developerLabRouter",
+      "file": "worker/developer-lab/router.ts",
+      "description": "Rutas `/api/developer-lab/*`; se desactiva por completo con `ENABLE_DEVELOPER_LAB=false`.",
+      "tags": [],
+      "x": 948,
+      "y": 704,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "integrations-router",
+      "layer": "worker",
+      "label": "Rutas de integración",
+      "file": "worker/index.ts (integrationRouter)",
+      "description": "PUT/DELETE/POST-test sobre `/api/integrations/:BINDING` con binding validado por regex `[A-Z0-9_]{3,64}`.",
+      "tags": [
+        "credenciales"
+      ],
+      "x": 948,
+      "y": 792,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "scheduled",
+      "layer": "worker",
+      "label": "Cron (*/15)",
+      "file": "worker/index.ts (scheduled)",
+      "description": "Calcula `dueSourceIds()` y encola un mensaje por fuente vencida.",
+      "tags": [
+        "asincrono"
+      ],
+      "x": 948,
+      "y": 880,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "queue-consumer",
+      "layer": "worker",
+      "label": "Consumidor de cola",
+      "file": "worker/index.ts (queue)",
+      "description": "Lote de hasta 10 mensajes; `retry()` cuando la sincronización falla, `ack()` cuando termina.",
+      "tags": [
+        "asincrono"
+      ],
+      "x": 948,
+      "y": 968,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "external-sync",
+      "layer": "servicio",
+      "label": "Sincronización de fuentes",
+      "file": "worker/external.ts",
+      "description": "28 adaptadores (públicos, con clave y de módulo) + `persistRecords`, deduplicación por sha256, control de rate limit e invalidación de caché.",
+      "tags": [],
+      "x": 1248,
+      "y": 308,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "modules-service",
+      "layer": "servicio",
+      "label": "Consultas de módulo",
+      "file": "worker/modules.ts",
+      "description": "Lecturas D1 para mapa, rankings, ofertas, precios, GitHub y videos; también persiste proyectos y alternativas.",
+      "tags": [],
+      "x": 1248,
+      "y": 396,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "market-service",
+      "layer": "servicio",
+      "label": "Cotizaciones",
+      "file": "worker/market.ts",
+      "description": "6 símbolos (NVDA, MSFT, GOOGL, META, AMD, PLTR) con caché KV de 60 s; nunca rellena huecos con el último valor conocido.",
+      "tags": [],
+      "x": 1248,
+      "y": 484,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "integrations-service",
+      "layer": "servicio",
+      "label": "Integraciones",
+      "file": "worker/integrations.ts",
+      "description": "Catálogo, alta/baja de credenciales, `withStoredSecrets` y prueba de conectividad por binding.",
+      "tags": [
+        "credenciales"
+      ],
+      "x": 1248,
+      "y": 572,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "secret-box",
+      "layer": "servicio",
+      "label": "Caja de secretos",
+      "file": "worker/secret-box.ts",
+      "description": "Sobre AES-GCM derivado de `DEVELOPER_LAB_ENCRYPTION_KEY`; sin esa variable las filas se leen pero los secretos no.",
+      "tags": [
+        "credenciales"
+      ],
+      "x": 1248,
+      "y": 660,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "credential-service",
+      "layer": "servicio",
+      "label": "Credenciales del lab",
+      "file": "worker/developer-lab/credential-service.ts",
+      "description": "Guarda, resuelve y borra claves por proveedor en `developer_lab_provider_configs`.",
+      "tags": [
+        "credenciales"
+      ],
+      "x": 1248,
+      "y": 748,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "connection",
+      "layer": "servicio",
+      "label": "Conexión de proveedor",
+      "file": "worker/developer-lab/connection.ts",
+      "description": "Comprueba conectividad y estado del proveedor, y registra `developer_lab_provider_status`.",
+      "tags": [],
+      "x": 1248,
+      "y": 836,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "testbench",
+      "layer": "servicio",
+      "label": "Banco de pruebas",
+      "file": "worker/developer-lab/testbench.ts",
+      "description": "Lista modelos por tipo de prueba y ejecuta chat/RAG/agente/media/video registrando runs y eventos.",
+      "tags": [],
+      "x": 1248,
+      "y": 924,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "import-local",
+      "layer": "servicio",
+      "label": "Importación interna",
+      "file": "worker/index.ts (importLocal)",
+      "description": "`POST /api/internal/import/local` autenticado con `LOCAL_IMPORT_TOKEN` y validado con Zod antes de tocar D1.",
+      "tags": [
+        "frontera"
+      ],
+      "x": 1248,
+      "y": 1012,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "doc-analysis",
+      "layer": "servicio",
+      "label": "Análisis documental",
+      "file": "worker/index.ts (analyzeDocument)",
+      "description": "Genera resumen y entidades de un documento local; `?force=1` recalcula.",
+      "tags": [],
+      "x": 1248,
+      "y": 1100,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "lib-validation",
+      "layer": "libreria",
+      "label": "Validación de importación",
+      "file": "lib/validation/local-import.ts",
+      "description": "`importBatchSchema` (Zod): contrato completo del lote antes de persistir.",
+      "tags": [
+        "frontera"
+      ],
+      "x": 1548,
+      "y": 220,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "lib-path-security",
+      "layer": "libreria",
+      "label": "Seguridad de rutas",
+      "file": "lib/security/path-security.ts",
+      "description": "Canonicaliza rutas, rechaza traversal y symlinks; probado en `tests/path-security.test.ts`.",
+      "tags": [
+        "frontera"
+      ],
+      "x": 1548,
+      "y": 308,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "lib-normalizers",
+      "layer": "libreria",
+      "label": "Normalizadores",
+      "file": "lib/external/normalizers.ts",
+      "description": "829 líneas: convierte payloads crudos de proveedor en `ObservatoryRecord` estable.",
+      "tags": [],
+      "x": 1548,
+      "y": 396,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "lib-academic",
+      "layer": "libreria",
+      "label": "Índices académicos",
+      "file": "lib/external/academic.ts",
+      "description": "arXiv, OpenAlex, Crossref, Europe PMC, DOAJ, DBLP, Semantic Scholar y CORE.",
+      "tags": [],
+      "x": 1548,
+      "y": 484,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "lib-news",
+      "layer": "libreria",
+      "label": "Prensa y series",
+      "file": "lib/external/news-and-series.ts",
+      "description": "Guardian, NewsAPI y series macro (FRED).",
+      "tags": [],
+      "x": 1548,
+      "y": 572,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "lib-videos",
+      "layer": "libreria",
+      "label": "Video",
+      "file": "lib/external/videos.ts · facebook-videos.ts",
+      "description": "Normaliza YouTube Data API y videos de páginas de Facebook.",
+      "tags": [],
+      "x": 1548,
+      "y": 660,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "lib-rankings",
+      "layer": "libreria",
+      "label": "Rankings",
+      "file": "lib/external/rankings.ts",
+      "description": "Construye rankings de modelos y ofertas comparables.",
+      "tags": [],
+      "x": 1548,
+      "y": 748,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "lib-engine",
+      "layer": "libreria",
+      "label": "Motor de recomendación",
+      "file": "lib/laboratory/engine.ts",
+      "description": "`recommend()` v1.0.0: puntúa alternativas por privacidad, resultado esperado y coste estimado.",
+      "tags": [],
+      "x": 1548,
+      "y": 836,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "lib-capabilities",
+      "layer": "libreria",
+      "label": "Capacidades de modelo",
+      "file": "lib/models/capabilities.ts · provider-identity.ts",
+      "description": "Deriva capacidades y la identidad canónica del proveedor.",
+      "tags": [],
+      "x": 1548,
+      "y": 924,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "lib-catalog",
+      "layer": "libreria",
+      "label": "Catálogo de integraciones",
+      "file": "lib/integrations/catalog.ts",
+      "description": "6 categorías (mercado, video, código, investigación, noticias, análisis) y el mapeo binding → sourceIds.",
+      "tags": [],
+      "x": 1548,
+      "y": 1012,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "lib-registry",
+      "layer": "libreria",
+      "label": "Registro de proveedores",
+      "file": "lib/developer-lab/registry.ts",
+      "description": "14 proveedores del laboratorio, incluidos 4 runtimes locales (Ollama, LM Studio, vLLM, LocalAI).",
+      "tags": [],
+      "x": 1548,
+      "y": 1100,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "lib-geo",
+      "layer": "libreria",
+      "label": "Geografía",
+      "file": "lib/geo/aggregate.ts · countries.ts",
+      "description": "Agrega entidades por país y define los códigos LATAM.",
+      "tags": [],
+      "x": 1548,
+      "y": 1188,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "d1",
+      "layer": "datos",
+      "label": "D1 · amaru-observatory",
+      "file": "migrations/0001–0008",
+      "description": "Metadatos normalizados: fuentes, proveedores, registros, documentos locales, rankings, ofertas, mapa, videos, proyectos, lab, integraciones y cotizaciones.",
+      "tags": [
+        "estado"
+      ],
+      "x": 1848,
+      "y": 528,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "r2",
+      "layer": "datos",
+      "label": "R2 · RAW_BUCKET",
+      "file": "wrangler.jsonc",
+      "description": "Copias crudas opcionales; solo se escriben con `LOCAL_STORE_RAW_FILES=true`.",
+      "tags": [
+        "estado"
+      ],
+      "x": 1848,
+      "y": 616,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "kv",
+      "layer": "datos",
+      "label": "KV · CACHE",
+      "file": "wrangler.jsonc",
+      "description": "Marcadores de estado y cachés cortas (cotizaciones 60 s, invalidación de listados).",
+      "tags": [
+        "estado"
+      ],
+      "x": 1848,
+      "y": 704,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "queue",
+      "layer": "datos",
+      "label": "Queue · amaru-index-jobs",
+      "file": "wrangler.jsonc",
+      "description": "Productor y consumidor del mismo Worker; lote 10, timeout 30 s.",
+      "tags": [
+        "asincrono"
+      ],
+      "x": 1848,
+      "y": 792,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "workers-ai",
+      "layer": "datos",
+      "label": "Workers AI",
+      "file": "binding AI (remote)",
+      "description": "Disponible para análisis documental; gobernado por `ENABLE_WORKERS_AI`.",
+      "tags": [],
+      "x": 1848,
+      "y": 880,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "ext-openrouter",
+      "layer": "externo",
+      "label": "OpenRouter",
+      "file": "público",
+      "description": "Catálogo de modelos y precios comparables.",
+      "tags": [],
+      "x": 2148,
+      "y": 132,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "ext-hf",
+      "layer": "externo",
+      "label": "Hugging Face",
+      "file": "token opcional",
+      "description": "Modelos abiertos y metadatos.",
+      "tags": [],
+      "x": 2148,
+      "y": 220,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "ext-academic",
+      "layer": "externo",
+      "label": "Índices académicos",
+      "file": "público",
+      "description": "arXiv · OpenAlex (+instituciones) · Crossref · Europe PMC · DOAJ · DBLP.",
+      "tags": [],
+      "x": 2148,
+      "y": 308,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "ext-scholar",
+      "layer": "externo",
+      "label": "Semantic Scholar · CORE",
+      "file": "con clave",
+      "description": "Índices académicos que requieren credencial configurada.",
+      "tags": [],
+      "x": 2148,
+      "y": 396,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "ext-github",
+      "layer": "externo",
+      "label": "GitHub API",
+      "file": "token opcional",
+      "description": "Snapshots de repositorios para el ranking.",
+      "tags": [],
+      "x": 2148,
+      "y": 484,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "ext-sec",
+      "layer": "externo",
+      "label": "SEC EDGAR · XBRL",
+      "file": "público",
+      "description": "Presentaciones y fundamentos financieros.",
+      "tags": [],
+      "x": 2148,
+      "y": 572,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "ext-fx",
+      "layer": "externo",
+      "label": "Frankfurter · BCRP",
+      "file": "público",
+      "description": "Tipos de cambio y series del banco central peruano.",
+      "tags": [],
+      "x": 2148,
+      "y": 660,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "ext-news",
+      "layer": "externo",
+      "label": "Guardian · NewsAPI · OpenAI blog",
+      "file": "mixto",
+      "description": "Prensa y feeds oficiales de proveedores.",
+      "tags": [],
+      "x": 2148,
+      "y": 748,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "ext-fred",
+      "layer": "externo",
+      "label": "FRED",
+      "file": "con clave",
+      "description": "Series macroeconómicas.",
+      "tags": [],
+      "x": 2148,
+      "y": 836,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "ext-finnhub",
+      "layer": "externo",
+      "label": "Finnhub",
+      "file": "con clave",
+      "description": "Cotizaciones intradía de las 6 empresas seguidas.",
+      "tags": [],
+      "x": 2148,
+      "y": 924,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "ext-youtube",
+      "layer": "externo",
+      "label": "YouTube Data API",
+      "file": "con clave",
+      "description": "Videos por canal y tema.",
+      "tags": [],
+      "x": 2148,
+      "y": 1012,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "ext-meta",
+      "layer": "externo",
+      "label": "Meta Graph API",
+      "file": "con clave",
+      "description": "Videos de páginas de Facebook e Instagram.",
+      "tags": [],
+      "x": 2148,
+      "y": 1100,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "ext-llm",
+      "layer": "externo",
+      "label": "Proveedores LLM",
+      "file": "clave de usuario",
+      "description": "OpenAI, Anthropic, Gemini, Groq, Mistral, Cohere, Replicate, Stability, ElevenLabs, Deepgram, AssemblyAI, NVIDIA.",
+      "tags": [],
+      "x": 2148,
+      "y": 1188,
+      "width": 216,
+      "height": 64
+    },
+    {
+      "id": "ext-local",
+      "layer": "externo",
+      "label": "Runtimes locales",
+      "file": "sin clave",
+      "description": "Ollama :11434 · LM Studio :1234 · vLLM :8000 · LocalAI :8080.",
+      "tags": [],
+      "x": 2148,
+      "y": 1276,
+      "width": 216,
+      "height": 64
+    }
+  ],
+  "edges": [
+    {
+      "id": "browser->main",
+      "from": "browser",
+      "to": "main",
+      "label": "carga SPA",
+      "kind": "sync"
+    },
+    {
+      "id": "main->app-router",
+      "from": "main",
+      "to": "app-router",
+      "label": "monta",
+      "kind": "sync"
+    },
+    {
+      "id": "main->query",
+      "from": "main",
+      "to": "query",
+      "label": "provee",
+      "kind": "sync"
+    },
+    {
+      "id": "main->i18n",
+      "from": "main",
+      "to": "i18n",
+      "label": "provee",
+      "kind": "sync"
+    },
+    {
+      "id": "app-router->app-shell",
+      "from": "app-router",
+      "to": "app-shell",
+      "label": "layout",
+      "kind": "sync"
+    },
+    {
+      "id": "app-shell->page-today",
+      "from": "app-shell",
+      "to": "page-today",
+      "label": "ruta",
+      "kind": "sync"
+    },
+    {
+      "id": "app-shell->page-providers",
+      "from": "app-shell",
+      "to": "page-providers",
+      "label": "ruta",
+      "kind": "sync"
+    },
+    {
+      "id": "app-shell->page-models",
+      "from": "app-shell",
+      "to": "page-models",
+      "label": "ruta",
+      "kind": "sync"
+    },
+    {
+      "id": "app-shell->page-evolution",
+      "from": "app-shell",
+      "to": "page-evolution",
+      "label": "ruta",
+      "kind": "sync"
+    },
+    {
+      "id": "app-shell->page-devlab",
+      "from": "app-shell",
+      "to": "page-devlab",
+      "label": "ruta",
+      "kind": "sync"
+    },
+    {
+      "id": "app-shell->page-openlocal",
+      "from": "app-shell",
+      "to": "page-openlocal",
+      "label": "ruta",
+      "kind": "sync"
+    },
+    {
+      "id": "app-shell->page-news",
+      "from": "app-shell",
+      "to": "page-news",
+      "label": "ruta",
+      "kind": "sync"
+    },
+    {
+      "id": "app-shell->page-research",
+      "from": "app-shell",
+      "to": "page-research",
+      "label": "ruta",
+      "kind": "sync"
+    },
+    {
+      "id": "app-shell->page-github",
+      "from": "app-shell",
+      "to": "page-github",
+      "label": "ruta",
+      "kind": "sync"
+    },
+    {
+      "id": "app-shell->page-videos",
+      "from": "app-shell",
+      "to": "page-videos",
+      "label": "ruta",
+      "kind": "sync"
+    },
+    {
+      "id": "app-shell->page-map",
+      "from": "app-shell",
+      "to": "page-map",
+      "label": "ruta",
+      "kind": "sync"
+    },
+    {
+      "id": "app-shell->page-markets",
+      "from": "app-shell",
+      "to": "page-markets",
+      "label": "ruta",
+      "kind": "sync"
+    },
+    {
+      "id": "app-shell->page-library",
+      "from": "app-shell",
+      "to": "page-library",
+      "label": "ruta",
+      "kind": "sync"
+    },
+    {
+      "id": "app-shell->page-lab",
+      "from": "app-shell",
+      "to": "page-lab",
+      "label": "ruta",
+      "kind": "sync"
+    },
+    {
+      "id": "app-shell->page-admin",
+      "from": "app-shell",
+      "to": "page-admin",
+      "label": "ruta",
+      "kind": "sync"
+    },
+    {
+      "id": "page-today->api-observatory",
+      "from": "page-today",
+      "to": "api-observatory",
+      "label": "consulta",
+      "kind": "sync"
+    },
+    {
+      "id": "page-providers->api-observatory",
+      "from": "page-providers",
+      "to": "api-observatory",
+      "label": "consulta",
+      "kind": "sync"
+    },
+    {
+      "id": "page-models->api-observatory",
+      "from": "page-models",
+      "to": "api-observatory",
+      "label": "consulta",
+      "kind": "sync"
+    },
+    {
+      "id": "page-openlocal->api-observatory",
+      "from": "page-openlocal",
+      "to": "api-observatory",
+      "label": "consulta",
+      "kind": "sync"
+    },
+    {
+      "id": "page-news->api-observatory",
+      "from": "page-news",
+      "to": "api-observatory",
+      "label": "consulta",
+      "kind": "sync"
+    },
+    {
+      "id": "page-research->api-observatory",
+      "from": "page-research",
+      "to": "api-observatory",
+      "label": "consulta",
+      "kind": "sync"
+    },
+    {
+      "id": "page-github->api-observatory",
+      "from": "page-github",
+      "to": "api-observatory",
+      "label": "consulta",
+      "kind": "sync"
+    },
+    {
+      "id": "page-videos->api-observatory",
+      "from": "page-videos",
+      "to": "api-observatory",
+      "label": "consulta",
+      "kind": "sync"
+    },
+    {
+      "id": "page-map->api-observatory",
+      "from": "page-map",
+      "to": "api-observatory",
+      "label": "consulta",
+      "kind": "sync"
+    },
+    {
+      "id": "page-markets->api-observatory",
+      "from": "page-markets",
+      "to": "api-observatory",
+      "label": "consulta",
+      "kind": "sync"
+    },
+    {
+      "id": "page-admin->api-observatory",
+      "from": "page-admin",
+      "to": "api-observatory",
+      "label": "consulta",
+      "kind": "sync"
+    },
+    {
+      "id": "page-devlab->api-devlab",
+      "from": "page-devlab",
+      "to": "api-devlab",
+      "label": "consulta",
+      "kind": "sync"
+    },
+    {
+      "id": "page-library->api-library",
+      "from": "page-library",
+      "to": "api-library",
+      "label": "consulta",
+      "kind": "sync"
+    },
+    {
+      "id": "page-lab->api-lab",
+      "from": "page-lab",
+      "to": "api-lab",
+      "label": "consulta",
+      "kind": "sync"
+    },
+    {
+      "id": "query->api-observatory",
+      "from": "query",
+      "to": "api-observatory",
+      "label": "cachea",
+      "kind": "sync"
+    },
+    {
+      "id": "api-observatory->worker-fetch",
+      "from": "api-observatory",
+      "to": "worker-fetch",
+      "label": "fetch /api/*",
+      "kind": "sync"
+    },
+    {
+      "id": "api-devlab->worker-fetch",
+      "from": "api-devlab",
+      "to": "worker-fetch",
+      "label": "fetch /api/developer-lab/*",
+      "kind": "sync"
+    },
+    {
+      "id": "api-library->worker-fetch",
+      "from": "api-library",
+      "to": "worker-fetch",
+      "label": "fetch /api/local-library/*",
+      "kind": "sync"
+    },
+    {
+      "id": "api-lab->worker-fetch",
+      "from": "api-lab",
+      "to": "worker-fetch",
+      "label": "fetch /api/laboratory/*",
+      "kind": "sync"
+    },
+    {
+      "id": "script-ingest->worker-fetch",
+      "from": "script-ingest",
+      "to": "worker-fetch",
+      "label": "POST lote + token",
+      "kind": "frontera"
+    },
+    {
+      "id": "script-watch->script-ingest",
+      "from": "script-watch",
+      "to": "script-ingest",
+      "label": "re-dispara",
+      "kind": "sync"
+    },
+    {
+      "id": "script-ops->worker-fetch",
+      "from": "script-ops",
+      "to": "worker-fetch",
+      "label": "estado / salud",
+      "kind": "sync"
+    },
+    {
+      "id": "worker-fetch->api-router",
+      "from": "worker-fetch",
+      "to": "api-router",
+      "label": "ruta /api/*",
+      "kind": "sync"
+    },
+    {
+      "id": "worker-fetch->browser",
+      "from": "worker-fetch",
+      "to": "browser",
+      "label": "assets + cabeceras",
+      "kind": "respuesta"
+    },
+    {
+      "id": "api-router->devlab-router",
+      "from": "api-router",
+      "to": "devlab-router",
+      "label": "1º",
+      "kind": "sync"
+    },
+    {
+      "id": "api-router->module-router",
+      "from": "api-router",
+      "to": "module-router",
+      "label": "2º",
+      "kind": "sync"
+    },
+    {
+      "id": "api-router->integrations-router",
+      "from": "api-router",
+      "to": "integrations-router",
+      "label": "/api/integrations/:binding",
+      "kind": "sync"
+    },
+    {
+      "id": "api-router->import-local",
+      "from": "api-router",
+      "to": "import-local",
+      "label": "/api/internal/import/local",
+      "kind": "sync"
+    },
+    {
+      "id": "api-router->doc-analysis",
+      "from": "api-router",
+      "to": "doc-analysis",
+      "label": "/api/local-library/:id/analysis",
+      "kind": "sync"
+    },
+    {
+      "id": "api-router->external-sync",
+      "from": "api-router",
+      "to": "external-sync",
+      "label": "POST /api/sync",
+      "kind": "sync"
+    },
+    {
+      "id": "api-router->integrations-service",
+      "from": "api-router",
+      "to": "integrations-service",
+      "label": "GET /api/sources · /api/integrations",
+      "kind": "sync"
+    },
+    {
+      "id": "api-router->d1",
+      "from": "api-router",
+      "to": "d1",
+      "label": "status · records · providers · dashboard",
+      "kind": "sync"
+    },
+    {
+      "id": "api-router->kv",
+      "from": "api-router",
+      "to": "kv",
+      "label": "invalida / lee caché",
+      "kind": "sync"
+    },
+    {
+      "id": "api-router->queue",
+      "from": "api-router",
+      "to": "queue",
+      "label": "sync inicial",
+      "kind": "asincrono"
+    },
+    {
+      "id": "module-router->modules-service",
+      "from": "module-router",
+      "to": "modules-service",
+      "label": "delega",
+      "kind": "sync"
+    },
+    {
+      "id": "module-router->market-service",
+      "from": "module-router",
+      "to": "market-service",
+      "label": "/api/market/quotes",
+      "kind": "sync"
+    },
+    {
+      "id": "modules-service->d1",
+      "from": "modules-service",
+      "to": "d1",
+      "label": "SELECT / UPSERT",
+      "kind": "sync"
+    },
+    {
+      "id": "modules-service->lib-rankings",
+      "from": "modules-service",
+      "to": "lib-rankings",
+      "label": "usa",
+      "kind": "sync"
+    },
+    {
+      "id": "modules-service->lib-capabilities",
+      "from": "modules-service",
+      "to": "lib-capabilities",
+      "label": "usa",
+      "kind": "sync"
+    },
+    {
+      "id": "modules-service->lib-geo",
+      "from": "modules-service",
+      "to": "lib-geo",
+      "label": "agrega",
+      "kind": "sync"
+    },
+    {
+      "id": "modules-service->lib-engine",
+      "from": "modules-service",
+      "to": "lib-engine",
+      "label": "recomienda",
+      "kind": "sync"
+    },
+    {
+      "id": "lib-engine->d1",
+      "from": "lib-engine",
+      "to": "d1",
+      "label": "alternativas",
+      "kind": "sync"
+    },
+    {
+      "id": "market-service->kv",
+      "from": "market-service",
+      "to": "kv",
+      "label": "caché 60 s",
+      "kind": "sync"
+    },
+    {
+      "id": "market-service->integrations-service",
+      "from": "market-service",
+      "to": "integrations-service",
+      "label": "resuelve clave",
+      "kind": "sync"
+    },
+    {
+      "id": "market-service->ext-finnhub",
+      "from": "market-service",
+      "to": "ext-finnhub",
+      "label": "GET /quote",
+      "kind": "sync"
+    },
+    {
+      "id": "market-service->d1",
+      "from": "market-service",
+      "to": "d1",
+      "label": "market_quotes",
+      "kind": "sync"
+    },
+    {
+      "id": "integrations-service->lib-catalog",
+      "from": "integrations-service",
+      "to": "lib-catalog",
+      "label": "catálogo",
+      "kind": "sync"
+    },
+    {
+      "id": "integrations-service->secret-box",
+      "from": "integrations-service",
+      "to": "secret-box",
+      "label": "sella / abre",
+      "kind": "sync"
+    },
+    {
+      "id": "integrations-service->d1",
+      "from": "integrations-service",
+      "to": "d1",
+      "label": "integration_credentials",
+      "kind": "sync"
+    },
+    {
+      "id": "integrations-router->integrations-service",
+      "from": "integrations-router",
+      "to": "integrations-service",
+      "label": "guardar · borrar · probar",
+      "kind": "sync"
+    },
+    {
+      "id": "integrations-service->external-sync",
+      "from": "integrations-service",
+      "to": "external-sync",
+      "label": "sourceIds del binding",
+      "kind": "sync"
+    },
+    {
+      "id": "scheduled->external-sync",
+      "from": "scheduled",
+      "to": "external-sync",
+      "label": "dueSourceIds()",
+      "kind": "asincrono"
+    },
+    {
+      "id": "scheduled->queue",
+      "from": "scheduled",
+      "to": "queue",
+      "label": "sendBatch",
+      "kind": "asincrono"
+    },
+    {
+      "id": "queue->queue-consumer",
+      "from": "queue",
+      "to": "queue-consumer",
+      "label": "lote 10",
+      "kind": "asincrono"
+    },
+    {
+      "id": "queue-consumer->external-sync",
+      "from": "queue-consumer",
+      "to": "external-sync",
+      "label": "synchronizeSource",
+      "kind": "asincrono"
+    },
+    {
+      "id": "external-sync->lib-normalizers",
+      "from": "external-sync",
+      "to": "lib-normalizers",
+      "label": "normaliza",
+      "kind": "sync"
+    },
+    {
+      "id": "external-sync->lib-academic",
+      "from": "external-sync",
+      "to": "lib-academic",
+      "label": "normaliza",
+      "kind": "sync"
+    },
+    {
+      "id": "external-sync->lib-news",
+      "from": "external-sync",
+      "to": "lib-news",
+      "label": "normaliza",
+      "kind": "sync"
+    },
+    {
+      "id": "external-sync->lib-videos",
+      "from": "external-sync",
+      "to": "lib-videos",
+      "label": "normaliza",
+      "kind": "sync"
+    },
+    {
+      "id": "external-sync->d1",
+      "from": "external-sync",
+      "to": "d1",
+      "label": "persistRecords + runs",
+      "kind": "sync"
+    },
+    {
+      "id": "external-sync->kv",
+      "from": "external-sync",
+      "to": "kv",
+      "label": "invalida listados",
+      "kind": "sync"
+    },
+    {
+      "id": "external-sync->ext-openrouter",
+      "from": "external-sync",
+      "to": "ext-openrouter",
+      "label": "GET",
+      "kind": "sync"
+    },
+    {
+      "id": "external-sync->ext-hf",
+      "from": "external-sync",
+      "to": "ext-hf",
+      "label": "GET",
+      "kind": "sync"
+    },
+    {
+      "id": "external-sync->ext-academic",
+      "from": "external-sync",
+      "to": "ext-academic",
+      "label": "GET",
+      "kind": "sync"
+    },
+    {
+      "id": "external-sync->ext-scholar",
+      "from": "external-sync",
+      "to": "ext-scholar",
+      "label": "GET + clave",
+      "kind": "sync"
+    },
+    {
+      "id": "external-sync->ext-github",
+      "from": "external-sync",
+      "to": "ext-github",
+      "label": "GET",
+      "kind": "sync"
+    },
+    {
+      "id": "external-sync->ext-sec",
+      "from": "external-sync",
+      "to": "ext-sec",
+      "label": "GET",
+      "kind": "sync"
+    },
+    {
+      "id": "external-sync->ext-fx",
+      "from": "external-sync",
+      "to": "ext-fx",
+      "label": "GET",
+      "kind": "sync"
+    },
+    {
+      "id": "external-sync->ext-news",
+      "from": "external-sync",
+      "to": "ext-news",
+      "label": "GET",
+      "kind": "sync"
+    },
+    {
+      "id": "external-sync->ext-fred",
+      "from": "external-sync",
+      "to": "ext-fred",
+      "label": "GET + clave",
+      "kind": "sync"
+    },
+    {
+      "id": "external-sync->ext-youtube",
+      "from": "external-sync",
+      "to": "ext-youtube",
+      "label": "GET + clave",
+      "kind": "sync"
+    },
+    {
+      "id": "external-sync->ext-meta",
+      "from": "external-sync",
+      "to": "ext-meta",
+      "label": "GET + clave",
+      "kind": "sync"
+    },
+    {
+      "id": "devlab-router->credential-service",
+      "from": "devlab-router",
+      "to": "credential-service",
+      "label": "configure · credential",
+      "kind": "sync"
+    },
+    {
+      "id": "devlab-router->connection",
+      "from": "devlab-router",
+      "to": "connection",
+      "label": "test",
+      "kind": "sync"
+    },
+    {
+      "id": "devlab-router->testbench",
+      "from": "devlab-router",
+      "to": "testbench",
+      "label": "models · execute",
+      "kind": "sync"
+    },
+    {
+      "id": "credential-service->secret-box",
+      "from": "credential-service",
+      "to": "secret-box",
+      "label": "cifra AES-GCM",
+      "kind": "sync"
+    },
+    {
+      "id": "credential-service->d1",
+      "from": "credential-service",
+      "to": "d1",
+      "label": "provider_configs",
+      "kind": "sync"
+    },
+    {
+      "id": "connection->lib-registry",
+      "from": "connection",
+      "to": "lib-registry",
+      "label": "definición",
+      "kind": "sync"
+    },
+    {
+      "id": "connection->d1",
+      "from": "connection",
+      "to": "d1",
+      "label": "provider_status",
+      "kind": "sync"
+    },
+    {
+      "id": "connection->ext-llm",
+      "from": "connection",
+      "to": "ext-llm",
+      "label": "ping",
+      "kind": "sync"
+    },
+    {
+      "id": "connection->ext-local",
+      "from": "connection",
+      "to": "ext-local",
+      "label": "ping",
+      "kind": "sync"
+    },
+    {
+      "id": "testbench->lib-registry",
+      "from": "testbench",
+      "to": "lib-registry",
+      "label": "capacidades",
+      "kind": "sync"
+    },
+    {
+      "id": "testbench->credential-service",
+      "from": "testbench",
+      "to": "credential-service",
+      "label": "resuelve clave",
+      "kind": "sync"
+    },
+    {
+      "id": "testbench->ext-llm",
+      "from": "testbench",
+      "to": "ext-llm",
+      "label": "llamada real",
+      "kind": "sync"
+    },
+    {
+      "id": "testbench->ext-local",
+      "from": "testbench",
+      "to": "ext-local",
+      "label": "llamada real",
+      "kind": "sync"
+    },
+    {
+      "id": "testbench->d1",
+      "from": "testbench",
+      "to": "d1",
+      "label": "runs + events",
+      "kind": "sync"
+    },
+    {
+      "id": "import-local->lib-validation",
+      "from": "import-local",
+      "to": "lib-validation",
+      "label": "Zod",
+      "kind": "frontera"
+    },
+    {
+      "id": "import-local->d1",
+      "from": "import-local",
+      "to": "d1",
+      "label": "local_documents",
+      "kind": "sync"
+    },
+    {
+      "id": "import-local->r2",
+      "from": "import-local",
+      "to": "r2",
+      "label": "bytes crudos (opcional)",
+      "kind": "sync"
+    },
+    {
+      "id": "script-ingest->lib-path-security",
+      "from": "script-ingest",
+      "to": "lib-path-security",
+      "label": "canoniza",
+      "kind": "sync"
+    },
+    {
+      "id": "script-ingest->lib-validation",
+      "from": "script-ingest",
+      "to": "lib-validation",
+      "label": "arma DTO",
+      "kind": "sync"
+    },
+    {
+      "id": "doc-analysis->workers-ai",
+      "from": "doc-analysis",
+      "to": "workers-ai",
+      "label": "resumen + entidades",
+      "kind": "sync"
+    },
+    {
+      "id": "doc-analysis->ext-llm",
+      "from": "doc-analysis",
+      "to": "ext-llm",
+      "label": "NVIDIA (alternativa)",
+      "kind": "sync"
+    },
+    {
+      "id": "doc-analysis->d1",
+      "from": "doc-analysis",
+      "to": "d1",
+      "label": "guarda análisis",
+      "kind": "sync"
+    }
+  ],
+  "flows": [
+    {
+      "id": "f-bootstrap",
+      "name": "Arranque y estado inicial",
+      "purpose": "Primera carga de la SPA y disparo perezoso de la sincronización inicial.",
+      "trigger": "El usuario abre la aplicación",
+      "nodes": [
+        "browser",
+        "main",
+        "app-router",
+        "app-shell",
+        "page-today",
+        "api-observatory",
+        "worker-fetch",
+        "api-router",
+        "d1"
+      ],
+      "edges": [
+        "browser->main",
+        "main->app-router",
+        "app-router->app-shell",
+        "app-shell->page-today",
+        "page-today->api-observatory",
+        "api-observatory->worker-fetch",
+        "worker-fetch->api-router",
+        "api-router->d1"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "node": "browser",
+          "action": "Solicita `/`; el entorno de assets devuelve el index (SPA fallback).",
+          "from": null,
+          "via": null
+        },
+        {
+          "order": 2,
+          "node": "main",
+          "action": "Monta QueryClient, idioma y router.",
+          "from": "browser",
+          "via": "browser->main"
+        },
+        {
+          "order": 3,
+          "node": "app-router",
+          "action": "Redirige `/` a `/today`.",
+          "from": "main",
+          "via": "main->app-router"
+        },
+        {
+          "order": 4,
+          "node": "app-shell",
+          "action": "Renderiza navegación, tema y contenedor.",
+          "from": "app-router",
+          "via": "app-router->app-shell"
+        },
+        {
+          "order": 5,
+          "node": "page-today",
+          "action": "Pide dashboard, eventos en vivo y tendencia de precios.",
+          "from": "app-shell",
+          "via": "app-shell->page-today"
+        },
+        {
+          "order": 6,
+          "node": "api-observatory",
+          "action": "`GET /api/dashboard`, `/api/live-events`, `/api/status`.",
+          "from": "page-today",
+          "via": "page-today->api-observatory"
+        },
+        {
+          "order": 7,
+          "node": "worker-fetch",
+          "action": "En `/api/status` encola `ensureInitialSynchronization` con `waitUntil`.",
+          "from": "api-observatory",
+          "via": "api-observatory->worker-fetch"
+        },
+        {
+          "order": 8,
+          "node": "api-router",
+          "action": "Resuelve las rutas del observatorio.",
+          "from": "worker-fetch",
+          "via": "worker-fetch->api-router"
+        },
+        {
+          "order": 9,
+          "node": "d1",
+          "action": "Lee agregados y eventos ya persistidos.",
+          "from": "api-router",
+          "via": "api-router->d1"
+        }
+      ]
+    },
+    {
+      "id": "f-cron",
+      "name": "Sincronización programada",
+      "purpose": "Refresco automático de fuentes vencidas cada 15 minutos.",
+      "trigger": "Cron `*/15 * * * *`",
+      "nodes": [
+        "scheduled",
+        "queue",
+        "queue-consumer",
+        "external-sync",
+        "ext-academic",
+        "lib-academic",
+        "d1",
+        "kv"
+      ],
+      "edges": [
+        "scheduled->queue",
+        "queue->queue-consumer",
+        "queue-consumer->external-sync",
+        "external-sync->ext-academic",
+        "external-sync->lib-academic",
+        "external-sync->d1",
+        "external-sync->kv"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "node": "scheduled",
+          "action": "Calcula `dueSourceIds()` según la cadencia de cada fuente.",
+          "from": null,
+          "via": null
+        },
+        {
+          "order": 2,
+          "node": "queue",
+          "action": "`INDEX_QUEUE.sendBatch()` con un mensaje por fuente.",
+          "from": "scheduled",
+          "via": "scheduled->queue"
+        },
+        {
+          "order": 3,
+          "node": "queue-consumer",
+          "action": "Procesa hasta 10 mensajes; `retry()` si falla.",
+          "from": "queue",
+          "via": "queue->queue-consumer"
+        },
+        {
+          "order": 4,
+          "node": "external-sync",
+          "action": "`synchronizeSource(sourceId)` ejecuta el adaptador correspondiente.",
+          "from": "queue-consumer",
+          "via": "queue-consumer->external-sync"
+        },
+        {
+          "order": 5,
+          "node": "ext-academic",
+          "action": "Ejemplo: consulta los índices académicos públicos.",
+          "from": "external-sync",
+          "via": "external-sync->ext-academic"
+        },
+        {
+          "order": 6,
+          "node": "lib-academic",
+          "action": "Normaliza los payloads a `ObservatoryRecord`.",
+          "from": "external-sync",
+          "via": "external-sync->lib-academic"
+        },
+        {
+          "order": 7,
+          "node": "d1",
+          "action": "`persistRecords` deduplica por sha256 y actualiza `synchronization_runs`.",
+          "from": "external-sync",
+          "via": "external-sync->d1"
+        },
+        {
+          "order": 8,
+          "node": "kv",
+          "action": "Invalida los listados cacheados.",
+          "from": "external-sync",
+          "via": "external-sync->kv"
+        }
+      ]
+    },
+    {
+      "id": "f-sync-manual",
+      "name": "Sincronización manual por alcance",
+      "purpose": "El operador fuerza el refresco de un alcance desde Admin.",
+      "trigger": "`POST /api/sync`",
+      "nodes": [
+        "page-admin",
+        "api-observatory",
+        "worker-fetch",
+        "api-router",
+        "external-sync",
+        "lib-normalizers",
+        "d1"
+      ],
+      "edges": [
+        "page-admin->api-observatory",
+        "api-observatory->worker-fetch",
+        "worker-fetch->api-router",
+        "api-router->external-sync",
+        "external-sync->lib-normalizers",
+        "external-sync->d1"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "node": "page-admin",
+          "action": "El botón de sincronización elige alcance (all, public, providers, models).",
+          "from": null,
+          "via": null
+        },
+        {
+          "order": 2,
+          "node": "api-observatory",
+          "action": "`POST /api/sync` con el alcance.",
+          "from": "page-admin",
+          "via": "page-admin->api-observatory"
+        },
+        {
+          "order": 3,
+          "node": "worker-fetch",
+          "action": "Aplica cabeceras de seguridad y enruta.",
+          "from": "api-observatory",
+          "via": "api-observatory->worker-fetch"
+        },
+        {
+          "order": 4,
+          "node": "api-router",
+          "action": "Reconoce `/api/sync`.",
+          "from": "worker-fetch",
+          "via": "worker-fetch->api-router"
+        },
+        {
+          "order": 5,
+          "node": "external-sync",
+          "action": "`synchronizeScope()` recorre las fuentes del alcance.",
+          "from": "api-router",
+          "via": "api-router->external-sync"
+        },
+        {
+          "order": 6,
+          "node": "lib-normalizers",
+          "action": "Normaliza cada respuesta cruda.",
+          "from": "external-sync",
+          "via": "external-sync->lib-normalizers"
+        },
+        {
+          "order": 7,
+          "node": "d1",
+          "action": "Persiste registros y el resumen de la corrida.",
+          "from": "external-sync",
+          "via": "external-sync->d1"
+        }
+      ]
+    },
+    {
+      "id": "f-ingest",
+      "name": "Ingesta de la biblioteca local",
+      "purpose": "Documentos del disco entran al sistema sin exponer bytes crudos al navegador.",
+      "trigger": "`pnpm ingest:local`",
+      "nodes": [
+        "script-watch",
+        "script-ingest",
+        "lib-path-security",
+        "lib-validation",
+        "worker-fetch",
+        "api-router",
+        "import-local",
+        "d1",
+        "r2"
+      ],
+      "edges": [
+        "script-watch->script-ingest",
+        "script-ingest->lib-path-security",
+        "script-ingest->lib-validation",
+        "script-ingest->worker-fetch",
+        "worker-fetch->api-router",
+        "api-router->import-local",
+        "import-local->d1",
+        "import-local->r2"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "node": "script-watch",
+          "action": "Opcional: chokidar detecta cambios en la carpeta.",
+          "from": null,
+          "via": null
+        },
+        {
+          "order": 2,
+          "node": "script-ingest",
+          "action": "Recorre archivos, extrae texto y calcula sha256.",
+          "from": "script-watch",
+          "via": "script-watch->script-ingest"
+        },
+        {
+          "order": 3,
+          "node": "lib-path-security",
+          "action": "Canoniza rutas y rechaza traversal y symlinks.",
+          "from": "script-ingest",
+          "via": "script-ingest->lib-path-security"
+        },
+        {
+          "order": 4,
+          "node": "lib-validation",
+          "action": "Arma el DTO del lote conforme a `importBatchSchema`.",
+          "from": "script-ingest",
+          "via": "script-ingest->lib-validation"
+        },
+        {
+          "order": 5,
+          "node": "worker-fetch",
+          "action": "`POST /api/internal/import/local` con `LOCAL_IMPORT_TOKEN`.",
+          "from": "script-ingest",
+          "via": "script-ingest->worker-fetch"
+        },
+        {
+          "order": 6,
+          "node": "api-router",
+          "action": "Autentica el endpoint interno.",
+          "from": "worker-fetch",
+          "via": "worker-fetch->api-router"
+        },
+        {
+          "order": 7,
+          "node": "import-local",
+          "action": "Revalida el lote completo con Zod en el borde.",
+          "from": "api-router",
+          "via": "api-router->import-local"
+        },
+        {
+          "order": 8,
+          "node": "d1",
+          "action": "Escribe `local_documents` e `import_runs`.",
+          "from": "import-local",
+          "via": "import-local->d1"
+        },
+        {
+          "order": 9,
+          "node": "r2",
+          "action": "Guarda bytes crudos solo si `LOCAL_STORE_RAW_FILES=true`.",
+          "from": "import-local",
+          "via": "import-local->r2"
+        }
+      ]
+    },
+    {
+      "id": "f-analysis",
+      "name": "Análisis de un documento",
+      "purpose": "Resumen y entidades de un documento ya ingerido.",
+      "trigger": "`POST /api/local-library/:id/analysis`",
+      "nodes": [
+        "page-library",
+        "api-library",
+        "worker-fetch",
+        "api-router",
+        "doc-analysis",
+        "workers-ai",
+        "d1"
+      ],
+      "edges": [
+        "page-library->api-library",
+        "api-library->worker-fetch",
+        "worker-fetch->api-router",
+        "api-router->doc-analysis",
+        "doc-analysis->workers-ai",
+        "doc-analysis->d1"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "node": "page-library",
+          "action": "El usuario abre el documento y pide análisis (`?force=1` recalcula).",
+          "from": null,
+          "via": null
+        },
+        {
+          "order": 2,
+          "node": "api-library",
+          "action": "Llama al endpoint de análisis.",
+          "from": "page-library",
+          "via": "page-library->api-library"
+        },
+        {
+          "order": 3,
+          "node": "worker-fetch",
+          "action": "Enruta a la API.",
+          "from": "api-library",
+          "via": "api-library->worker-fetch"
+        },
+        {
+          "order": 4,
+          "node": "api-router",
+          "action": "Coincide con el patrón `/analysis`.",
+          "from": "worker-fetch",
+          "via": "worker-fetch->api-router"
+        },
+        {
+          "order": 5,
+          "node": "doc-analysis",
+          "action": "Construye el prompt sobre el texto extraído.",
+          "from": "api-router",
+          "via": "api-router->doc-analysis"
+        },
+        {
+          "order": 6,
+          "node": "workers-ai",
+          "action": "Genera resumen y entidades.",
+          "from": "doc-analysis",
+          "via": "doc-analysis->workers-ai"
+        },
+        {
+          "order": 7,
+          "node": "d1",
+          "action": "Persiste el análisis para servirlo con GET.",
+          "from": "doc-analysis",
+          "via": "doc-analysis->d1"
+        }
+      ]
+    },
+    {
+      "id": "f-market",
+      "name": "Cotizaciones de mercado",
+      "purpose": "Precios intradía reales, sin rellenos ni estimaciones.",
+      "trigger": "`GET /api/market/quotes`",
+      "nodes": [
+        "page-markets",
+        "api-observatory",
+        "worker-fetch",
+        "api-router",
+        "module-router",
+        "market-service",
+        "kv",
+        "ext-finnhub",
+        "d1"
+      ],
+      "edges": [
+        "page-markets->api-observatory",
+        "api-observatory->worker-fetch",
+        "worker-fetch->api-router",
+        "api-router->module-router",
+        "module-router->market-service",
+        "market-service->kv",
+        "market-service->ext-finnhub",
+        "market-service->d1"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "node": "page-markets",
+          "action": "Renderiza tarjetas y gráficos de las 6 empresas.",
+          "from": null,
+          "via": null
+        },
+        {
+          "order": 2,
+          "node": "api-observatory",
+          "action": "`GET /api/market/quotes` (`?force=1` salta la caché).",
+          "from": "page-markets",
+          "via": "page-markets->api-observatory"
+        },
+        {
+          "order": 3,
+          "node": "worker-fetch",
+          "action": "Enruta a la API.",
+          "from": "api-observatory",
+          "via": "api-observatory->worker-fetch"
+        },
+        {
+          "order": 4,
+          "node": "api-router",
+          "action": "Delega en el enrutador de módulos.",
+          "from": "worker-fetch",
+          "via": "worker-fetch->api-router"
+        },
+        {
+          "order": 5,
+          "node": "module-router",
+          "action": "Reconoce la ruta de mercado.",
+          "from": "api-router",
+          "via": "api-router->module-router"
+        },
+        {
+          "order": 6,
+          "node": "market-service",
+          "action": "Comprueba la caché de 60 s.",
+          "from": "module-router",
+          "via": "module-router->market-service"
+        },
+        {
+          "order": 7,
+          "node": "kv",
+          "action": "Devuelve el lote cacheado si sigue vigente.",
+          "from": "market-service",
+          "via": "market-service->kv"
+        },
+        {
+          "order": 8,
+          "node": "ext-finnhub",
+          "action": "Si no, consulta cada símbolo; los fallos se omiten y se declaran.",
+          "from": "market-service",
+          "via": "market-service->ext-finnhub"
+        },
+        {
+          "order": 9,
+          "node": "d1",
+          "action": "Guarda las cotizaciones con su marca de tiempo.",
+          "from": "market-service",
+          "via": "market-service->d1"
+        }
+      ]
+    },
+    {
+      "id": "f-integration",
+      "name": "Alta y prueba de una integración",
+      "purpose": "El operador guarda una credencial y comprueba que funciona.",
+      "trigger": "`PUT/POST /api/integrations/:BINDING`",
+      "nodes": [
+        "page-admin",
+        "api-observatory",
+        "worker-fetch",
+        "api-router",
+        "integrations-router",
+        "integrations-service",
+        "secret-box",
+        "d1",
+        "external-sync"
+      ],
+      "edges": [
+        "page-admin->api-observatory",
+        "api-observatory->worker-fetch",
+        "worker-fetch->api-router",
+        "api-router->integrations-router",
+        "integrations-router->integrations-service",
+        "integrations-service->secret-box",
+        "integrations-service->d1",
+        "external-sync->d1"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "node": "page-admin",
+          "action": "Panel de integraciones por categoría.",
+          "from": null,
+          "via": null
+        },
+        {
+          "order": 2,
+          "node": "api-observatory",
+          "action": "Guarda la credencial o lanza la prueba.",
+          "from": "page-admin",
+          "via": "page-admin->api-observatory"
+        },
+        {
+          "order": 3,
+          "node": "worker-fetch",
+          "action": "Enruta a la API.",
+          "from": "api-observatory",
+          "via": "api-observatory->worker-fetch"
+        },
+        {
+          "order": 4,
+          "node": "api-router",
+          "action": "Valida el binding con la regex `[A-Z0-9_]{3,64}`.",
+          "from": "worker-fetch",
+          "via": "worker-fetch->api-router"
+        },
+        {
+          "order": 5,
+          "node": "integrations-router",
+          "action": "Resuelve guardar, borrar o probar.",
+          "from": "api-router",
+          "via": "api-router->integrations-router"
+        },
+        {
+          "order": 6,
+          "node": "integrations-service",
+          "action": "Consulta el catálogo y prepara el secreto.",
+          "from": "integrations-router",
+          "via": "integrations-router->integrations-service"
+        },
+        {
+          "order": 7,
+          "node": "secret-box",
+          "action": "Sella con AES-GCM derivado de la clave de cifrado.",
+          "from": "integrations-service",
+          "via": "integrations-service->secret-box"
+        },
+        {
+          "order": 8,
+          "node": "d1",
+          "action": "Escribe `integration_credentials` (solo el sobre cifrado).",
+          "from": "integrations-service",
+          "via": "integrations-service->d1"
+        },
+        {
+          "order": 9,
+          "node": "external-sync",
+          "action": "La prueba ejecuta los `sourceIds` asociados al binding.",
+          "from": "d1",
+          "via": "external-sync->d1"
+        }
+      ]
+    },
+    {
+      "id": "f-devlab-config",
+      "name": "Configurar un proveedor del laboratorio",
+      "purpose": "La clave del usuario se cifra antes de tocar la base.",
+      "trigger": "`POST /api/developer-lab/providers/:id/configure`",
+      "nodes": [
+        "page-devlab",
+        "api-devlab",
+        "worker-fetch",
+        "api-router",
+        "devlab-router",
+        "credential-service",
+        "secret-box",
+        "d1"
+      ],
+      "edges": [
+        "page-devlab->api-devlab",
+        "api-devlab->worker-fetch",
+        "worker-fetch->api-router",
+        "api-router->devlab-router",
+        "devlab-router->credential-service",
+        "credential-service->secret-box",
+        "credential-service->d1"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "node": "page-devlab",
+          "action": "Formulario de credencial por proveedor.",
+          "from": null,
+          "via": null
+        },
+        {
+          "order": 2,
+          "node": "api-devlab",
+          "action": "Envía la clave por el mismo origen.",
+          "from": "page-devlab",
+          "via": "page-devlab->api-devlab"
+        },
+        {
+          "order": 3,
+          "node": "worker-fetch",
+          "action": "Enruta a la API.",
+          "from": "api-devlab",
+          "via": "api-devlab->worker-fetch"
+        },
+        {
+          "order": 4,
+          "node": "api-router",
+          "action": "Cede el paso al enrutador del laboratorio.",
+          "from": "worker-fetch",
+          "via": "worker-fetch->api-router"
+        },
+        {
+          "order": 5,
+          "node": "devlab-router",
+          "action": "Coincide con `/configure`.",
+          "from": "api-router",
+          "via": "api-router->devlab-router"
+        },
+        {
+          "order": 6,
+          "node": "credential-service",
+          "action": "Valida el proveedor contra el registro.",
+          "from": "devlab-router",
+          "via": "devlab-router->credential-service"
+        },
+        {
+          "order": 7,
+          "node": "secret-box",
+          "action": "Cifra la clave con AES-GCM.",
+          "from": "credential-service",
+          "via": "credential-service->secret-box"
+        },
+        {
+          "order": 8,
+          "node": "d1",
+          "action": "Guarda `developer_lab_provider_configs`.",
+          "from": "credential-service",
+          "via": "credential-service->d1"
+        }
+      ]
+    },
+    {
+      "id": "f-devlab-test",
+      "name": "Probar conexión de proveedor",
+      "purpose": "Verificación real de conectividad y estado.",
+      "trigger": "`POST /api/developer-lab/providers/:id/test`",
+      "nodes": [
+        "page-devlab",
+        "api-devlab",
+        "worker-fetch",
+        "api-router",
+        "devlab-router",
+        "connection",
+        "lib-registry",
+        "ext-llm",
+        "d1"
+      ],
+      "edges": [
+        "page-devlab->api-devlab",
+        "api-devlab->worker-fetch",
+        "worker-fetch->api-router",
+        "api-router->devlab-router",
+        "devlab-router->connection",
+        "connection->lib-registry",
+        "connection->ext-llm",
+        "connection->d1"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "node": "page-devlab",
+          "action": "Botón de prueba de conexión.",
+          "from": null,
+          "via": null
+        },
+        {
+          "order": 2,
+          "node": "api-devlab",
+          "action": "Llama al endpoint de test.",
+          "from": "page-devlab",
+          "via": "page-devlab->api-devlab"
+        },
+        {
+          "order": 3,
+          "node": "worker-fetch",
+          "action": "Enruta a la API.",
+          "from": "api-devlab",
+          "via": "api-devlab->worker-fetch"
+        },
+        {
+          "order": 4,
+          "node": "api-router",
+          "action": "Cede el paso al enrutador del laboratorio.",
+          "from": "worker-fetch",
+          "via": "worker-fetch->api-router"
+        },
+        {
+          "order": 5,
+          "node": "devlab-router",
+          "action": "Coincide con `/test`.",
+          "from": "api-router",
+          "via": "api-router->devlab-router"
+        },
+        {
+          "order": 6,
+          "node": "connection",
+          "action": "Resuelve la definición y la credencial.",
+          "from": "devlab-router",
+          "via": "devlab-router->connection"
+        },
+        {
+          "order": 7,
+          "node": "lib-registry",
+          "action": "Aporta endpoints y capacidades del proveedor.",
+          "from": "connection",
+          "via": "connection->lib-registry"
+        },
+        {
+          "order": 8,
+          "node": "ext-llm",
+          "action": "Llamada real al proveedor remoto…",
+          "from": "connection",
+          "via": "connection->ext-llm"
+        },
+        {
+          "order": 9,
+          "node": "d1",
+          "action": "…y se registra el estado en `developer_lab_provider_status`.",
+          "from": "connection",
+          "via": "connection->d1"
+        }
+      ]
+    },
+    {
+      "id": "f-devlab-exec",
+      "name": "Ejecutar una prueba en el banco",
+      "purpose": "Chat, RAG, agente, media o video contra el proveedor elegido.",
+      "trigger": "`POST /api/developer-lab/execute`",
+      "nodes": [
+        "page-devlab",
+        "api-devlab",
+        "worker-fetch",
+        "api-router",
+        "devlab-router",
+        "testbench",
+        "credential-service",
+        "ext-local",
+        "d1"
+      ],
+      "edges": [
+        "page-devlab->api-devlab",
+        "api-devlab->worker-fetch",
+        "worker-fetch->api-router",
+        "api-router->devlab-router",
+        "devlab-router->testbench",
+        "testbench->credential-service",
+        "testbench->ext-local",
+        "testbench->d1"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "node": "page-devlab",
+          "action": "Selecciona proveedor, modelo y tipo de prueba.",
+          "from": null,
+          "via": null
+        },
+        {
+          "order": 2,
+          "node": "api-devlab",
+          "action": "`POST /api/developer-lab/execute`.",
+          "from": "page-devlab",
+          "via": "page-devlab->api-devlab"
+        },
+        {
+          "order": 3,
+          "node": "worker-fetch",
+          "action": "Enruta a la API.",
+          "from": "api-devlab",
+          "via": "api-devlab->worker-fetch"
+        },
+        {
+          "order": 4,
+          "node": "api-router",
+          "action": "Cede el paso al enrutador del laboratorio.",
+          "from": "worker-fetch",
+          "via": "worker-fetch->api-router"
+        },
+        {
+          "order": 5,
+          "node": "devlab-router",
+          "action": "Coincide con `/execute`.",
+          "from": "api-router",
+          "via": "api-router->devlab-router"
+        },
+        {
+          "order": 6,
+          "node": "testbench",
+          "action": "Valida el tipo de prueba contra los flags `ENABLE_*_TESTS`.",
+          "from": "devlab-router",
+          "via": "devlab-router->testbench"
+        },
+        {
+          "order": 7,
+          "node": "credential-service",
+          "action": "Resuelve y descifra la clave del proveedor.",
+          "from": "testbench",
+          "via": "testbench->credential-service"
+        },
+        {
+          "order": 8,
+          "node": "ext-local",
+          "action": "Runtimes locales cuando el proveedor es Ollama/LM Studio/vLLM/LocalAI.",
+          "from": "testbench",
+          "via": "testbench->ext-local"
+        },
+        {
+          "order": 9,
+          "node": "d1",
+          "action": "Registra `developer_lab_runs` y `developer_lab_events`.",
+          "from": "testbench",
+          "via": "testbench->d1"
+        }
+      ]
+    },
+    {
+      "id": "f-recommend",
+      "name": "Recomendador de proyecto",
+      "purpose": "Convierte los requisitos del usuario en alternativas puntuadas.",
+      "trigger": "`POST /api/laboratory/projects/:id/recommend`",
+      "nodes": [
+        "page-lab",
+        "api-lab",
+        "worker-fetch",
+        "api-router",
+        "module-router",
+        "modules-service",
+        "lib-engine",
+        "d1"
+      ],
+      "edges": [
+        "page-lab->api-lab",
+        "api-lab->worker-fetch",
+        "worker-fetch->api-router",
+        "api-router->module-router",
+        "module-router->modules-service",
+        "modules-service->lib-engine",
+        "lib-engine->d1"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "node": "page-lab",
+          "action": "Formulario de proyecto: privacidad, resultado esperado, presupuesto.",
+          "from": null,
+          "via": null
+        },
+        {
+          "order": 2,
+          "node": "api-lab",
+          "action": "Crea el proyecto y pide la recomendación.",
+          "from": "page-lab",
+          "via": "page-lab->api-lab"
+        },
+        {
+          "order": 3,
+          "node": "worker-fetch",
+          "action": "Enruta a la API.",
+          "from": "api-lab",
+          "via": "api-lab->worker-fetch"
+        },
+        {
+          "order": 4,
+          "node": "api-router",
+          "action": "Delega en el enrutador de módulos.",
+          "from": "worker-fetch",
+          "via": "worker-fetch->api-router"
+        },
+        {
+          "order": 5,
+          "node": "module-router",
+          "action": "Coincide con `/api/laboratory/projects`.",
+          "from": "api-router",
+          "via": "api-router->module-router"
+        },
+        {
+          "order": 6,
+          "node": "modules-service",
+          "action": "Indexa ofertas, modelos abiertos y repositorios desde D1.",
+          "from": "module-router",
+          "via": "module-router->modules-service"
+        },
+        {
+          "order": 7,
+          "node": "lib-engine",
+          "action": "`recommend()` puntúa y estima coste (motor v1.0.0).",
+          "from": "modules-service",
+          "via": "modules-service->lib-engine"
+        },
+        {
+          "order": 8,
+          "node": "d1",
+          "action": "Guarda proyecto y `laboratory_alternatives`.",
+          "from": "lib-engine",
+          "via": "lib-engine->d1"
+        }
+      ]
+    },
+    {
+      "id": "f-map",
+      "name": "Mapa global de la IA",
+      "purpose": "Distribución geográfica de entidades y panel por país.",
+      "trigger": "`GET /api/map/global`",
+      "nodes": [
+        "page-map",
+        "api-observatory",
+        "worker-fetch",
+        "api-router",
+        "module-router",
+        "modules-service",
+        "lib-geo",
+        "d1"
+      ],
+      "edges": [
+        "page-map->api-observatory",
+        "api-observatory->worker-fetch",
+        "worker-fetch->api-router",
+        "api-router->module-router",
+        "module-router->modules-service",
+        "modules-service->lib-geo",
+        "modules-service->d1"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "node": "page-map",
+          "action": "MapLibre GL pinta la capa de entidades.",
+          "from": null,
+          "via": null
+        },
+        {
+          "order": 2,
+          "node": "api-observatory",
+          "action": "`GET /api/map/global` y `/api/map/countries/:code`.",
+          "from": "page-map",
+          "via": "page-map->api-observatory"
+        },
+        {
+          "order": 3,
+          "node": "worker-fetch",
+          "action": "Enruta a la API.",
+          "from": "api-observatory",
+          "via": "api-observatory->worker-fetch"
+        },
+        {
+          "order": 4,
+          "node": "api-router",
+          "action": "Delega en el enrutador de módulos.",
+          "from": "worker-fetch",
+          "via": "worker-fetch->api-router"
+        },
+        {
+          "order": 5,
+          "node": "module-router",
+          "action": "Coincide con las rutas de mapa.",
+          "from": "api-router",
+          "via": "api-router->module-router"
+        },
+        {
+          "order": 6,
+          "node": "modules-service",
+          "action": "Consulta `map_locations`.",
+          "from": "module-router",
+          "via": "module-router->modules-service"
+        },
+        {
+          "order": 7,
+          "node": "lib-geo",
+          "action": "Agrega por país y aplica el conjunto LATAM.",
+          "from": "modules-service",
+          "via": "modules-service->lib-geo"
+        },
+        {
+          "order": 8,
+          "node": "d1",
+          "action": "Fuente de las ubicaciones y sus proveedores.",
+          "from": "modules-service",
+          "via": "modules-service->d1"
+        }
+      ]
+    }
+  ]
+}</script>
+<script>
+(() => {
+  const MODEL = JSON.parse(document.getElementById("model").textContent);
+  const layerById = new Map(MODEL.layers.map((l) => [l.id, l]));
+  const nodeById = new Map(MODEL.nodes.map((n) => [n.id, n]));
+
+  document.getElementById("brand-name").textContent = MODEL.project.name;
+  document.getElementById("brand-stack").textContent = MODEL.project.stack.slice(0, 4).join(" · ");
+  document.getElementById("stat-nodes").textContent = MODEL.nodes.length;
+  document.getElementById("stat-edges").textContent = MODEL.edges.length;
+  document.getElementById("stat-flows").textContent = MODEL.flows.length;
+  document.title = MODEL.project.name + " · Mapa de arquitectura";
+
+  const canvas = document.getElementById("canvas");
+  const viewport = document.getElementById("viewport");
+  const svg = document.getElementById("edges");
+  const nodesHost = document.getElementById("nodes");
+  const tooltip = document.getElementById("tooltip");
+
+  const W = MODEL.project.canvas.width;
+  const H = MODEL.project.canvas.height;
+  viewport.style.width = W + "px";
+  viewport.style.height = H + "px";
+  svg.setAttribute("width", W);
+  svg.setAttribute("height", H);
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+
+  // --- carriles ---
+  for (const layer of MODEL.layers) {
+    const first = MODEL.nodes.find((n) => n.layer === layer.id);
+    if (!first) continue;
+    const label = document.createElement("div");
+    label.className = "lane-label";
+    label.textContent = layer.label;
+    label.style.left = first.x + "px";
+    label.style.top = "14px";
+    label.style.color = layer.color;
+    label.style.opacity = ".85";
+    nodesHost.appendChild(label);
+  }
+
+  // --- aristas ---
+  const edgeEls = new Map();
+  const labelEls = new Map();
+  const NS = "http://www.w3.org/2000/svg";
+  for (const edge of MODEL.edges) {
+    const a = nodeById.get(edge.from);
+    const b = nodeById.get(edge.to);
+    const forward = (a.x + a.width / 2) <= (b.x + b.width / 2);
+    const x1 = forward ? a.x + a.width : a.x;
+    const y1 = a.y + a.height / 2;
+    const x2 = forward ? b.x : b.x + b.width;
+    const y2 = b.y + b.height / 2;
+    const dx = Math.max(40, Math.abs(x2 - x1) * 0.45);
+    const c1 = forward ? x1 + dx : x1 - dx;
+    const c2 = forward ? x2 - dx : x2 + dx;
+    const path = document.createElementNS(NS, "path");
+    path.setAttribute("d", `M ${x1} ${y1} C ${c1} ${y1}, ${c2} ${y2}, ${x2} ${y2}`);
+    path.setAttribute("class", "edge");
+    if (edge.kind === "asincrono") path.setAttribute("stroke-dasharray", "4 4");
+    svg.appendChild(path);
+    edgeEls.set(edge.id, path);
+
+    if (edge.label) {
+      const text = document.createElementNS(NS, "text");
+      text.setAttribute("class", "edge-label");
+      text.setAttribute("x", (x1 + x2) / 2);
+      text.setAttribute("y", (y1 + y2) / 2 - 5);
+      text.setAttribute("text-anchor", "middle");
+      text.textContent = edge.label;
+      svg.appendChild(text);
+      labelEls.set(edge.id, text);
+    }
+  }
+
+  // --- nodos ---
+  const nodeEls = new Map();
+  for (const node of MODEL.nodes) {
+    const layer = layerById.get(node.layer);
+    const el = document.createElement("div");
+    el.className = "node";
+    el.style.cssText = `left:${node.x}px;top:${node.y}px;width:${node.width}px;min-height:${node.height}px;--dot:${layer.color}`;
+    el.dataset.id = node.id;
+    el.tabIndex = 0;
+    const badge = document.createElement("i");
+    badge.className = "step-badge";
+    el.append(
+      Object.assign(document.createElement("b"), { textContent: node.label }),
+      Object.assign(document.createElement("small"), { textContent: node.file }),
+      badge,
+    );
+    nodesHost.appendChild(el);
+    nodeEls.set(node.id, el);
+  }
+
+  // --- leyenda ---
+  const legend = document.getElementById("legend");
+  for (const layer of MODEL.layers) {
+    const span = document.createElement("span");
+    span.style.setProperty("--dot", layer.color);
+    span.innerHTML = `<i></i>${layer.label}`;
+    legend.appendChild(span);
+  }
+
+  // --- tooltip ---
+  const inline = (text) => text
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/`([^`]+)`/g, "<code>$1</code>");
+
+  let tipNode = null;
+  function showTooltip(node, event) {
+    const layer = layerById.get(node.layer);
+    tooltip.style.setProperty("--dot", layer.color);
+    tooltip.innerHTML =
+      `<h4>${inline(node.label)}</h4>` +
+      `<div class="file">${inline(node.file)}</div>` +
+      `<p>${inline(node.description)}</p>` +
+      `<span class="lay">${inline(layer.label)}</span>`;
+    tooltip.classList.add("show");
+    moveTooltip(event);
+    tipNode = node.id;
+  }
+  function moveTooltip(event) {
+    const pad = 14;
+    const rect = tooltip.getBoundingClientRect();
+    let x = event.clientX + pad;
+    let y = event.clientY + pad;
+    if (x + rect.width > innerWidth - 8) x = event.clientX - rect.width - pad;
+    if (y + rect.height > innerHeight - 8) y = event.clientY - rect.height - pad;
+    tooltip.style.left = Math.max(8, x) + "px";
+    tooltip.style.top = Math.max(8, y) + "px";
+  }
+  function hideTooltip() { tooltip.classList.remove("show"); tipNode = null; }
+
+  nodesHost.addEventListener("mouseover", (event) => {
+    const el = event.target.closest(".node");
+    if (!el || el.dataset.id === tipNode) return;
+    showTooltip(nodeById.get(el.dataset.id), event);
+  });
+  nodesHost.addEventListener("mousemove", (event) => { if (tipNode) moveTooltip(event); });
+  nodesHost.addEventListener("mouseout", (event) => {
+    if (!event.relatedTarget || !event.relatedTarget.closest?.(".node")) hideTooltip();
+  });
+
+  // --- resaltado ---
+  let activeFlow = null;
+
+  function clearHighlight() {
+    for (const el of nodeEls.values()) { el.classList.remove("dim", "active"); el.querySelector(".step-badge").textContent = ""; }
+    for (const el of edgeEls.values()) el.classList.remove("dim", "active");
+    for (const el of labelEls.values()) el.classList.remove("active");
+  }
+
+  function highlightFlow(flow) {
+    clearHighlight();
+    const stepIndex = new Map();
+    flow.steps.forEach((step) => { if (!stepIndex.has(step.node)) stepIndex.set(step.node, step.order); });
+    const activeEdges = new Set(flow.edges);
+    for (const [id, el] of nodeEls) {
+      if (stepIndex.has(id)) {
+        el.classList.add("active");
+        el.querySelector(".step-badge").textContent = stepIndex.get(id);
+      } else el.classList.add("dim");
+    }
+    for (const [id, el] of edgeEls) el.classList.add(activeEdges.has(id) ? "active" : "dim");
+    for (const [id, el] of labelEls) if (activeEdges.has(id)) el.classList.add("active");
+  }
+
+  // --- panel de flujos ---
+  const flowsHost = document.getElementById("flows");
+  MODEL.flows.forEach((flow, index) => {
+    const card = document.createElement("div");
+    card.className = "flow";
+    card.dataset.id = flow.id;
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.setAttribute("aria-expanded", "false");
+    button.innerHTML =
+      `<span class="flow-name"><span class="idx">${index + 1}</span>${inline(flow.name)}</span>` +
+      `<span class="flow-purpose">${inline(flow.purpose)}</span>` +
+      `<span class="flow-trigger">${inline(flow.trigger)}</span>`;
+
+    const steps = document.createElement("ol");
+    steps.className = "steps";
+    steps.hidden = true;
+    for (const step of flow.steps) {
+      const node = nodeById.get(step.node);
+      const layer = layerById.get(node.layer);
+      const li = document.createElement("li");
+      li.style.setProperty("--dot", layer.color);
+      li.innerHTML =
+        `<span class="n">${step.order}</span>` +
+        `<span class="txt"><b>${inline(node.label)}</b><span>${inline(step.action)}</span></span>`;
+      li.addEventListener("click", (event) => {
+        event.stopPropagation();
+        focusNode(step.node);
+      });
+      steps.appendChild(li);
+    }
+
+    button.addEventListener("click", () => toggleFlow(flow, card, button, steps));
+    card.append(button, steps);
+    flowsHost.appendChild(card);
+  });
+
+  function toggleFlow(flow, card, button, steps) {
+    const open = activeFlow === flow.id;
+    for (const other of flowsHost.querySelectorAll(".flow")) {
+      other.classList.remove("open");
+      other.querySelector("button").setAttribute("aria-expanded", "false");
+      other.querySelector(".steps").hidden = true;
+    }
+    if (open) { activeFlow = null; clearHighlight(); return; }
+    activeFlow = flow.id;
+    card.classList.add("open");
+    button.setAttribute("aria-expanded", "true");
+    steps.hidden = false;
+    highlightFlow(flow);
+    fitTo(flow.steps.map((s) => nodeById.get(s.node)));
+    card.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
+  // --- pan y zoom ---
+  const view = { x: 0, y: 0, k: 1 };
+  function applyView() {
+    viewport.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.k})`;
+  }
+  function fitTo(list) {
+    const items = list && list.length ? list : MODEL.nodes;
+    const pad = 70;
+    const minX = Math.min(...items.map((n) => n.x)) - pad;
+    const minY = Math.min(...items.map((n) => n.y)) - pad;
+    const maxX = Math.max(...items.map((n) => n.x + n.width)) + pad;
+    const maxY = Math.max(...items.map((n) => n.y + n.height)) + pad;
+    const rect = canvas.getBoundingClientRect();
+    const k = Math.min(rect.width / (maxX - minX), rect.height / (maxY - minY), 1.6);
+    // Suelo de legibilidad: por debajo de 0.38 las etiquetas dejan de leerse y
+    // es preferible que el usuario desplace el lienzo.
+    view.k = Math.max(list && list.length ? 0.15 : 0.38, k);
+    view.x = (rect.width - (maxX - minX) * view.k) / 2 - minX * view.k;
+    view.y = (rect.height - (maxY - minY) * view.k) / 2 - minY * view.k;
+    applyView();
+  }
+  function focusNode(id) {
+    const node = nodeById.get(id);
+    fitTo([node]);
+    view.k = Math.min(view.k, 1.15);
+    applyView();
+    const el = nodeEls.get(id);
+    el.classList.add("hit");
+    setTimeout(() => el.classList.remove("hit"), 1200);
+  }
+
+  let drag = null;
+  canvas.addEventListener("pointerdown", (event) => {
+    if (event.target.closest(".control")) return;
+    drag = { x: event.clientX - view.x, y: event.clientY - view.y };
+    canvas.classList.add("dragging");
+    canvas.setPointerCapture(event.pointerId);
+  });
+  canvas.addEventListener("pointermove", (event) => {
+    if (!drag) return;
+    view.x = event.clientX - drag.x;
+    view.y = event.clientY - drag.y;
+    applyView();
+  });
+  const endDrag = () => { drag = null; canvas.classList.remove("dragging"); };
+  canvas.addEventListener("pointerup", endDrag);
+  canvas.addEventListener("pointercancel", endDrag);
+
+  canvas.addEventListener("wheel", (event) => {
+    event.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const px = event.clientX - rect.left;
+    const py = event.clientY - rect.top;
+    const factor = Math.exp(-event.deltaY * 0.0016);
+    const k = Math.min(2.4, Math.max(0.15, view.k * factor));
+    view.x = px - (px - view.x) * (k / view.k);
+    view.y = py - (py - view.y) * (k / view.k);
+    view.k = k;
+    applyView();
+  }, { passive: false });
+
+  for (const button of document.querySelectorAll("[data-zoom]")) {
+    button.addEventListener("click", () => {
+      const rect = canvas.getBoundingClientRect();
+      const px = rect.width / 2;
+      const py = rect.height / 2;
+      const k = Math.min(2.4, Math.max(0.15, view.k * (Number(button.dataset.zoom) > 0 ? 1.25 : 0.8)));
+      view.x = px - (px - view.x) * (k / view.k);
+      view.y = py - (py - view.y) * (k / view.k);
+      view.k = k;
+      applyView();
+    });
+  }
+
+  // --- nodo: clic y búsqueda ---
+  nodesHost.addEventListener("click", (event) => {
+    const el = event.target.closest(".node");
+    if (!el) return;
+    const id = el.dataset.id;
+    clearHighlight();
+    activeFlow = null;
+    for (const other of flowsHost.querySelectorAll(".flow")) {
+      other.classList.remove("open");
+      other.querySelector(".steps").hidden = true;
+      other.querySelector("button").setAttribute("aria-expanded", "false");
+    }
+    const related = MODEL.edges.filter((e) => e.from === id || e.to === id);
+    const keep = new Set([id, ...related.map((e) => e.from), ...related.map((e) => e.to)]);
+    const keepEdges = new Set(related.map((e) => e.id));
+    for (const [nid, nel] of nodeEls) if (!keep.has(nid)) nel.classList.add("dim");
+    nodeEls.get(id).classList.add("active");
+    for (const [eid, eel] of edgeEls) eel.classList.add(keepEdges.has(eid) ? "active" : "dim");
+    for (const [eid, lel] of labelEls) if (keepEdges.has(eid)) lel.classList.add("active");
+  });
+
+  const search = document.getElementById("search");
+  search.addEventListener("input", () => {
+    const term = search.value.trim().toLowerCase();
+    if (!term) { if (!activeFlow) clearHighlight(); return; }
+    clearHighlight();
+    activeFlow = null;
+    for (const [id, el] of nodeEls) {
+      const node = nodeById.get(id);
+      const hit = (node.label + " " + node.file + " " + node.description).toLowerCase().includes(term);
+      el.classList.add(hit ? "active" : "dim");
+    }
+    for (const el of edgeEls.values()) el.classList.add("dim");
+  });
+
+  document.getElementById("reset").addEventListener("click", () => {
+    search.value = "";
+    activeFlow = null;
+    clearHighlight();
+    for (const other of flowsHost.querySelectorAll(".flow")) {
+      other.classList.remove("open");
+      other.querySelector(".steps").hidden = true;
+      other.querySelector("button").setAttribute("aria-expanded", "false");
+    }
+    fitTo(null);
+  });
+  document.getElementById("fit").addEventListener("click", () => fitTo(null));
+
+  addEventListener("keydown", (event) => {
+    if (event.key === "Escape") document.getElementById("reset").click();
+  });
+  addEventListener("resize", () => { if (!activeFlow) fitTo(null); });
+
+  fitTo(null);
+})();
+</script>
+</body>
+</html>

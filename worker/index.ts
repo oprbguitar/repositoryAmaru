@@ -22,6 +22,7 @@ import {
   synchronizeScope,
   synchronizeSource,
 } from "./external";
+import { type ExtraEnv, extraRouters } from "./extra-routes";
 import {
   deleteIntegration,
   listIntegrations,
@@ -1379,6 +1380,14 @@ async function apiRouter(request: Request, env: Env): Promise<Response> {
   if (env.ENABLE_DEVELOPER_LAB !== "false") {
     const developerLabResponse = await developerLabRouter(request, env, url);
     if (developerLabResponse) return developerLabResponse;
+  }
+  for (const router of extraRouters) {
+    const extraResponse = await router(
+      request,
+      env as unknown as ExtraEnv,
+      url,
+    );
+    if (extraResponse) return extraResponse;
   }
   const moduleResponse = await moduleRouter(request, env, url);
   if (moduleResponse) return moduleResponse;

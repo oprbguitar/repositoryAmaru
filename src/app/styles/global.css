@@ -9,9 +9,10 @@
    =========================================================================== */
 :root {
   color-scheme: dark;
-  /* System stack: no webfont is loaded, so declare what actually renders. */
-  font-family:
-    "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  /* Self-hosted (@fontsource): Public Sans for UI, IBM Plex Mono for data. */
+  --font-sans: "Public Sans Variable", "Public Sans", "Segoe UI", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  font-family: var(--font-sans);
   font-synthesis: none;
 
   /* --- Surfaces ------------------------------------------------------- */
@@ -40,6 +41,17 @@
   --accent-strong: #6fe3ec;
   --accent-quiet: rgb(46 199 212 / 13%);
   --cyan: var(--accent);
+  /* Secondary accent taken from the logo's green stroke. Use it for
+     "local / open / executable" meaning and for the second series in charts,
+     never as a large decorative fill. */
+  --accent-2: #22e3a0;
+  --accent-2-quiet: rgb(34 227 160 / 12%);
+
+  /* --- Motion --------------------------------------------------------- */
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-med: 220ms;
+  --stagger: 40ms;
 
   /* --- Semantic state (never decorative) ------------------------------ */
   --ok: #3ad894;
@@ -1394,7 +1406,7 @@ select:focus-visible {
   text-align: right;
 }
 .metadata-list dd.hash {
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   color: var(--accent);
 }
 .context-tags {
@@ -1421,7 +1433,7 @@ select:focus-visible {
   border-radius: var(--radius-md);
   padding: 9px;
   line-height: 1.5;
-  font-family: ui-monospace, "Cascadia Code", monospace;
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
 }
 .context-actions {
@@ -2930,6 +2942,92 @@ html[data-theme="light"] {
 
   --shadow: 0 12px 32px rgb(28 55 74 / 12%);
   --shadow-sm: 0 1px 4px rgb(28 55 74 / 10%);
+  --accent-2: #087a52;
+  --accent-2-quiet: rgb(8 122 82 / 10%);
+}
+
+/* High-contrast reading modes: pure black/white, no tinted surfaces, every
+   border at full strength. Built for long tables and technical docs. */
+html[data-theme="contrast-light"] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --bg-deep: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #ffffff;
+  --surface-3: #f2f2f2;
+  --surface-hover: #ececec;
+  --line: #000000;
+  --line-soft: #4d4d4d;
+  --line-strong: #000000;
+  --text: #000000;
+  --text-muted: #1a1a1a;
+  --text-subtle: #262626;
+  --muted: var(--text-muted);
+  --subtle: var(--text-subtle);
+  --accent: #00566b;
+  --accent-strong: #003d4d;
+  --accent-quiet: #e0f0f4;
+  --cyan: var(--accent);
+  --accent-2: #005c3a;
+  --accent-2-quiet: #e0f2ea;
+  --ok: #005c3a;
+  --ok-text: #005c3a;
+  --warn: #6b4500;
+  --danger: #a00000;
+  --info: #003f7a;
+  --purple: #4b2a85;
+  --green: var(--ok);
+  --amber: var(--warn);
+  --red: var(--danger);
+  --blue: var(--info);
+  --shadow: none;
+  --shadow-sm: none;
+}
+html[data-theme="contrast-dark"] {
+  color-scheme: dark;
+  --bg: #000000;
+  --bg-deep: #000000;
+  --surface: #000000;
+  --surface-2: #000000;
+  --surface-3: #141414;
+  --surface-hover: #1f1f1f;
+  --line: #ffffff;
+  --line-soft: #b3b3b3;
+  --line-strong: #ffffff;
+  --text: #ffffff;
+  --text-muted: #f0f0f0;
+  --text-subtle: #e0e0e0;
+  --muted: var(--text-muted);
+  --subtle: var(--text-subtle);
+  --accent: #5ff0ff;
+  --accent-strong: #a8f7ff;
+  --accent-quiet: #062a2e;
+  --cyan: var(--accent);
+  --accent-2: #5cffbd;
+  --accent-2-quiet: #06281b;
+  --ok: #5cffbd;
+  --ok-text: #5cffbd;
+  --warn: #ffd166;
+  --danger: #ff8a8a;
+  --info: #8cc8ff;
+  --purple: #c9b0ff;
+  --green: var(--ok);
+  --amber: var(--warn);
+  --red: var(--danger);
+  --blue: var(--info);
+  --shadow: none;
+  --shadow-sm: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 html[data-theme="light"] .app-shell {
   background: var(--bg);
@@ -6204,7 +6302,7 @@ html[data-theme="light"] .provider-card-select {
   border: 0;
   background: transparent;
   color: var(--text);
-  font-family: ui-monospace, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: var(--text-sm);
 }
 .integration-input input:focus {
