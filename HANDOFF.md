@@ -1,49 +1,69 @@
-# Traspaso — rediseño AMARU (2026-11-09)
+# Traspaso — AMARU AI Observatory (actualizado 2026-11-09)
 
-Instrucciones para la IA que continúe. Rama: `feat/integrations-market-realtime`. Lee primero `AGENTS.md`, `DESIGN.md` y `docs/migracion-y-despliegue.md`.
+Para la IA que continúe. Rama: `feat/integrations-market-realtime` (subida a GitHub).
+Lee primero `AGENTS.md`, `DESIGN.md` y `docs/migracion-y-despliegue.md`.
+El usuario pide **bajo consumo de tokens, trabajar de uno en uno, sin subagentes en paralelo ni Fable**. Interfaz en español de Perú.
 
-## Estado verificado al cerrar
-- `npx tsc -b` pasa sin errores; `npx vitest run` dio 193 tests OK.
-- `npx biome check .` limpio (se excluyó `docs/architecture-map.html` y se desactivó `noDescendingSpecificity`).
-- `pnpm build` OK. `evolution.css` lo escribió el orquestador al final (el agente se detuvo antes): revisarlo en el navegador.
-- No se ha abierto nada en el navegador. Hay que arrancar `pnpm dev` (127.0.0.1:5174) y revisar cada módulo a 360, 768, 1280 y 1600 px.
-- No se ejecutó la guía de diseño: `node ..\AI-Design-Harness\bin\design-lint.mjs .` ni `design-log.mjs`.
+## Cómo funciona
+- **Stack:** React 19 + Vite + Cloudflare Worker (`@cloudflare/vite-plugin`). D1, KV y R2 locales en `.wrangler/state`. pnpm, Biome, Vitest, TanStack Query.
+- **Arranque:** `pnpm dev` (127.0.0.1:5174) o `Iniciar-Servidor-Local.cmd`. Para apagar: botón «Apagar servidor» o `Apagar-Servidor.cmd`.
+- **Migraciones locales:** `npx wrangler d1 migrations apply DB --local` (la última es `0012_developer_lab_runs.sql`, ya aplicada).
+- **Rutas API nuevas:** se registran en `worker/extra-routes.ts` (`ExtraRouter`). Ya hay: github, model-hub, market-forecast y llm-map. El laboratorio está en `worker/developer-lab/router.ts`.
+- **Estilos:** un CSS por módulo (`src/features/<x>/<x>.css`) que solo usa los tokens de `src/app/styles/global.css`. Fuentes: Public Sans e IBM Plex Mono.
+- **Reglas:**
+  - Nunca inventar datos: si falta una fuente, la interfaz dice «no configurado».
+  - Los secretos van solo en `.dev.vars` (en gitignore).
+  - El hook de pre-push exige que pasen lint y build.
+- **Verificación antes de subir:** `npx tsc -b`, `npx vitest run` (196 tests OK), `npx biome check .` y `pnpm build`.
 
 ## Hecho
-- **Shell:** menú plegable con Ctrl+B, cabecera fija, 4 temas (incluidos los de alto contraste), logo y favicon nuevos, botón «Apagar servidor» (plugin `scripts/dev-server-control.ts`), `Iniciar-Servidor-Local.cmd` y `Apagar-Servidor.cmd`.
-- **Tokens:** fuentes Public Sans e IBM Plex Mono; registro de rutas en `worker/extra-routes.ts`.
-- **Hoy:** tabla de 50 modelos paginada.
-- **Proveedores:** migración `0009` con 18 proveedores nuevos (Qwen, Moonshot, Zhipu…).
-- **Precios:** precios en vivo de OpenRouter en el catálogo de APIs.
-- **Mercado:** proyección Holt rotulada como tal (`/api/market/forecast`) y proveedores de respaldo.
-- **Mapa:** origen de los LLM con 4 capas (`/api/map/llm-origins`).
-- **GitHub:** explorador por tipos y topics, «Aprende sobre mí», visor interno de README y árbol (`/api/github/*`).
-- **Evolución IA:** timeline alternado tipo Prevenir, árbol de ramas y grafo de conceptos (falta el lint).
+- **Shell:**
+  - menú plegable (Ctrl+B), cabecera fija y 4 temas, incluidos los de alto contraste;
+  - logo y favicon nuevos, y botón «Apagar servidor» (`scripts/dev-server-control.ts`).
+- **Hoy:** tabla de 50 modelos. **Proveedores:** migración `0009` con 18 proveedores (Qwen, Moonshot, Zhipu…). **Precios:** precios en vivo de OpenRouter.
+- **Mercado:** proyección Holt rotulada como tal. **Mapa:** origen de los LLM en 4 capas.
+- **GitHub:** explorador por tipos y topics, «Aprende sobre mí» y visor interno de README y archivos.
+- **Evolución IA:**
+  - timeline alternado izquierda/derecha, árbol de ramas y grafo de conceptos;
+  - se arregló la barra de eras que se encogía y se dio estilo a los filtros de rama.
+- **Modelos** (`/models`, `src/features/models/ModelExplorer.tsx`):
+  - explorador por necesidad: el texto libre se convierte en filtros (`parseNeed`);
+  - ranking 1–10 con criterio y metodología (`lib/models/ranking.ts`) y panel de procedencia por país;
+  - ficha técnica (`ModelSheet.tsx`) con botón a `/open-local?model=`;
+  - la vista anterior sigue en el botón «Rankings de APIs».
+- **Descarga de modelos** (`/open-local`, `src/features/local-models/`):
+  - `LocalModelManager.tsx` es la interfaz: elegir carpeta (File System Access, solo Chrome/Edge), analizar un repositorio de Hugging Face, elegir el paquete GGUF o el modelo completo (safetensors);
+  - `glossary.ts`: explicación de GGUF, de la cuantización, de la calidad, del uso recomendado y de la RAM necesaria;
+  - `downloadManager.ts`: cola global a nivel de módulo. Permite varias descargas a la vez y siguen aunque cambies de módulo; avisa al cerrar la pestaña;
+  - `downloader.ts`, archivos de 128 MB o más: 4 conexiones Range (`fetchParallel`). Cada segmento reintenta con backoff y retoma desde su propio offset; el progreso por segmento se guarda en `amaru-model.json` (`segments`), así que «Reanudar» continúa como un torrent;
+  - `downloader.ts`, en general: escrituras en bloques de 8 MB, checkpoint cada 1 GB y SHA-256 en un Web Worker (`hash.worker.ts`);
+  - biblioteca con estados, «Reanudar», «Versión» (compara con la última revisión publicada; nunca borra) y «Eliminar» (con confirmación).
+- **Laboratorio de APIs:**
+  - vista «En vivo» (`LiveConsole.tsx`): streaming SSE, razonamiento y respuesta por separado, máximo de salida configurable (4096 por defecto), métricas y promedio de costo por modelo (`/api/developer-lab/runs/stats`);
+  - banco de pruebas: ahora devuelve `reasoningText` y `finishReason`, y avisa si el límite de tokens se gastó razonando.
 
-## Completado después (2026-11-09, sesión 2)
-- **Modelos:** `src/features/models/ModelExplorer.tsx` (vista por defecto en `/models`): necesidad en texto libre → filtros combinables, ranking 1–10 con criterio y metodología, panel de procedencia por país, ficha técnica (`ModelSheet`) con enlace a `/open-local?model=`. El botón «Rankings de APIs» abre la vista anterior.
-- **Modelos locales:** `src/features/local-models/LocalModelManager.tsx` en `/open-local`: elegir carpeta (File System Access, Chrome/Edge), paquete GGUF o modelo completo safetensors, descarga reanudable con verificación, biblioteca y control de versiones (nunca borra). Pendiente: hardware, Ollama y categoría «modificados» en la UI.
-- **Laboratorio de APIs:** vista «En vivo» (`LiveConsole.tsx`): streaming SSE, métricas y promedio de costo por modelo (`/api/developer-lab/runs/stats`). Migración 0012 aplicada en local.
-- No verificado en el navegador.
-
-## Parcial (agentes detenidos a mitad: revisar el diff y completar)
-1. **Modelos** (`ModelsRankingPage.tsx`, `lib/models/hub.ts`, `memory.ts`, `organizations.ts`, quizá `worker/routes/model-hub.ts`): explorador por necesidad, rankings 1–10, procedencia visual y ficha técnica con enlace a `/open-local?model=`.
-2. **Modelos locales** (`src/features/local-models/`, `OpenLocalPage.tsx`):
-   - descarga a una carpeta (File System Access), reanudable, con SHA-256;
-   - inventario y control de versiones;
-   - análisis del hardware y pruebas con Ollama;
-   - categoría «modificados» con 3 ejes.
-3. **Laboratorio de APIs** (`worker/developer-lab/*`, migración `0012`, fixtures en `tests/fixtures/developer-lab/`): streaming SSE en vivo, promedios de costo por modelo, modo comparar y más proveedores.
-4. **Noticias, Investigación y Videos** (`lib/external/dates.ts` ya existe):
-   - tarjetas compactas y más fuentes RSS;
-   - «Actualizar» que refresque todo el scope;
-   - ocultar fechas centinela (9999);
-   - lector interno de texto completo;
-   - arreglar la sincronización de videos y añadir más plataformas.
-5. **Biblioteca local** (rediseño tipo mediateca ya escrito; verificar), **Mi laboratorio** (`LaboratoryTimeline.tsx`) e **Integraciones** (más APIs, más compacto).
-
-## Integración pendiente
-- Añadir a `.dev.vars.example`: `ALPHA_VANTAGE_API_KEY`, `FMP_API_KEY`, `POLYGON_API_KEY`, `MARKETSTACK_API_KEY`, `TIINGO_API_KEY`.
-- CSP en `worker/index.ts`: añadir `https://*.github.io` a `frame-src` para la vista previa de GitHub.
-- `docs/index.html` línea 11: cambiar `../public/favicon.svg` (borrado) por `favicon-32.png`.
-- Actualizar `README.md` y la memoria del proyecto. Trabajar de uno en uno (el usuario pidió bajo consumo de tokens, sin subagentes en paralelo ni Fable).
+## Pendiente
+1. **Probar en el navegador** lo último:
+   - descarga paralela con reanudación tras un corte de red, y la opción «Eliminar»;
+   - Evolución IA, en 360, 768, 1280 y 1600 px.
+2. **Modelos locales:**
+   - mostrar en la interfaz el análisis de hardware (`hardware.ts`, `compat.ts`);
+   - pruebas con Ollama (`ollama.ts`) y estado «ejecutable»;
+   - categoría «modificados» con 3 ejes (`alignment.ts`).
+   - La lógica ya existe y falta conectarla.
+3. **Laboratorio:** modo comparar (dos modelos en paralelo, con `compareGroupId`) y precios para los modelos que muestran «Sin precio».
+4. **Noticias, Investigación y Videos:**
+   - tarjetas compactas con hover y más fuentes RSS;
+   - «Actualizar» que refresque todo;
+   - ocultar fechas centinela (`lib/external/dates.ts`);
+   - lector interno;
+   - arreglar la sincronización de videos y añadir plataformas.
+5. **Verificar** Biblioteca local (rediseño como mediateca), Mi laboratorio (`LaboratoryTimeline.tsx`) e Integraciones (más APIs y diseño compacto).
+6. **Ajustes menores:**
+   - claves de mercado en `.dev.vars.example` (`ALPHA_VANTAGE_API_KEY`, `FMP_API_KEY`, `POLYGON_API_KEY`, `MARKETSTACK_API_KEY`, `TIINGO_API_KEY`);
+   - añadir `https://*.github.io` a `frame-src` del CSP en `worker/index.ts`;
+   - en `docs/index.html` (línea 11), cambiar el favicon por `favicon-32.png`;
+   - precios estáticos de imagen, video y audio;
+   - dos avisos `!important` en `evolution.css`;
+   - ejecutar `node ..\AI-Design-Harness\bin\design-lint.mjs .` y `design-log.mjs`;
+   - actualizar `README.md`.
