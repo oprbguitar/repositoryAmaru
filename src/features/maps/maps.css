@@ -197,3 +197,7 @@
     min-block-size: max(380px, 62dvh);
   }
 }
+/* The stage is tall: heading, modes and legend must never shrink under it. */
+.map-layout .module-main > * {
+  flex-shrink: 0;
+}

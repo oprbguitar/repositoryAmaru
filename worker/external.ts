@@ -1052,6 +1052,13 @@ export async function synchronizeSource(
     };
   }
   if (!credentialConfigured(source, env)) {
+    // Record the attempt so unconfigured sources rotate out of the schedule
+    // instead of starving the configured ones (dueSourceIds orders by it).
+    await env.DB.prepare(
+      "UPDATE source_registry SET last_request_at = ? WHERE id = ?",
+    )
+      .bind(requestedAt, sourceId)
+      .run();
     await env.DB.prepare(`INSERT INTO synchronization_runs
       (id, source_id, scope, status, requested_at, completed_at, error_message)
       VALUES (?, ?, ?, 'not_configured', ?, ?, ?)`)
@@ -1253,8 +1260,8 @@ export async function synchronizeScope(
 export async function dueSourceIds(env: ExternalEnv): Promise<string[]> {
   const result = await env.DB.prepare(`
     SELECT id FROM source_registry WHERE is_enabled = 1 AND source_type != 'local_directory'
-      AND (last_success_at IS NULL OR datetime(last_success_at, '+' || update_frequency_minutes || ' minutes') <= CURRENT_TIMESTAMP)
-    ORDER BY CASE WHEN last_success_at IS NULL THEN 0 ELSE 1 END, last_success_at ASC LIMIT 12
+      AND (last_request_at IS NULL OR datetime(last_request_at, '+' || update_frequency_minutes || ' minutes') <= CURRENT_TIMESTAMP)
+    ORDER BY CASE WHEN last_request_at IS NULL THEN 0 ELSE 1 END, last_request_at ASC LIMIT 20
   `).all<{ id: string }>();
   return result.results.map((row) => row.id);
 }

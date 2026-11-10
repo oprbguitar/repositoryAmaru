@@ -9,6 +9,7 @@ import {
   openShare,
   TRAIT_TOKENS,
 } from "./llmModel";
+import { initialZoom, touchMapOptions } from "./touchMap";
 
 const BASEMAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
 
@@ -106,8 +107,9 @@ export function LlmMapCanvas({
       container: containerRef.current,
       style: BASEMAP_STYLE,
       center: [-20, 25],
-      zoom: 1.4,
+      zoom: initialZoom(1.4),
       attributionControl: { compact: true },
+      ...touchMapOptions(),
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }));
     map.on("load", () => {

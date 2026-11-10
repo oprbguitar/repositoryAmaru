@@ -3,6 +3,7 @@ import maplibregl, { type Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useRef } from "react";
 import type { MapGeoJson } from "../../../types/api";
+import { touchMapOptions } from "./touchMap";
 
 const BASEMAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
 
@@ -39,6 +40,7 @@ export function MapCanvas({
       center: focus.center,
       zoom: focus.zoom,
       attributionControl: { compact: true },
+      ...touchMapOptions(),
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }));
     map.on("load", () => {

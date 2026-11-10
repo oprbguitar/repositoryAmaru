@@ -8,6 +8,7 @@ import {
   type SuggestionSet,
   suggestLocally,
 } from "../../../lib/github/suggest";
+import { useAdminSession } from "../admin/adminApi";
 import {
   executeLabTest,
   listDeveloperLabProviders,
@@ -30,11 +31,14 @@ export function ProfilePanel({
   const [result, setResult] = useState<SuggestionSet | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
+  // Paid providers belong to the administrator: visitors skip the request.
+  const session = useAdminSession();
   const providers = useQuery({
     queryKey: ["developer-lab-providers"],
     queryFn: listDeveloperLabProviders,
     staleTime: 60_000,
     retry: false,
+    enabled: session.data?.authenticated === true,
   });
   const usable = (providers.data?.data ?? []).filter(
     (provider) =>

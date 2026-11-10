@@ -793,16 +793,24 @@ textarea.gh-input {
 @media (max-width: 1024px) {
   .gh-grid {
     grid-template-columns: minmax(0, 1fr);
-    grid-auto-rows: auto;
+    grid-template-rows: none;
+    grid-auto-rows: max-content;
     overflow: auto;
+    overscroll-behavior: contain;
   }
+  /* Stacked on small screens: each block keeps its full height (min-height:
+     auto) and the page scrolls as one, instead of squeezing three panes. */
   .gh-rail,
   .gh-center,
   .gh-side {
+    min-height: auto;
     overflow: visible;
     border: 0;
   }
+  /* The category rail is long: keep it as a compact scrollable card. */
   .gh-rail {
+    max-height: 42dvh;
+    overflow: auto;
     border-bottom: 1px solid var(--line);
   }
   .gh-side {

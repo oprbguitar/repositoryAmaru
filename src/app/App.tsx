@@ -1,25 +1,97 @@
+import { lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
-import { AdminConsole } from "../features/admin/AdminConsole";
 import { AdminOnly } from "../features/admin/AdminOnly";
-import { ApiCatalogPage } from "../features/api-catalog/ApiCatalogPage";
 import { PlaceholderWorkspace } from "../features/common/PlaceholderWorkspace";
-import { DeveloperLabPage } from "../features/developer-lab/DeveloperLabPage";
-import { EvolutionPage } from "../features/evolution/EvolutionPage";
-import { FavoritesPage } from "../features/favorites/FavoritesPage";
-import { LaboratoryPage } from "../features/laboratory/LaboratoryPage";
-import { LocalLibraryPage } from "../features/local-library/LocalLibraryPage";
-import { GlobalMapPage } from "../features/maps/GlobalMapPage";
-import { GitHubPage } from "../features/observatory/GitHubPage";
-import { MarketPage } from "../features/observatory/MarketPage";
-import { ModelsRankingPage } from "../features/observatory/ModelsRankingPage";
-import { NewsPage } from "../features/observatory/NewsPage";
-import { OpenLocalPage } from "../features/observatory/OpenLocalPage";
-import { ProvidersPage } from "../features/observatory/ProvidersPage";
-import { ResearchPage } from "../features/observatory/ResearchPage";
-import { PromptStudioPage } from "../features/prompts/PromptStudioPage";
 import { TodayPage } from "../features/today/TodayPage";
-import { VideosPage } from "../features/videos/VideosPage";
+
+// Every section except «Hoy» loads on demand: the first visit (mobile above
+// all) downloads only the shell and the landing page.
+const AdminConsole = lazy(() =>
+  import("../features/admin/AdminConsole").then((module) => ({
+    default: module.AdminConsole,
+  })),
+);
+const ApiCatalogPage = lazy(() =>
+  import("../features/api-catalog/ApiCatalogPage").then((module) => ({
+    default: module.ApiCatalogPage,
+  })),
+);
+const DeveloperLabPage = lazy(() =>
+  import("../features/developer-lab/DeveloperLabPage").then((module) => ({
+    default: module.DeveloperLabPage,
+  })),
+);
+const EvolutionPage = lazy(() =>
+  import("../features/evolution/EvolutionPage").then((module) => ({
+    default: module.EvolutionPage,
+  })),
+);
+const FavoritesPage = lazy(() =>
+  import("../features/favorites/FavoritesPage").then((module) => ({
+    default: module.FavoritesPage,
+  })),
+);
+const LaboratoryPage = lazy(() =>
+  import("../features/laboratory/LaboratoryPage").then((module) => ({
+    default: module.LaboratoryPage,
+  })),
+);
+const LocalLibraryPage = lazy(() =>
+  import("../features/local-library/LocalLibraryPage").then((module) => ({
+    default: module.LocalLibraryPage,
+  })),
+);
+const GlobalMapPage = lazy(() =>
+  import("../features/maps/GlobalMapPage").then((module) => ({
+    default: module.GlobalMapPage,
+  })),
+);
+const GitHubPage = lazy(() =>
+  import("../features/observatory/GitHubPage").then((module) => ({
+    default: module.GitHubPage,
+  })),
+);
+const MarketPage = lazy(() =>
+  import("../features/observatory/MarketPage").then((module) => ({
+    default: module.MarketPage,
+  })),
+);
+const ModelsRankingPage = lazy(() =>
+  import("../features/observatory/ModelsRankingPage").then((module) => ({
+    default: module.ModelsRankingPage,
+  })),
+);
+const NewsPage = lazy(() =>
+  import("../features/observatory/NewsPage").then((module) => ({
+    default: module.NewsPage,
+  })),
+);
+const OpenLocalPage = lazy(() =>
+  import("../features/observatory/OpenLocalPage").then((module) => ({
+    default: module.OpenLocalPage,
+  })),
+);
+const ProvidersPage = lazy(() =>
+  import("../features/observatory/ProvidersPage").then((module) => ({
+    default: module.ProvidersPage,
+  })),
+);
+const ResearchPage = lazy(() =>
+  import("../features/observatory/ResearchPage").then((module) => ({
+    default: module.ResearchPage,
+  })),
+);
+const PromptStudioPage = lazy(() =>
+  import("../features/prompts/PromptStudioPage").then((module) => ({
+    default: module.PromptStudioPage,
+  })),
+);
+const VideosPage = lazy(() =>
+  import("../features/videos/VideosPage").then((module) => ({
+    default: module.VideosPage,
+  })),
+);
 
 const placeholderRoutes = [
   [

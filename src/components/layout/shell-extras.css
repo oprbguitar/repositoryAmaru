@@ -417,3 +417,44 @@
     display: none;
   }
 }
+
+/* Route chunk loading (React.lazy). */
+.route-loading {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: var(--space-3);
+  height: 100%;
+  color: var(--text-subtle);
+  font-size: var(--text-sm);
+}
+.route-loading-bar {
+  width: 120px;
+  height: 3px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--line-soft);
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    var(--accent),
+    transparent
+  );
+  background-size: 50% 100%;
+  background-repeat: no-repeat;
+  animation: route-slide 1.1s var(--ease-out) infinite;
+}
+@keyframes route-slide {
+  from {
+    background-position: -60px 0;
+  }
+  to {
+    background-position: 180px 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .route-loading-bar {
+    animation: none;
+    background: var(--accent-quiet);
+  }
+}

@@ -17,6 +17,7 @@ import {
   SunMoon,
 } from "lucide-react";
 import {
+  Suspense,
   useCallback,
   useEffect,
   useId,
@@ -622,7 +623,16 @@ export function AppShell() {
       ) : null}
 
       <main className="workspace" aria-label={activeLabel}>
-        <Outlet />
+        <Suspense
+          fallback={
+            <div className="route-loading" role="status">
+              <span className="route-loading-bar" />
+              Cargando sección…
+            </div>
+          }
+        >
+          <Outlet />
+        </Suspense>
       </main>
 
       <footer className="live-strip">

@@ -1367,9 +1367,20 @@ async function integrationRouter(
           "Falta la credencial a guardar.",
           400,
         );
-      return json(
-        envelope(await saveIntegration(env, binding, body.credential)),
+      const saved = await saveIntegration(env, binding, body.credential);
+      // Fetch the sources that use this key right away instead of waiting
+      // for the next cron slot.
+      const sources = await env.DB.prepare(
+        "SELECT id FROM source_registry WHERE secret_binding_name = ? AND is_enabled = 1",
+      )
+        .bind(binding)
+        .all<{ id: string }>();
+      await dispatchSynchronization(
+        env,
+        sources.results.map((row) => row.id),
+        "manual",
       );
+      return json(envelope(saved));
     }
     if (!isTest && request.method === "DELETE")
       return json(envelope(await deleteIntegration(env, binding)));
