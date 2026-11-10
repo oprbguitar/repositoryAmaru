@@ -418,7 +418,7 @@ export const githubRouter: ExtraRouter = async (request, env, url) => {
           return fail(
             new GithubError("invalid_query", "Usuario no válido.", 400),
           );
-        const key = `github:mine:${user}:${ctx.token ? "auth" : "anon"}`;
+        const key = `github:mine:${user}:${ctx.token && env.VIEWER_IS_ADMIN !== "false" ? "auth" : "anon"}`;
         const result = await cached(
           ctx,
           key,
@@ -427,7 +427,8 @@ export const githubRouter: ExtraRouter = async (request, env, url) => {
             SearchResult & { stale?: boolean; includesPrivate: boolean }
           > => {
             let raw: unknown = null;
-            if (ctx.token) {
+            // Private repos are only listed to the administrator.
+            if (ctx.token && env.VIEWER_IS_ADMIN !== "false") {
               const me = (await ghJson(ctx, "/user")) as { login?: string };
               if (me?.login?.toLowerCase() === user.toLowerCase())
                 raw = await ghJson(

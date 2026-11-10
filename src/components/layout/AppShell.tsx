@@ -7,6 +7,7 @@ import {
   Globe,
   Library,
   Moon,
+  Palette,
   PanelLeftClose,
   PanelLeftOpen,
   PowerOff,
@@ -36,6 +37,9 @@ import { getLiveEvents, getSources } from "../../features/observatory/api";
 import { LANGUAGES, type TranslationKey } from "../../i18n/dictionary";
 import { useLanguage } from "../../i18n/LanguageProvider";
 import { Brand } from "./Brand";
+import { GuideControls } from "./GuideSystem";
+import { PrivacyNotice } from "./PrivacyNotice";
+import "./shell-extras.css";
 import { mobileNavigation, navigation } from "./navigation";
 import {
   ServerStoppedScreen,
@@ -53,7 +57,7 @@ import {
 } from "./theme";
 import { useMenu } from "./useMenu";
 
-const THEME_KEY = "amaru-theme";
+const THEME_KEY = "amaru-theme-v2";
 const NAV_KEY = "amaru-nav";
 const DRAWER_QUERY = "(max-width: 900px)";
 
@@ -63,6 +67,12 @@ const THEME_OPTIONS: ReadonlyArray<{
   hintKey: TranslationKey;
   icon: typeof Sun;
 }> = [
+  {
+    value: "pastel",
+    labelKey: "shell.themePastel",
+    hintKey: "shell.themePastelHint",
+    icon: Palette,
+  },
   {
     value: "dark",
     labelKey: "shell.dark",
@@ -571,13 +581,14 @@ export function AppShell() {
         inert={isDrawer && !drawerOpen}
       >
         <nav>
-          {navigation.map((item) => {
+          {navigation.map((item, index) => {
             const Icon = item.icon;
             const label = t(item.labelKey);
             return (
               <NavLink
                 key={item.path}
                 to={item.path}
+                data-bubble={(index % 6) + 1}
                 className={({ isActive }) => (isActive ? "active" : "")}
                 onMouseEnter={(event) =>
                   showTooltip(event.currentTarget, label)
@@ -592,9 +603,10 @@ export function AppShell() {
             );
           })}
         </nav>
+        <GuideControls compact={compact} />
         <Link
           className="sidebar-footer-link"
-          to="/admin/sources"
+          to="/admin"
           onMouseEnter={(event) =>
             showTooltip(event.currentTarget, t("shell.configureIntegrations"))
           }
@@ -642,7 +654,7 @@ export function AppShell() {
             ? `${latestEvent.sourceName}: ${latestEvent.title}`
             : t("shell.noChanges")}
         </span>
-        <Link to={latestEvent?.targetPath ?? "/admin/sources"}>
+        <Link to={latestEvent?.targetPath ?? "/news"}>
           {t("shell.viewUpdate")} <ArrowRight aria-hidden="true" />
         </Link>
       </footer>
@@ -658,6 +670,8 @@ export function AppShell() {
           );
         })}
       </nav>
+
+      <PrivacyNotice />
 
       <ShutdownDialog
         open={shutdownOpen}

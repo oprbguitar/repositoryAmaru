@@ -77,3 +77,9 @@ INSTAGRAM_BUSINESS_ACCOUNT_ID=
 SEC_USER_AGENT=
 FACEBOOK_PAGE_ACCESS_TOKEN=
 X_BEARER_TOKEN=
+
+# Administrator access (production only; local dev needs no login)
+# ADMIN_USER is a plain var in wrangler.jsonc. Set these with
+# `wrangler secret put <NAME> --env production`, never in this file.
+ADMIN_PASSWORD=
+ADMIN_SESSION_SECRET=

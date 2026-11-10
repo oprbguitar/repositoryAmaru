@@ -9,8 +9,9 @@ import {
 } from "../src/components/layout/theme";
 
 describe("application theme", () => {
-  it("offers the four reading modes", () => {
+  it("offers pastel plus the four reading modes", () => {
     expect(APP_THEMES).toEqual([
+      "pastel",
       "dark",
       "light",
       "contrast-light",
@@ -25,10 +26,10 @@ describe("application theme", () => {
     expect(resolveInitialTheme("contrast-dark", true)).toBe("contrast-dark");
   });
 
-  it("uses the operating system preference when no choice was stored", () => {
-    expect(resolveInitialTheme(null, true)).toBe("light");
-    expect(resolveInitialTheme(null, false)).toBe("dark");
-    expect(resolveInitialTheme("bogus", false)).toBe("dark");
+  it("defaults to pastel when no choice was stored", () => {
+    expect(resolveInitialTheme(null, true)).toBe("pastel");
+    expect(resolveInitialTheme(null, false)).toBe("pastel");
+    expect(resolveInitialTheme("bogus", false)).toBe("pastel");
   });
 
   it("honours prefers-contrast: more when nothing was stored", () => {
@@ -41,11 +42,13 @@ describe("application theme", () => {
     expect(nextTheme("dark")).toBe("light");
     expect(nextTheme("light")).toBe("contrast-light");
     expect(nextTheme("contrast-light")).toBe("contrast-dark");
-    expect(nextTheme("contrast-dark")).toBe("dark");
+    expect(nextTheme("contrast-dark")).toBe("pastel");
+    expect(nextTheme("pastel")).toBe("dark");
   });
 
   it("classifies light surfaces and validates values", () => {
     expect(isLightTheme("light")).toBe(true);
+    expect(isLightTheme("pastel")).toBe(true);
     expect(isLightTheme("contrast-light")).toBe(true);
     expect(isLightTheme("contrast-dark")).toBe(false);
     expect(isAppTheme("contrast-dark")).toBe(true);

@@ -76,19 +76,41 @@
   "env": {
     "production": {
       "name": "amaru-ai-observatory-production",
+      "routes": [
+        { "pattern": "amaru.andesnova.solutions", "custom_domain": true },
+        { "pattern": "ia.amauta.online", "custom_domain": true }
+      ],
       "vars": {
         "APP_ENV": "production",
         "APP_LOCALE": "es-PE",
+        "ADMIN_USER": "oprbguitar",
         "ENABLE_DEMO_DATA": "false",
-        "ENABLE_WORKERS_AI": "false",
+        "ENABLE_WORKERS_AI": "true",
         "ENABLE_VECTOR_SEARCH": "false",
         "ENABLE_DEVELOPER_LAB": "true",
         "ENABLE_PROVIDER_RAW_INSPECTOR": "true",
-        "ENABLE_LOCAL_AI_PROVIDERS": "true",
+        "ENABLE_LOCAL_AI_PROVIDERS": "false",
         "ENABLE_AGENT_TESTS": "true",
         "ENABLE_RAG_TESTS": "true",
         "ENABLE_MEDIA_TESTS": "true",
-        "ENABLE_VIDEO_TESTS": "true"
+        "ENABLE_VIDEO_TESTS": "true",
+        "OLLAMA_BASE_URL": "http://127.0.0.1:11434",
+        "LM_STUDIO_BASE_URL": "http://127.0.0.1:1234/v1",
+        "VLLM_BASE_URL": "http://127.0.0.1:8000/v1",
+        "LOCALAI_BASE_URL": "http://127.0.0.1:8080/v1"
+      },
+      "queues": {
+        "producers": [{ "binding": "INDEX_QUEUE", "queue": "amaru-index-jobs" }],
+        "consumers": [
+          {
+            "queue": "amaru-index-jobs",
+            "max_batch_size": 10,
+            "max_batch_timeout": 30
+          }
+        ]
+      },
+      "triggers": {
+        "crons": ["*/30 * * * *"]
       },
       "d1_databases": [
         {

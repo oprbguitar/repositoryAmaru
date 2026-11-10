@@ -1,6 +1,6 @@
 # AMARU AI Observatory — DESIGN.md
 
-Dirección visual vigente desde 2026-11-09 (rediseño "observatorio de modelos").
+Dirección visual vigente desde 2026-11-09 (rediseño "observatorio de modelos"). Desde 2026-11-10 el tema por defecto es **pastel** (pedido del usuario: vista amigable y divertida para todo público); la estructura no cambia.
 
 ## Dirección (6 líneas)
 1. **Dominio:** observatorio técnico personal de IA — mucha tabla, rankings, fichas y series. Densidad media-alta.
@@ -25,7 +25,7 @@ Dirección visual vigente desde 2026-11-09 (rediseño "observatorio de modelos")
 - Control: `--control-sm 28 / md 32 / lg 36`
 - Motion: `--ease-out --dur-fast 120ms --dur-med 220ms --stagger 40ms`
 
-Temas: `dark` (defecto), `light`, `contrast-light` (negro sobre blanco), `contrast-dark` (blanco sobre negro). Todos redefinen **solo tokens**.
+Temas: `pastel` (defecto desde 2026-11-10: Manrope + Fredoka vía `--font-display`, crema/ciruela/coral, tokens `--bubble-1..6` para categorías y `--nav-bubble-1..6` para íconos del menú), `dark`, `light`, `contrast-light` (negro sobre blanco), `contrast-dark` (blanco sobre negro). Todos redefinen **solo tokens**.
 
 ## Reglas para módulos
 - Cada módulo nuevo o rediseñado tiene su CSS propio junto al componente (`src/features/<x>/<x>.css`) importado desde la página, con clases prefijadas por módulo. `global.css` solo contiene tokens y shell.

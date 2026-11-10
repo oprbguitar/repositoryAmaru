@@ -14,6 +14,7 @@ import {
   PlaySquare,
   ServerCog,
   Star,
+  Workflow,
   Wrench,
 } from "lucide-react";
 import type { TranslationKey } from "../../i18n/dictionary";
@@ -31,6 +32,12 @@ export const navigation = [
     icon: Building2,
   },
   { label: "Modelos", labelKey: "nav.models", path: "/models", icon: Bot },
+  {
+    label: "Prompts y agentes",
+    labelKey: "nav.prompts",
+    path: "/prompts",
+    icon: Workflow,
+  },
   {
     label: "APIs y proyectos",
     labelKey: "nav.apiCatalog",
@@ -102,5 +109,5 @@ export const navigation = [
 }>;
 
 export const mobileNavigation = navigation.filter((item) =>
-  ["/today", "/providers", "/developer-lab", "/laboratory"].includes(item.path),
+  ["/today", "/models", "/prompts", "/news"].includes(item.path),
 );

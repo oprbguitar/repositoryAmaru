@@ -204,7 +204,7 @@ export function TodayPage() {
         </span>
         <div>
           <strong>
-            AMARU funciona localmente con datos externos trazables
+            AMARU reúne datos externos trazables
           </strong>
           <p>
             D1, KV y R2 permanecen locales; las solicitudes públicas se ejecutan

@@ -15,6 +15,7 @@ import type {
   ProviderRecord,
   SourceHealth,
 } from "../types/api";
+import { adminRequired, adminRouter, isAdmin, needsAdmin } from "./admin";
 import { developerLabRouter } from "./developer-lab/router";
 import {
   dueSourceIds,
@@ -49,6 +50,7 @@ import {
   recommendForProject,
   saveLaboratoryProject,
 } from "./modules";
+import { publicAiRouter } from "./public-ai";
 
 type Env = {
   DB: D1Database;
@@ -109,6 +111,11 @@ type Env = {
   LM_STUDIO_BASE_URL?: string;
   VLLM_BASE_URL?: string;
   LOCALAI_BASE_URL?: string;
+  ADMIN_USER?: string;
+  ADMIN_PASSWORD?: string;
+  ADMIN_SESSION_SECRET?: string;
+  /** Set per request by the fetch handler; never configured. */
+  VIEWER_IS_ADMIN?: string;
 };
 
 type IndexJob = {
@@ -1378,8 +1385,15 @@ async function integrationRouter(
   return errorResponse("not_found", "La ruta solicitada no existe.", 404);
 }
 
-async function apiRouter(request: Request, env: Env): Promise<Response> {
+async function apiRouter(request: Request, baseEnv: Env): Promise<Response> {
   const url = new URL(request.url);
+  const admin = await isAdmin(request, baseEnv);
+  if (!admin && needsAdmin(request, url)) return adminRequired();
+  const env: Env = { ...baseEnv, VIEWER_IS_ADMIN: admin ? "true" : "false" };
+  const adminResponse = await adminRouter(request, env, url);
+  if (adminResponse) return adminResponse;
+  const publicAiResponse = await publicAiRouter(request, env, url);
+  if (publicAiResponse) return publicAiResponse;
   if (env.ENABLE_DEVELOPER_LAB !== "false") {
     const developerLabResponse = await developerLabRouter(request, env, url);
     if (developerLabResponse) return developerLabResponse;

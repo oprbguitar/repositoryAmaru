@@ -1,0 +1,391 @@
+/* Shell additions (2026-11-10): display font, nav bubbles, guided tour,
+   documentation, privacy notice. Tokens only. */
+
+.page-heading h1,
+.developer-lab-header h1 {
+  font-family: var(--font-display);
+}
+
+/* Section colour-coding on nav icons (transparent outside pastel). */
+.sidebar nav a svg {
+  box-sizing: content-box;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+}
+.sidebar nav a[data-bubble="1"] svg {
+  background: var(--nav-bubble-1);
+}
+.sidebar nav a[data-bubble="2"] svg {
+  background: var(--nav-bubble-2);
+}
+.sidebar nav a[data-bubble="3"] svg {
+  background: var(--nav-bubble-3);
+}
+.sidebar nav a[data-bubble="4"] svg {
+  background: var(--nav-bubble-4);
+}
+.sidebar nav a[data-bubble="5"] svg {
+  background: var(--nav-bubble-5);
+}
+.sidebar nav a[data-bubble="6"] svg {
+  background: var(--nav-bubble-6);
+}
+
+/* --- Guide controls (sidebar footer) ---------------------------------- */
+.guide-controls {
+  display: grid;
+  gap: 2px;
+  margin-top: auto;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--line-soft);
+}
+.guide-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--control-md);
+  padding: 0 var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.guide-toggle svg {
+  width: 17px;
+  flex: none;
+}
+.guide-toggle:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.guide-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.guide-toggle[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-quiet);
+  color: var(--accent-strong);
+}
+/* Soft breathing glow until first use — a slow fade, never a blink. */
+.guide-toggle[data-glow="true"] {
+  color: var(--accent);
+  animation: guide-breathe 3.2s ease-in-out infinite;
+}
+@keyframes guide-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--accent-quiet);
+  }
+  50% {
+    box-shadow: 0 0 0 4px var(--accent-quiet);
+  }
+}
+@media (min-width: 901px) {
+  .app-shell[data-nav="compact"] .guide-toggle {
+    justify-content: center;
+    padding: 0;
+  }
+}
+
+/* --- Guide card: one section at a time -------------------------------- */
+.guide-card {
+  position: fixed;
+  right: var(--space-4);
+  bottom: calc(var(--strip-h) + var(--space-5));
+  z-index: 60;
+  display: grid;
+  gap: var(--space-2);
+  width: min(340px, calc(100vw - 2 * var(--space-4)));
+  padding: var(--space-4);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  animation: guide-in var(--dur-med) var(--ease-out);
+}
+@keyframes guide-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.guide-card header,
+.docs-dialog header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.guide-step {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+.guide-card h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+}
+.guide-card p {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.guide-card ol {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-inline-start: var(--space-4);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+.guide-card footer {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+.guide-card footer button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--control-md);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.guide-card footer button svg {
+  width: 15px;
+  height: 15px;
+}
+.guide-card footer button:hover {
+  background: var(--surface-hover);
+}
+.guide-card footer .guide-next {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--surface);
+}
+.guide-card footer .guide-next:hover {
+  background: var(--accent-strong);
+}
+.guide-card footer button:focus-visible,
+.guide-close:focus-visible,
+.docs-list button:focus-visible,
+.privacy-ok:focus-visible,
+.privacy-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.guide-close {
+  display: inline-grid;
+  place-items: center;
+  width: var(--control-sm);
+  height: var(--control-sm);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.guide-close svg {
+  width: 16px;
+  height: 16px;
+}
+.guide-close:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+/* --- Documentation / privacy dialog ----------------------------------- */
+.docs-dialog {
+  width: min(640px, calc(100vw - 2 * var(--space-4)));
+  max-height: min(80vh, 760px);
+  padding: var(--space-5);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+.docs-dialog::backdrop {
+  background: rgb(20 14 30 / 40%);
+}
+.docs-dialog h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+}
+.docs-intro {
+  margin: var(--space-3) 0;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+.docs-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-lg);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+.docs-search svg {
+  width: 15px;
+  color: var(--text-subtle);
+}
+.docs-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  outline: none;
+}
+.docs-list {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.docs-list button {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.docs-list button:hover {
+  border-color: var(--line);
+  background: var(--surface-2);
+}
+.docs-list span {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+.privacy-body {
+  margin-top: var(--space-3);
+  line-height: 1.55;
+}
+.privacy-body h3 {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--text-lg);
+}
+.privacy-body p,
+.privacy-body li {
+  color: var(--text-muted);
+}
+.privacy-body ul {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-inline-start: var(--space-4);
+}
+.privacy-body strong {
+  color: var(--text);
+}
+
+/* --- Privacy toast: small, bottom-left, dismissible ------------------- */
+.privacy-toast {
+  position: fixed;
+  right: 0;
+  left: 0;
+  width: fit-content;
+  margin-inline: auto;
+  bottom: calc(var(--strip-h) + var(--space-4));
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: min(460px, calc(100vw - 2 * var(--space-4)));
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+  font-size: var(--text-sm);
+  animation: guide-in var(--dur-med) var(--ease-out);
+}
+.privacy-toast > svg {
+  flex: none;
+  width: 18px;
+  color: var(--accent-2);
+}
+.privacy-toast p {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+.privacy-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.privacy-ok {
+  flex: none;
+  min-height: var(--control-sm);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.privacy-ok:hover {
+  background: var(--surface-hover);
+}
+
+@media (max-width: 900px) {
+  .guide-card {
+    right: var(--space-3);
+    bottom: calc(64px + var(--space-3));
+  }
+  .privacy-toast {
+    left: var(--space-3);
+    right: var(--space-3);
+    bottom: calc(64px + var(--space-3));
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guide-toggle[data-glow="true"] {
+    animation: none;
+    box-shadow: 0 0 0 3px var(--accent-quiet);
+  }
+  .guide-card,
+  .privacy-toast {
+    animation: none;
+  }
+}

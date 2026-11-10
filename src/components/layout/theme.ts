@@ -1,4 +1,5 @@
 export const APP_THEMES = [
+  "pastel",
   "dark",
   "light",
   "contrast-light",
@@ -22,18 +23,20 @@ export function resolveInitialTheme(
   if (isAppTheme(stored)) return stored;
   if (prefersMoreContrast)
     return prefersLight ? "contrast-light" : "contrast-dark";
-  return prefersLight ? "light" : "dark";
+  // Friendly pastel is the default for every new visitor; the other themes
+  // stay one click away in the display menu.
+  return "pastel";
 }
 
 /** Cycles through every theme in display order. */
 export function nextTheme(theme: AppTheme): AppTheme {
   const index = APP_THEMES.indexOf(theme);
-  return APP_THEMES[(index + 1) % APP_THEMES.length] ?? "dark";
+  return APP_THEMES[(index + 1) % APP_THEMES.length] ?? "pastel";
 }
 
 /** Whether a theme paints light surfaces (drives `color-scheme` helpers). */
 export function isLightTheme(theme: AppTheme) {
-  return theme === "light" || theme === "contrast-light";
+  return theme === "light" || theme === "pastel" || theme === "contrast-light";
 }
 
 export type NavMode = "full" | "compact";

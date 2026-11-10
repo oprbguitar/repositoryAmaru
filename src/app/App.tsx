@@ -1,5 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
+import { AdminConsole } from "../features/admin/AdminConsole";
+import { AdminOnly } from "../features/admin/AdminOnly";
 import { ApiCatalogPage } from "../features/api-catalog/ApiCatalogPage";
 import { PlaceholderWorkspace } from "../features/common/PlaceholderWorkspace";
 import { DeveloperLabPage } from "../features/developer-lab/DeveloperLabPage";
@@ -8,7 +10,6 @@ import { FavoritesPage } from "../features/favorites/FavoritesPage";
 import { LaboratoryPage } from "../features/laboratory/LaboratoryPage";
 import { LocalLibraryPage } from "../features/local-library/LocalLibraryPage";
 import { GlobalMapPage } from "../features/maps/GlobalMapPage";
-import { AdminSourcesPage } from "../features/observatory/AdminSourcesPage";
 import { GitHubPage } from "../features/observatory/GitHubPage";
 import { MarketPage } from "../features/observatory/MarketPage";
 import { ModelsRankingPage } from "../features/observatory/ModelsRankingPage";
@@ -16,6 +17,7 @@ import { NewsPage } from "../features/observatory/NewsPage";
 import { OpenLocalPage } from "../features/observatory/OpenLocalPage";
 import { ProvidersPage } from "../features/observatory/ProvidersPage";
 import { ResearchPage } from "../features/observatory/ResearchPage";
+import { PromptStudioPage } from "../features/prompts/PromptStudioPage";
 import { TodayPage } from "../features/today/TodayPage";
 import { VideosPage } from "../features/videos/VideosPage";
 
@@ -45,7 +47,14 @@ export default function App() {
         <Route path="/models/*" element={<ModelsRankingPage />} />
         <Route path="/api-catalog/*" element={<ApiCatalogPage />} />
         <Route path="/evolution/*" element={<EvolutionPage />} />
-        <Route path="/developer-lab/*" element={<DeveloperLabPage />} />
+        <Route
+          path="/developer-lab/*"
+          element={
+            <AdminOnly title="Laboratorio de APIs">
+              <DeveloperLabPage />
+            </AdminOnly>
+          }
+        />
         <Route path="/map/*" element={<GlobalMapPage />} />
         <Route path="/videos/*" element={<VideosPage />} />
         <Route path="/laboratory/*" element={<LaboratoryPage />} />
@@ -55,7 +64,8 @@ export default function App() {
         <Route path="/github/*" element={<GitHubPage />} />
         <Route path="/favorites" element={<FavoritesPage />} />
         <Route path="/markets/*" element={<MarketPage />} />
-        <Route path="/admin/*" element={<AdminSourcesPage />} />
+        <Route path="/admin/*" element={<AdminConsole />} />
+        <Route path="/prompts/*" element={<PromptStudioPage />} />
         <Route path="/local-library" element={<LocalLibraryPage />} />
         <Route
           path="/local-library/:documentId"

@@ -4,6 +4,11 @@ Para la IA que continúe. Rama: `feat/integrations-market-realtime` (subida a Gi
 Lee primero `AGENTS.md`, `DESIGN.md` y `docs/migracion-y-despliegue.md`.
 El usuario pide **bajo consumo de tokens, trabajar de uno en uno, sin subagentes en paralelo ni Fable**. Interfaz en español de Perú.
 
+## En línea (2026-11-10)
+- Producción: https://amaru.andesnova.solutions y https://ia.amauta.online (Worker `amaru-ai-observatory-production`). Detalles, admin, IA gratuita y redespliegue en `docs/despliegue-produccion.md`.
+- Nuevos: tema pastel por defecto, `/prompts` (cadenas, generador, agentes, técnicas, histórico, curso PIT 2026), guía/documentación/privacidad abajo en el menú, `/admin` con login (`worker/admin.ts`) e IA gratuita limitada (`worker/public-ai.ts`).
+- Pendiente del usuario: `npx wrangler secret put ADMIN_PASSWORD --env production`.
+
 ## Cómo funciona
 - **Stack:** React 19 + Vite + Cloudflare Worker (`@cloudflare/vite-plugin`). D1, KV y R2 locales en `.wrangler/state`. pnpm, Biome, Vitest, TanStack Query.
 - **Arranque:** `pnpm dev` (127.0.0.1:5174) o `Iniciar-Servidor-Local.cmd`. Para apagar: botón «Apagar servidor» o `Apagar-Servidor.cmd`.
