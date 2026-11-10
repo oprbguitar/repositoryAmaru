@@ -12,7 +12,8 @@
       "!test-results",
       "!playwright-report",
       "!developer-lab-test-output",
-      "!docs/ui-redesign"
+      "!docs/ui-redesign",
+      "!docs/architecture-map.html"
     ]
   },
   "formatter": {
@@ -26,6 +27,9 @@
       "preset": "recommended",
       "suspicious": {
         "noExplicitAny": "off"
+      },
+      "style": {
+        "noDescendingSpecificity": "off"
       }
     }
   },

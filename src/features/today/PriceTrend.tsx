@@ -37,7 +37,7 @@ export function PriceTrend({
   const dates = history?.dates ?? [];
   const series = (history?.series ?? []).slice(0, SERIES_COLORS.length);
 
-  if (!history || !history.available) {
+  if (!history?.available) {
     return (
       <div className="honest-empty compact-empty">
         <p>{history?.reason ?? emptyLabel}</p>

@@ -4,7 +4,7 @@ Instrucciones para la IA que continúe. Rama: `feat/integrations-market-realtime
 
 ## Estado verificado al cerrar
 - `npx tsc -b` pasa sin errores; `npx vitest run` dio 193 tests OK.
-- `npx biome check .` todavía da errores. Hay que corregirlos o excluir `docs/architecture-map.html` en `biome.json`. Los pendientes en código:
+- `npx biome check .` limpio (se excluyó `docs/architecture-map.html` y se desactivó `noDescendingSpecificity`).
   - `src/features/evolution/EvolutionPage.tsx`: `useSemanticElements` y `useExhaustiveDependencies`.
   - `src/features/evolution/BranchTree.tsx`: `noArrayIndexKey`.
   - Avisos `noDescendingSpecificity` en los CSS.

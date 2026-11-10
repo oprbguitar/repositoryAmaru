@@ -88,8 +88,11 @@ export function BranchTree({
                   }
                 >
                   <path className="evo-tree-limb" d={g.path} pathLength={1} />
-                  {g.leaves.map((leaf, leafIndex) => (
-                    <g key={`${g.id}-${leafIndex}`} className="evo-tree-leaf">
+                  {g.leaves.map((leaf) => (
+                    <g
+                      key={`${g.id}-${leaf.x}-${leaf.y}`}
+                      className="evo-tree-leaf"
+                    >
                       <line x1={leaf.lx} y1={leaf.ly} x2={leaf.x} y2={leaf.y} />
                       <circle cx={leaf.x} cy={leaf.y} r={5} />
                     </g>

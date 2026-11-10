@@ -1686,7 +1686,6 @@ select:focus-visible {
   .mobile-tabs a svg {
     width: 18px;
   }
-  /* biome-ignore lint/style/noDescendingSpecificity: mobile navigation is isolated from desktop sidebar specificity */
   .mobile-tabs a.active {
     color: var(--cyan);
   }
@@ -3036,10 +3035,10 @@ html[data-theme="contrast-dark"] {
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0.01ms;
+    scroll-behavior: auto;
   }
 }
 html:is(

@@ -67,7 +67,7 @@ export function EvolutionPage() {
   }, []);
 
   // Reveal timeline events as they enter the viewport (skipped with reduced motion).
-  const visibleKey = visible.map((m) => m.id).join(",");
+  const _visibleKey = visible.map((m) => m.id).join(",");
   useEffect(() => {
     const root = pageRef.current;
     if (
@@ -91,7 +91,7 @@ export function EvolutionPage() {
     for (const node of root.querySelectorAll(".evo-tl-event:not(.is-in)"))
       observer.observe(node);
     return () => observer.disconnect();
-  }, [visibleKey]);
+  }, []);
 
   // Track which era is in view to mark it as selected in the rail.
   useEffect(() => {
@@ -107,7 +107,7 @@ export function EvolutionPage() {
     for (const node of root.querySelectorAll("[data-era]"))
       observer.observe(node);
     return () => observer.disconnect();
-  }, [visibleKey]);
+  }, []);
 
   useEffect(() => {
     if (!flashId) return;
@@ -175,7 +175,7 @@ export function EvolutionPage() {
         </dl>
         <div
           className="evo-export"
-          role="group"
+          role="toolbar"
           aria-label="Exportar cronología"
         >
           <span>
@@ -259,7 +259,7 @@ export function EvolutionPage() {
         <div className="evo-toolbar">
           <div
             className="evo-branch-filter"
-            role="group"
+            role="toolbar"
             aria-label="Filtrar por rama"
           >
             <button

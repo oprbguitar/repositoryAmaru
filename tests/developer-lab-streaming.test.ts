@@ -31,12 +31,16 @@ function runSse(name: string, protocol: Exclude<StreamProtocol, "ollama">) {
   let clock = 0;
   for (let index = 0; index < text.length; index += 7) {
     for (const message of decoder.push(text.slice(index, index + 7)))
-      for (const piece of parseSseMessage(protocol, message))
-        applyPiece(acc, piece, (clock += 10));
+      for (const piece of parseSseMessage(protocol, message)) {
+        clock += 10;
+        applyPiece(acc, piece, clock);
+      }
   }
   for (const message of decoder.flush())
-    for (const piece of parseSseMessage(protocol, message))
-      applyPiece(acc, piece, (clock += 10));
+    for (const piece of parseSseMessage(protocol, message)) {
+      clock += 10;
+      applyPiece(acc, piece, clock);
+    }
   return acc;
 }
 
