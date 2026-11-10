@@ -458,3 +458,99 @@
     background: var(--accent-quiet);
   }
 }
+
+/* --- Mobile detail sheet (context panel rises from the bottom) -------- */
+@media (max-width: 900px) {
+  .module-layout.sheet-open > .context-slot,
+  .module-layout.sheet-open > .context-panel {
+    position: fixed;
+    top: 18dvh;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 82;
+    display: block;
+    width: auto;
+    max-width: none;
+    height: auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--space-4) var(--space-4)
+      calc(var(--space-6) + env(safe-area-inset-bottom));
+    border: 1px solid var(--line-strong);
+    border-bottom: 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    animation: sheet-up var(--dur-med) var(--ease-out);
+  }
+  .module-layout.sheet-open > .context-slot > * {
+    display: block;
+  }
+  .module-layout.sheet-open > .context-slot > .context-toggle {
+    display: none;
+  }
+  .module-layout.sheet-open > .context-slot .context-panel {
+    position: static;
+    display: block;
+    height: auto;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    background: none;
+  }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(32px);
+  }
+}
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 81;
+  border: 0;
+  background: rgb(20 14 30 / 32%);
+}
+.sheet-close {
+  position: fixed;
+  top: calc(18dvh - 44px);
+  left: 0;
+  right: 0;
+  z-index: 83;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  width: fit-content;
+  min-height: var(--control-md);
+  margin-inline: auto;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 650;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+.sheet-close svg {
+  width: 16px;
+  height: 16px;
+}
+.sheet-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (min-width: 901px) {
+  .sheet-backdrop,
+  .sheet-close {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .module-layout.sheet-open .context-panel {
+    animation: none;
+  }
+}

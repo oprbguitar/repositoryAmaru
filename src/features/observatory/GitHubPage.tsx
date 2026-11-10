@@ -16,6 +16,7 @@ import type {
   RepoDetail,
   SearchSort,
 } from "../../../lib/github/types";
+import { revealOnMobile } from "../../components/layout/mobile";
 import { useAdminSession } from "../admin/adminApi";
 import {
   GithubApiError,
@@ -497,7 +498,10 @@ export function GitHubPage() {
                       type="button"
                       className="gh-row-btn"
                       aria-current={chosen?.fullName === item.fullName}
-                      onClick={() => setSelected(item.fullName)}
+                      onClick={() => {
+                        setSelected(item.fullName);
+                        revealOnMobile(".gh-side");
+                      }}
                     >
                       <span className="gh-row-name">{item.fullName}</span>
                       <span className="gh-row-desc">

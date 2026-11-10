@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { BadgeCheck, Info, PlaySquare, Search, Tv } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import type { VideoItem } from "../../../types/api";
 import { SyncActionButton } from "../../components/common/SyncActionButton";
 import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
+import { revealOnMobile, useIsMobile } from "../../components/layout/mobile";
+import "./videos.css";
 import { AdminNote, AUTO_UPDATE_NOTE, useIsAdmin } from "../admin/AdminNote";
 import { getVideos, synchronize } from "../observatory/api";
 import { formatDate, formatNumber, missing } from "../observatory/format";
@@ -20,6 +22,12 @@ function duration(seconds: number | null): string {
 
 type Platform = "" | "youtube" | "facebook";
 
+function embedUrl(video: VideoItem, autoplay = false) {
+  return video.platform === "facebook"
+    ? `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(video.watchUrl)}&show_text=false${autoplay ? "&autoplay=true" : ""}`
+    : `https://www.youtube-nocookie.com/embed/${video.externalId}${autoplay ? "?autoplay=1&playsinline=1" : ""}`;
+}
+
 const PLATFORM_LABEL: Record<string, string> = {
   youtube: "YouTube",
   facebook: "Facebook",
@@ -27,6 +35,9 @@ const PLATFORM_LABEL: Record<string, string> = {
 
 export function VideosPage() {
   const isAdmin = useIsAdmin();
+  const isMobile = useIsMobile();
+  // Phones play the video inside its own card instead of the side panel.
+  const [playing, setPlaying] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [topic, setTopic] = useState("");
   const [language, setLanguage] = useState("");
@@ -86,11 +97,7 @@ export function VideosPage() {
         <h3>Reproducción</h3>
         <div className="video-embed">
           <iframe
-            src={
-              chosen.platform === "facebook"
-                ? `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(chosen.watchUrl)}&show_text=false`
-                : `https://www.youtube-nocookie.com/embed/${chosen.externalId}`
-            }
+            src={embedUrl(chosen)}
             title={chosen.title}
             allow="encrypted-media; picture-in-picture"
             allowFullScreen
@@ -264,48 +271,66 @@ export function VideosPage() {
         </label>
       </div>
       {items.length ? (
-        <div className="video-grid">
+        <div className="video-grid" data-no-sheet>
           {items.map((video) => (
-            <button
-              type="button"
-              key={video.id}
-              className={`panel video-card ${chosen?.id === video.id ? "selected" : ""}`}
-              onClick={() => setSelected(video)}
-            >
-              {video.thumbnailUrl ? (
-                <img
-                  src={video.thumbnailUrl}
-                  alt=""
-                  loading="lazy"
-                  className="video-thumbnail"
-                />
-              ) : (
-                <div className="video-thumbnail placeholder" />
-              )}
-              <div className="video-card-body">
-                <span className={`platform-chip ${video.platform}`}>
-                  {PLATFORM_LABEL[video.platform] ?? video.platform}
-                </span>
-                <h2>{video.title}</h2>
-                <p className="video-meta">
-                  <Tv className="inline-icon" /> {video.channelTitle}
-                  {video.isOfficialChannel ? (
-                    <BadgeCheck
-                      className="inline-icon"
-                      aria-label="Canal oficial"
-                    />
-                  ) : null}
-                </p>
-                <p className="video-meta">
-                  {formatDate(video.publishedAt)} ·{" "}
-                  {duration(video.durationSeconds)} ·{" "}
-                  {video.viewCount === null
-                    ? "vistas no informadas"
-                    : `${formatNumber(video.viewCount)} vistas`}
-                </p>
-                <p className="video-topic">{video.topic}</p>
-              </div>
-            </button>
+            <Fragment key={video.id}>
+              {isMobile && playing === video.id ? (
+                <div className="video-inline">
+                  <iframe
+                    src={embedUrl(video, true)}
+                    title={video.title}
+                    allow="autoplay; encrypted-media; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              ) : null}
+              <button
+                type="button"
+                className={`panel video-card ${chosen?.id === video.id ? "selected" : ""}${isMobile && playing === video.id ? " is-playing" : ""}`}
+                onClick={() => {
+                  setSelected(video);
+                  if (isMobile) {
+                    setPlaying(video.id);
+                    revealOnMobile(".video-inline");
+                  }
+                }}
+              >
+                {isMobile &&
+                playing === video.id ? null : video.thumbnailUrl ? (
+                  <img
+                    src={video.thumbnailUrl}
+                    alt=""
+                    loading="lazy"
+                    className="video-thumbnail"
+                  />
+                ) : (
+                  <div className="video-thumbnail placeholder" />
+                )}
+                <div className="video-card-body">
+                  <span className={`platform-chip ${video.platform}`}>
+                    {PLATFORM_LABEL[video.platform] ?? video.platform}
+                  </span>
+                  <h2>{video.title}</h2>
+                  <p className="video-meta">
+                    <Tv className="inline-icon" /> {video.channelTitle}
+                    {video.isOfficialChannel ? (
+                      <BadgeCheck
+                        className="inline-icon"
+                        aria-label="Canal oficial"
+                      />
+                    ) : null}
+                  </p>
+                  <p className="video-meta">
+                    {formatDate(video.publishedAt)} ·{" "}
+                    {duration(video.durationSeconds)} ·{" "}
+                    {video.viewCount === null
+                      ? "vistas no informadas"
+                      : `${formatNumber(video.viewCount)} vistas`}
+                  </p>
+                  <p className="video-topic">{video.topic}</p>
+                </div>
+              </button>
+            </Fragment>
           ))}
         </div>
       ) : (

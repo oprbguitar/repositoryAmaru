@@ -40,6 +40,7 @@ import { LANGUAGES, type TranslationKey } from "../../i18n/dictionary";
 import { useLanguage } from "../../i18n/LanguageProvider";
 import { Brand } from "./Brand";
 import { GuideControls } from "./GuideSystem";
+import { MobileDetailSheet } from "./MobileDetailSheet";
 import { PrivacyNotice } from "./PrivacyNotice";
 import "./shell-extras.css";
 import { mobileNavigation, navigation } from "./navigation";
@@ -200,6 +201,7 @@ export function AppShell() {
 
   // --- Global shortcuts: Ctrl+B navigation, Ctrl+K or "/" search ------------
   const searchRef = useRef<HTMLInputElement>(null);
+  const workspaceRef = useRef<HTMLElement>(null);
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       const mod = event.ctrlKey || event.metaKey;
@@ -631,7 +633,7 @@ export function AppShell() {
         />
       ) : null}
 
-      <main className="workspace" aria-label={activeLabel}>
+      <main className="workspace" aria-label={activeLabel} ref={workspaceRef}>
         <Suspense
           fallback={
             <div className="route-loading" role="status">
@@ -673,6 +675,7 @@ export function AppShell() {
       </nav>
 
       <PrivacyNotice />
+      <MobileDetailSheet workspaceRef={workspaceRef} />
 
       <ShutdownDialog
         open={shutdownOpen}

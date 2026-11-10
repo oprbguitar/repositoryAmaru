@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { revealOnMobile } from "../../components/layout/mobile";
 import {
   AGENT_BLUEPRINTS,
   AGENT_PATTERNS,
@@ -226,7 +227,10 @@ function ChainsTab() {
                   type="button"
                   className="pr-card"
                   aria-pressed={selected?.id === chain.id}
-                  onClick={() => setSelectedId(chain.id)}
+                  onClick={() => {
+                    setSelectedId(chain.id);
+                    revealOnMobile(".pr-inspector");
+                  }}
                 >
                   <span className="pr-card-top">
                     <CategoryChip id={chain.category} />
@@ -717,7 +721,10 @@ function AgentsTab() {
                   type="button"
                   className="pr-card"
                   aria-pressed={selected?.id === item.id}
-                  onClick={() => setSelectedId(item.id)}
+                  onClick={() => {
+                    setSelectedId(item.id);
+                    revealOnMobile(".pr-agents .pr-inspector");
+                  }}
                 >
                   <span className="pr-card-top">
                     <span className="pr-chip" data-bubble={5}>
