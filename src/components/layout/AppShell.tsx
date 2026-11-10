@@ -34,6 +34,7 @@ import {
 } from "react-router-dom";
 import { normalizeSearch } from "../../../lib/normalization/search";
 import type { ApiResponse, LibraryStats } from "../../../types/api";
+import { useIsAdmin } from "../../features/admin/AdminNote";
 import { getLiveEvents, getSources } from "../../features/observatory/api";
 import { LANGUAGES, type TranslationKey } from "../../i18n/dictionary";
 import { useLanguage } from "../../i18n/LanguageProvider";
@@ -270,6 +271,7 @@ export function AppShell() {
     refetchInterval: 60_000,
   });
   const devHealth = useDevServerHealth();
+  const isAdmin = useIsAdmin();
   const library = status.data?.data;
   const sourceSummary = sources.data
     ? summarizeSources(sources.data.data)
@@ -352,35 +354,42 @@ export function AppShell() {
         <GlobalSearch inputRef={searchRef} />
 
         <div className="topbar-actions">
-          <Link
-            className={`source-indicator is-${
-              sources.isError ? "error" : (sourceSummary?.level ?? "loading")
-            }`}
-            to="/admin/sources"
-            title={t("shell.configureIntegrations")}
-          >
-            <i aria-hidden="true" />
-            <span className="source-indicator-label">{t("shell.sources")}</span>
-            <span className="source-indicator-value">
-              {sources.isError
-                ? t("shell.sourcesUnavailable")
-                : !sourceSummary
-                  ? t("common.loading")
-                  : sourceSummary.enabled === 0
-                    ? t("shell.sourcesEmpty")
-                    : sourceSummary.failed > 0
-                      ? t("shell.sourcesFailed").replace(
-                          "{failed}",
-                          String(sourceSummary.failed),
-                        )
-                      : t("shell.sourcesConnected")
-                          .replace(
-                            "{connected}",
-                            String(sourceSummary.connected),
+          {isAdmin ? (
+            <Link
+              className={`source-indicator is-${
+                sources.isError ? "error" : (sourceSummary?.level ?? "loading")
+              }`}
+              to="/admin/sources"
+              title={t("shell.configureIntegrations")}
+            >
+              <i aria-hidden="true" />
+              <span className="source-indicator-label">
+                {t("shell.sources")}
+              </span>
+              <span className="source-indicator-value">
+                {sources.isError
+                  ? t("shell.sourcesUnavailable")
+                  : !sourceSummary
+                    ? t("common.loading")
+                    : sourceSummary.enabled === 0
+                      ? t("shell.sourcesEmpty")
+                      : sourceSummary.failed > 0
+                        ? t("shell.sourcesFailed").replace(
+                            "{failed}",
+                            String(sourceSummary.failed),
                           )
-                          .replace("{enabled}", String(sourceSummary.enabled))}
-            </span>
-          </Link>
+                        : t("shell.sourcesConnected")
+                            .replace(
+                              "{connected}",
+                              String(sourceSummary.connected),
+                            )
+                            .replace(
+                              "{enabled}",
+                              String(sourceSummary.enabled),
+                            )}
+              </span>
+            </Link>
+          ) : null}
 
           <div className="shell-menu" ref={display.rootRef}>
             <button

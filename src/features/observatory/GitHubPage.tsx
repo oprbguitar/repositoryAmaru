@@ -28,6 +28,7 @@ import { RepoInspector } from "../github/RepoInspector";
 import { RepoViewer } from "../github/RepoViewer";
 import { formatDate, formatNumber } from "./format";
 import "../github/github.css";
+import { AdminNote } from "../admin/AdminNote";
 
 type Source =
   | { kind: "type"; id: string }
@@ -450,9 +451,14 @@ export function GitHubPage() {
                 {rate?.resetAt
                   ? `Se reinicia a las ${new Date(rate.resetAt).toLocaleTimeString("es-PE")}. `
                   : ""}
-                {tokenOn
-                  ? ""
-                  : "Configura GITHUB_TOKEN en Integraciones para subir el límite."}
+                {tokenOn ? (
+                  ""
+                ) : (
+                  <AdminNote fallback="Vuelve a intentarlo en unos minutos.">
+                    Configura GITHUB_TOKEN en Administración para subir el
+                    límite.
+                  </AdminNote>
+                )}
               </p>
             ) : results.error ? (
               <p className="gh-note gh-note-warn" role="alert">

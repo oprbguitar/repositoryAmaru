@@ -15,7 +15,11 @@ export type CategoryId =
   | "software"
   | "investigacion"
   | "aprendizaje"
-  | "agentes";
+  | "agentes"
+  | "datos"
+  | "diagramas"
+  | "documentos"
+  | "tendencias";
 
 export const CATEGORIES: ReadonlyArray<{
   id: CategoryId;
@@ -82,6 +86,30 @@ export const CATEGORIES: ReadonlyArray<{
     label: "Agentes",
     hint: "Sistemas agénticos por fases",
     bubble: 5,
+  },
+  {
+    id: "datos",
+    label: "Análisis de datos",
+    hint: "CSV/Excel → perfil → hallazgos → gráficos",
+    bubble: 3,
+  },
+  {
+    id: "diagramas",
+    label: "Diagramas y gráficos",
+    hint: "Flujos, pie charts y secuencias en código",
+    bubble: 2,
+  },
+  {
+    id: "documentos",
+    label: "Documentos largos",
+    hint: "Leer, categorizar y resumir por partes",
+    bubble: 4,
+  },
+  {
+    id: "tendencias",
+    label: "Tendencias",
+    hint: "Ingeniería de contexto, MCP y agentes de código",
+    bubble: 1,
   },
 ];
 
@@ -863,6 +891,232 @@ export const CHAINS: ReadonlyArray<PromptChain> = [
       },
     ],
     sources: [SOURCES.course, SOURCES.promptGuide],
+  },
+  {
+    id: "analisis-de-datos",
+    category: "datos",
+    title: "Análisis de datos desde un CSV o Excel",
+    summary:
+      "Perfil de los datos, limpieza, preguntas de negocio, hallazgos con cifras y gráficos listos. Sin inventar valores.",
+    level: "intermedio",
+    variables: [
+      {
+        key: "datos",
+        label: "Qué datos son",
+        example: "ventas mensuales 2025 por tienda",
+      },
+      {
+        key: "pregunta",
+        label: "Pregunta de negocio",
+        example: "¿qué tiendas crecen y cuáles caen?",
+      },
+    ],
+    steps: [
+      {
+        title: "1 · Perfil de los datos",
+        goal: "Entender columnas, tipos y calidad antes de concluir.",
+        tier: "contexto",
+        prompt:
+          "Adjunto un archivo con {{datos}}. Antes de analizar, describe: columnas y tipo, filas, rango de fechas, valores faltantes, duplicados y valores atípicos. No calcules conclusiones todavía.",
+        output: "Perfil de calidad",
+      },
+      {
+        title: "2 · Limpieza propuesta",
+        goal: "Decidir qué corregir y por qué.",
+        tier: "rapido",
+        prompt:
+          "Propón las transformaciones de limpieza necesarias y su impacto (filas afectadas). Muéstralas como código Python (pandas) o fórmulas de Excel, sin aplicarlas aún.",
+        output: "Plan de limpieza + código",
+      },
+      {
+        title: "3 · Análisis guiado por la pregunta",
+        goal: "Responder con cifras verificables.",
+        tier: "razonador",
+        prompt:
+          "Responde: {{pregunta}}. Para cada hallazgo indica la cifra exacta, cómo se calculó y el nivel de confianza. Si los datos no alcanzan para responder, dilo.",
+        output: "Hallazgos con cifras",
+      },
+      {
+        title: "4 · Gráficos",
+        goal: "Un gráfico por mensaje, el adecuado.",
+        tier: "rapido",
+        prompt:
+          "Para cada hallazgo, elige el gráfico adecuado (línea para tiempo, barras para comparar, dispersión para relación; pie chart solo si son partes de un todo con ≤5 categorías) y genera el código o la especificación con títulos y ejes en español.",
+        output: "Gráficos + código",
+      },
+      {
+        title: "5 · Resumen ejecutivo",
+        goal: "Lo que una gerencia necesita leer.",
+        tier: "rapido",
+        prompt:
+          "Resume en 5 viñetas los hallazgos, 3 recomendaciones y las limitaciones de los datos.",
+        output: "Resumen de 1 página",
+      },
+    ],
+    sources: [SOURCES.openaiCookbook, SOURCES.claudeCookbooks],
+  },
+  {
+    id: "diagramas-y-graficos",
+    category: "diagramas",
+    title: "Diagramas de flujo y gráficos detallados",
+    summary:
+      "El modelo escribe el diagrama como código (mermaid) y una herramienta lo dibuja: flujos, secuencias, procesos y pie charts sin errores de trazo.",
+    level: "intermedio",
+    variables: [
+      {
+        key: "proceso",
+        label: "Proceso o datos",
+        example: "atención de un reclamo desde que llega hasta que se cierra",
+      },
+    ],
+    steps: [
+      {
+        title: "1 · Pasos y decisiones",
+        goal: "Ordenar antes de dibujar.",
+        tier: "rapido",
+        prompt:
+          "Describe {{proceso}} como lista numerada de pasos. Marca las decisiones (sí/no), los responsables y los puntos de espera.",
+        output: "Lista de pasos y decisiones",
+      },
+      {
+        title: "2 · Diagrama de flujo",
+        goal: "Código que se dibuja solo.",
+        tier: "rapido",
+        prompt:
+          "Convierte la lista en un bloque ```mermaid flowchart TD```. Usa rombos para decisiones, subgrafos por responsable y textos cortos sin caracteres especiales. Devuelve solo el bloque.",
+        output: "Código mermaid (pegar en Mermaid Live)",
+      },
+      {
+        title: "3 · Diagrama de secuencia",
+        goal: "Quién habla con quién.",
+        tier: "rapido",
+        prompt:
+          "Genera también un ```mermaid sequenceDiagram``` con los actores del proceso y los mensajes entre ellos.",
+        output: "Secuencia mermaid",
+      },
+      {
+        title: "4 · Gráfico de proporciones",
+        goal: "Pie chart cuando corresponde.",
+        tier: "rapido",
+        prompt:
+          "Si hay proporciones (por ejemplo, % de reclamos por tipo), genera un ```mermaid pie``` con título. Si no hay datos reales, deja valores de ejemplo marcados como EJEMPLO.",
+        output: "Pie chart mermaid",
+      },
+    ],
+    sources: [SOURCES.mermaid, SOURCES.course],
+  },
+  {
+    id: "documento-largo",
+    category: "documentos",
+    title: "Leer un documento largo: categorizar y resumir",
+    summary:
+      "Para PDFs de cientos de páginas: índice, categorías, resumen por parte y preguntas. Funciona con NotebookLM, Claude, Gemini o Copilot en Word.",
+    level: "intermedio",
+    variables: [
+      {
+        key: "documento",
+        label: "Documento",
+        example: "reglamento interno de 180 páginas",
+      },
+      {
+        key: "objetivo",
+        label: "Para qué lo lees",
+        example: "saber qué obligaciones tengo como jefe de área",
+      },
+    ],
+    steps: [
+      {
+        title: "1 · Mapa del documento",
+        goal: "Ver la estructura antes del detalle.",
+        tier: "contexto",
+        prompt:
+          "Adjunto {{documento}}. Devuelve su índice real (capítulos y páginas) y, en una línea por capítulo, de qué trata. No resumas todavía.",
+        output: "Índice comentado",
+      },
+      {
+        title: "2 · Categorización",
+        goal: "Agrupar por temas útiles.",
+        tier: "contexto",
+        prompt:
+          "Clasifica el contenido en 5–8 categorías útiles para: {{objetivo}}. Para cada categoría lista las secciones y páginas donde aparece.",
+        output: "Tabla categoría → páginas",
+      },
+      {
+        title: "3 · Resumen por categoría",
+        goal: "Lo esencial, con cita.",
+        tier: "razonador",
+        prompt:
+          "Resume cada categoría en máximo 6 viñetas. Cada viñeta termina con (pág. N). Si algo es ambiguo en el texto, márcalo como [AMBIGUO].",
+        output: "Resúmenes citados",
+      },
+      {
+        title: "4 · Preguntas y acciones",
+        goal: "Pasar de leer a actuar.",
+        tier: "rapido",
+        prompt:
+          "Con base en {{objetivo}}, lista: obligaciones, plazos, riesgos y 5 preguntas que debería hacer a quien corresponda. Todo con número de página.",
+        output: "Lista de acciones",
+      },
+    ],
+    sources: [SOURCES.course, SOURCES.geminiCookbook],
+  },
+  {
+    id: "ingenieria-de-contexto",
+    category: "tendencias",
+    title: "Ingeniería de contexto (más allá del prompt)",
+    summary:
+      "La tendencia actual: en vez de un prompt perfecto, preparar el contexto (reglas, ejemplos, archivos y herramientas MCP) para que un agente trabaje solo y bien.",
+    level: "avanzado",
+    variables: [
+      {
+        key: "tarea",
+        label: "Tarea recurrente",
+        example: "preparar el reporte semanal de ventas",
+      },
+    ],
+    steps: [
+      {
+        title: "1 · Archivo de reglas",
+        goal: "Lo que el agente debe saber siempre.",
+        tier: "razonador",
+        prompt:
+          "Redacta un archivo de instrucciones permanentes (tipo CLAUDE.md o AGENTS.md) para la tarea «{{tarea}}»: objetivo, público, formato de salida, fuentes permitidas, lo que nunca debe hacer y cómo verificar el resultado.",
+        output: "Archivo de reglas",
+      },
+      {
+        title: "2 · Ejemplos de oro",
+        goal: "Mostrar, no solo decir.",
+        tier: "rapido",
+        prompt:
+          "Crea 2 ejemplos completos de entrada → salida ideal para «{{tarea}}» y 1 ejemplo de salida incorrecta explicando por qué está mal.",
+        output: "Ejemplos few-shot",
+      },
+      {
+        title: "3 · Herramientas (MCP)",
+        goal: "Dar acceso a datos, no pegarlos.",
+        tier: "razonador",
+        prompt:
+          "Lista qué herramientas o conectores MCP necesita el agente para «{{tarea}}» (hoja de cálculo, correo, base de datos, búsqueda), qué permisos mínimos requiere cada uno y qué acciones deben pedir confirmación humana.",
+        output: "Mapa de herramientas y permisos",
+      },
+      {
+        title: "4 · Habilidad reutilizable",
+        goal: "Empaquetar para repetir.",
+        tier: "codigo",
+        prompt:
+          "Empaqueta reglas, ejemplos y pasos como una «skill» reutilizable: nombre, cuándo activarse, pasos y criterio de terminado. Formato Markdown con encabezado YAML.",
+        output: "Skill en Markdown",
+      },
+      {
+        title: "5 · Evaluación",
+        goal: "Medir antes de confiar.",
+        tier: "rapido",
+        prompt:
+          "Diseña 5 casos de prueba con resultado esperado para comprobar que el agente hace bien «{{tarea}}» y una rúbrica de 1 a 5.",
+        output: "Casos de prueba + rúbrica",
+      },
+    ],
+    sources: [SOURCES.claudeSkills, SOURCES.superpowers, SOURCES.dspy],
   },
 ];
 

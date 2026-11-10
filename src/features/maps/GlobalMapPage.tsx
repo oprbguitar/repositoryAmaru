@@ -17,6 +17,7 @@ import {
 } from "./llmModel";
 import { MapCanvas, type MapLayerVisibility } from "./MapCanvas";
 import "./maps.css";
+import { AdminNote, AUTO_UPDATE_NOTE } from "../admin/AdminNote";
 
 const MODES: Array<{ id: MapMode; label: string; purpose: string }> = [
   {
@@ -213,8 +214,10 @@ export function GlobalMapPage() {
                   : "Sin datos geográficos indexados"}
               </h2>
               <p>
-                Ejecuta «Sincronizar mapa» para indexar instituciones
-                (OpenAlex). No se muestran puntos inventados.
+                <AdminNote fallback={AUTO_UPDATE_NOTE}>
+                  Ejecuta «Sincronizar mapa» para indexar instituciones
+                  (OpenAlex). No se muestran puntos inventados.
+                </AdminNote>
               </p>
             </div>
           )

@@ -26,6 +26,7 @@ import {
   updateDocument,
 } from "./api";
 import "./local-library.css";
+import { AdminNote } from "../admin/AdminNote";
 import {
   type AnalysisFilter,
   applyView,
@@ -694,9 +695,11 @@ function AnalysisSection({ document }: { document: LocalDocument }) {
   );
   if (!configured)
     return (
-      <p className="ll-muted">
-        Fuente no configurada: define NVIDIA_API_KEY (Admin, Claves de API).
-      </p>
+      <AdminNote>
+        <p className="ll-muted">
+          Fuente no configurada: define NVIDIA_API_KEY (Admin, Claves de API).
+        </p>
+      </AdminNote>
     );
   if (!hasText)
     return <p className="ll-muted">Sin texto extraído para analizar.</p>;

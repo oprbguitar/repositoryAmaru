@@ -72,10 +72,18 @@ async function fetchJson(
     headers: { accept: "application/json", "user-agent": USER_AGENT },
     signal: AbortSignal.timeout(30_000),
   });
-  if (!response.ok)
+  if (!response.ok) {
+    // Google APIs explain the refusal in error.errors[0].reason (keyInvalid,
+    // accessNotConfigured, quotaExceeded…). Only that short code is kept: the
+    // full message can name the cloud project.
+    const body = (await response.json().catch(() => null)) as {
+      error?: { errors?: Array<{ reason?: string }>; status?: string };
+    } | null;
+    const reason = body?.error?.errors?.[0]?.reason ?? body?.error?.status;
     throw new Error(
-      `La fuente respondió HTTP ${response.status} (${new URL(url).pathname}).`,
+      `La fuente respondió HTTP ${response.status}${reason ? ` · ${reason}` : ""} (${new URL(url).pathname}).`,
     );
+  }
   return { payload: await response.json(), status: response.status };
 }
 
@@ -444,6 +452,8 @@ export async function syncYouTube(
   );
 
   const collected: NormalizedVideo[] = [];
+  let succeeded = 0;
+  let lastError: string | null = null;
   // Subidas recientes de canales oficiales vía playlist de uploads (1 unidad c/u)
   for (const channel of channels.results) {
     const uploadsPlaylist = channel.channel_id.replace(/^UC/, "UU");
@@ -458,8 +468,10 @@ export async function syncYouTube(
           `channel-${channel.id}`,
         ),
       );
-    } catch {
+      succeeded += 1;
+    } catch (error) {
       // Canal sin uploads accesibles; continuar.
+      lastError = error instanceof Error ? error.message : String(error);
     }
   }
   // Consultas temáticas configurables (search = 100 unidades c/u)
@@ -485,12 +497,18 @@ export async function syncYouTube(
             group.language,
           ),
         );
-      } catch {
+        succeeded += 1;
+      } catch (error) {
         // Se preserva el resto de grupos ante fallos puntuales de cuota.
+        lastError = error instanceof Error ? error.message : String(error);
       }
     }
   }
 
+  // Every request refused (invalid key, API disabled, quota): report it
+  // instead of a silent «connected · 0 videos».
+  if (succeeded === 0 && lastError)
+    throw new Error(`YouTube rechazó todas las consultas: ${lastError}`);
   const unique = [
     ...new Map(collected.map((video) => [video.externalId, video])).values(),
   ];

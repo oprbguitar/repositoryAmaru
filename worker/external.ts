@@ -1257,6 +1257,15 @@ export async function synchronizeScope(
   return summaries;
 }
 
+/** Every enabled external source, least recently attempted first. */
+export async function allSourceIds(env: ExternalEnv): Promise<string[]> {
+  const result = await env.DB.prepare(`
+    SELECT id FROM source_registry WHERE is_enabled = 1 AND source_type != 'local_directory'
+    ORDER BY CASE WHEN last_request_at IS NULL THEN 0 ELSE 1 END, last_request_at ASC
+  `).all<{ id: string }>();
+  return result.results.map((row) => row.id);
+}
+
 export async function dueSourceIds(env: ExternalEnv): Promise<string[]> {
   const result = await env.DB.prepare(`
     SELECT id FROM source_registry WHERE is_enabled = 1 AND source_type != 'local_directory'

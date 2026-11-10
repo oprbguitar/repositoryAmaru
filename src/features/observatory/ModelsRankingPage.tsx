@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { CapabilityTag, ModelRankingEntry } from "../../../types/api";
 import { SyncActionButton } from "../../components/common/SyncActionButton";
 import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
+import { AUTO_UPDATE_NOTE, useIsAdmin } from "../admin/AdminNote";
 import { FavoriteButton, FavoriteStar } from "../favorites/FavoriteStar";
 import { ModelExplorer } from "../models/ModelExplorer";
 import {
@@ -388,6 +389,7 @@ function ModelContextPanel({
 }
 
 function ApiRankingsView({ onSwitch }: { onSwitch: () => void }) {
+  const isAdmin = useIsAdmin();
   const [tab, setTab] = useState("category-programming");
   const [selected, setSelected] = useState<ModelRankingEntry | null>(null);
   const [drawer, setDrawer] = useState<ModelRankingEntry | null>(null);
@@ -676,7 +678,9 @@ function ApiRankingsView({ onSwitch }: { onSwitch: () => void }) {
               <p>
                 {tagFilter
                   ? "Quita el filtro o elige otra etiqueta. Las etiquetas se derivan de los campos publicados por la fuente."
-                  : "Ejecuta «Sincronizar modelos» para obtener el catálogo y los rankings reales de OpenRouter. No se muestran posiciones inventadas."}
+                  : isAdmin
+                    ? "Ejecuta «Sincronizar modelos» para obtener el catálogo y los rankings reales de OpenRouter. No se muestran posiciones inventadas."
+                    : AUTO_UPDATE_NOTE}
               </p>
             </div>
           )}

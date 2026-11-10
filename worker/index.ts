@@ -18,7 +18,7 @@ import type {
 import { adminRequired, adminRouter, isAdmin, needsAdmin } from "./admin";
 import { developerLabRouter } from "./developer-lab/router";
 import {
-  dueSourceIds,
+  allSourceIds,
   type ExternalEnv,
   synchronizeScope,
   synchronizeSource,
@@ -1137,7 +1137,7 @@ async function ensureInitialSynchronization(env: Env): Promise<void> {
     "SELECT value FROM app_settings WHERE key = 'initial_public_sync'",
   ).first<{ value: string }>();
   if (state?.value) return;
-  const sourceIds = await dueSourceIds(env as ExternalEnv);
+  const sourceIds = await allSourceIds(env as ExternalEnv);
   await dispatchSynchronization(env, sourceIds, "scheduled");
   await env.DB.prepare(
     "INSERT OR REPLACE INTO app_settings (key, value, updated_at) VALUES ('initial_public_sync', 'queued', CURRENT_TIMESTAMP)",
@@ -1510,7 +1510,9 @@ export default {
   },
 
   async scheduled(_controller: ScheduledController, env: Env): Promise<void> {
-    const sourceIds = await dueSourceIds(env as ExternalEnv);
+    // Production runs this weekly (Monday 09:00 UTC, see wrangler.jsonc) and
+    // refreshes every enabled source; the administrator can sync on demand.
+    const sourceIds = await allSourceIds(env as ExternalEnv);
     await dispatchSynchronization(env, sourceIds, "scheduled");
   },
 

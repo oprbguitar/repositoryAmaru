@@ -41,7 +41,9 @@ import {
 } from "./course";
 import { addHistory, removeHistory, useHistory } from "./history";
 import { saveTextFile, slugify } from "./saveFile";
+import { ToolSuggestions } from "./ToolSuggestions";
 import { TryFreeAi } from "./TryFreeAi";
+import { suggestionsFor } from "./tools";
 import "./prompts.css";
 
 const TABS = [
@@ -276,6 +278,8 @@ function ChainInspector({ chain }: { chain: PromptChain }) {
         <p>{chain.summary}</p>
       </header>
 
+      <ToolSuggestions category={chain.category} />
+
       <fieldset className="pr-vars">
         <legend>Completa las variables</legend>
         {chain.variables.map((variable) => (
@@ -461,6 +465,22 @@ const PRODUCTS: ReadonlyArray<{
     label: "Decisión difícil",
     chainId: "arbol-de-pensamientos",
   },
+  { id: "datos", label: "Análisis de datos", chainId: "analisis-de-datos" },
+  {
+    id: "diagramas",
+    label: "Diagrama o gráfico",
+    chainId: "diagramas-y-graficos",
+  },
+  {
+    id: "documento",
+    label: "Resumir un documento largo",
+    chainId: "documento-largo",
+  },
+  {
+    id: "contexto",
+    label: "Agente con contexto (tendencia)",
+    chainId: "ingenieria-de-contexto",
+  },
 ];
 
 const TONES = ["claro y cercano", "formal", "técnico", "divertido"] as const;
@@ -505,8 +525,25 @@ function GeneratorTab() {
       "",
     ];
     const parts = [header.join("\n")];
-    if (chain)
+    if (chain) {
+      const tools = suggestionsFor(chain.category);
+      parts.push(
+        [
+          "## Dónde ejecutarlo",
+          "",
+          tools.tip,
+          "",
+          ...tools.online.map(
+            (tool) => `- [${tool.name}](${tool.url}) — ${tool.note}`,
+          ),
+          ...tools.local.map(
+            (model) =>
+              `- En tu PC: ${model.name} (ollama run ${model.ollama}, ${model.ram})`,
+          ),
+        ].join("\n"),
+      );
       parts.push(chainToMarkdown(chain, values).replace(/^# /, "## Cadena: "));
+    }
     if (blueprint)
       parts.push(
         blueprintToMarkdown(blueprint).replace(/^# /, "## Sistema agéntico: "),

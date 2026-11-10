@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import type { VideoItem } from "../../../types/api";
 import { SyncActionButton } from "../../components/common/SyncActionButton";
 import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
+import { AdminNote, AUTO_UPDATE_NOTE, useIsAdmin } from "../admin/AdminNote";
 import { getVideos, synchronize } from "../observatory/api";
 import { formatDate, formatNumber, missing } from "../observatory/format";
 
@@ -25,6 +26,7 @@ const PLATFORM_LABEL: Record<string, string> = {
 };
 
 export function VideosPage() {
+  const isAdmin = useIsAdmin();
   const [query, setQuery] = useState("");
   const [topic, setTopic] = useState("");
   const [language, setLanguage] = useState("");
@@ -165,7 +167,7 @@ export function VideosPage() {
           onClick={runSync}
         />
       </header>
-      {data && !data.integrations.youtubeConfigured ? (
+      {isAdmin && data && !data.integrations.youtubeConfigured ? (
         <div className="panel status-banner">
           <Info />
           <div>
@@ -178,7 +180,7 @@ export function VideosPage() {
           </div>
         </div>
       ) : null}
-      {data && !data.integrations.metaConfigured ? (
+      {isAdmin && data && !data.integrations.metaConfigured ? (
         <div className="panel status-banner">
           <Info />
           <div>
@@ -308,14 +310,16 @@ export function VideosPage() {
         </div>
       ) : (
         <div className="panel honest-empty">
-          <h2>No hay videos indexados</h2>
+          <h2>Videos en preparación</h2>
           <p>
-            Ejecuta «Sincronizar videos» para obtener contenidos reales de la
-            YouTube Data API con la clave configurada.
+            <AdminNote fallback={AUTO_UPDATE_NOTE}>
+              Ejecuta «Sincronizar videos» para obtener contenidos reales de la
+              YouTube Data API con la clave configurada.
+            </AdminNote>
           </p>
         </div>
       )}
-      <section className="panel">
+      <section className="panel" hidden={!isAdmin}>
         <div className="panel-heading">
           <h2>Cobertura por plataforma</h2>
           <span>{total} videos indexados</span>

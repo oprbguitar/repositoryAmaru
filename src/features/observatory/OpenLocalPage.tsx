@@ -28,6 +28,7 @@ import type {
 import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
 import { FavoriteStar } from "../favorites/FavoriteStar";
 import { LocalModelManager } from "../local-models/LocalModelManager";
+import { LocalRunGuide } from "../local-models/LocalRunGuide";
 import { getGithubRankings, getModelRankings, getRecords } from "./api";
 import { formatDate, formatNumber, missing } from "./format";
 import { ResourceAvatar } from "./ResourceAvatar";
@@ -426,6 +427,7 @@ export function OpenLocalPage() {
           </p>
         </div>
       </header>
+      <LocalRunGuide />
       <LocalModelManager />
 
       <div className="resource-stats">

@@ -271,7 +271,7 @@ export function ForecastPanel() {
                     .filter((p) => p.configured)
                     .map((p) => p.name)
                     .join(", ")
-                : "ninguno configurado (se usan las cotizaciones guardadas)"}
+                : "cotizaciones guardadas"}
               .
             </p>
           </div>

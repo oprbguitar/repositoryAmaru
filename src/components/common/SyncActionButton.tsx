@@ -1,4 +1,5 @@
 import { RefreshCw } from "lucide-react";
+import { useIsAdmin } from "../../features/admin/AdminNote";
 
 /**
  * Botón de sincronización compartido por todos los módulos.
@@ -30,6 +31,8 @@ export function SyncActionButton({
   /** Contenido adicional bajo la etiqueta (avisos de credencial, por ejemplo). */
   children?: React.ReactNode;
 }) {
+  // Manual sync is an administrator tool; visitors rely on the weekly cron.
+  if (!useIsAdmin()) return null;
   return (
     <button
       type="button"

@@ -34,6 +34,7 @@ import { formatDate, formatNumber } from "../observatory/format";
 import { PriceTrend } from "./PriceTrend";
 import { TodayModelsTable } from "./TodayModelsTable";
 import "./today.css";
+import { AdminNote } from "../admin/AdminNote";
 
 const DAY_MS = 86_400_000;
 
@@ -193,9 +194,11 @@ export function TodayPage() {
             ? `${formatDate(lastSync)} (${relativeDay(lastSync)})`
             : "sin sincronizaciones"}
         </span>
-        <Link className="secondary-button compact" to="/admin/sources">
-          {t("today.sync")}
-        </Link>
+        <AdminNote>
+          <Link className="secondary-button compact" to="/admin/sources">
+            {t("today.sync")}
+          </Link>
+        </AdminNote>
       </header>
 
       <div className="status-banner">
@@ -358,9 +361,11 @@ export function TodayPage() {
                 </strong>
               </div>
             </div>
-            <Link className="panel-link" to="/admin/sources">
-              {t("shell.configureIntegrations")} <ArrowRight />
-            </Link>
+            <AdminNote>
+              <Link className="panel-link" to="/admin/sources">
+                {t("shell.configureIntegrations")} <ArrowRight />
+              </Link>
+            </AdminNote>
           </div>
         </section>
 

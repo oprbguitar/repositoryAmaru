@@ -111,3 +111,14 @@ npx wrangler d1 migrations apply DB --remote --env production
   - ejercicios de comparación.
 - Las técnicas están en `catalog.ts`.
 - La carpeta del escritorio ya puede borrarse.
+
+## Sincronización y vista pública (2026-11-10)
+
+- **Automática:** cron semanal, lunes 09:00 UTC (04:00 en Lima). Sincroniza **todas** las fuentes activas mediante la cola. Las cotizaciones de mercado no dependen del cron: se consultan en vivo, con caché de 60 s.
+- **Manual:** los botones «Sincronizar …» solo aparecen con sesión de administrador. Además, al guardar una clave en Administración se sincronizan de inmediato las fuentes que la usan.
+- **Vista de visitante:** los avisos de configuración («falta X_API_KEY», «ejecuta Sincronizar», el indicador de fuentes de la cabecera) solo se muestran al administrador. El visitante ve un texto neutro («Los datos se actualizan automáticamente cada semana»). El componente es `src/features/admin/AdminNote.tsx`.
+- **YouTube:** la clave debe permitir llamadas desde un servidor. En Google Cloud Console → Credenciales:
+  - en «Restricciones de aplicación» elige **Ninguna**; las restricciones por referente HTTP devuelven `403 forbidden`;
+  - en «Restricciones de API» limita la clave a **YouTube Data API v3**.
+
+  Si YouTube rechaza todas las consultas, el error se ve en Administración → «Fuentes y sincronización».

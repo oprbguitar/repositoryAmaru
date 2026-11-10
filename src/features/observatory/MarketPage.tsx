@@ -17,6 +17,7 @@ import { Link } from "react-router-dom";
 import type { MarketQuote, ObservatoryRecord } from "../../../types/api";
 import { SyncActionButton } from "../../components/common/SyncActionButton";
 import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
+import { AdminNote, AUTO_UPDATE_NOTE } from "../admin/AdminNote";
 import { ForecastPanel } from "../market/ForecastPanel";
 import { getMarketQuotes, getRecords, synchronize } from "./api";
 import { formatDate, missing } from "./format";
@@ -313,7 +314,7 @@ export function MarketPage() {
             <small>
               {quoteData?.refreshedAt
                 ? `cotizaciones ${formatDate(quoteData.refreshedAt)}`
-                : "cotizaciones no configuradas"}
+                : "cotizaciones en preparación"}
             </small>
           </div>
         </article>
@@ -327,7 +328,7 @@ export function MarketPage() {
           <span>
             {quoteData?.configured
               ? `${quoteData.quotes.length} símbolos · actualiza cada 60 s${quoteData.fromCache ? " · desde caché" : ""}`
-              : "Finnhub no configurado"}
+              : "en preparación"}
           </span>
         </div>
         {quoteData?.configured ? (
@@ -338,20 +339,26 @@ export function MarketPage() {
               ))}
             </div>
             {quoteData.reason ? (
-              <p className="coverage-note">{quoteData.reason}</p>
+              <p className="coverage-note">
+                <AdminNote fallback="Precios de cierre diario, no en tiempo real.">
+                  {quoteData.reason}
+                </AdminNote>
+              </p>
             ) : null}
           </>
         ) : (
           <div className="honest-empty">
-            <h2>Cotizaciones intradía no configuradas</h2>
-            <p>
-              {quoteData?.reason ??
-                "Se requiere una clave de Finnhub para mostrar precios verificables."}{" "}
-              No se muestran precios sin una respuesta real de la fuente.
-            </p>
-            <Link className="source-link-button" to="/admin/sources">
-              Configurar integraciones
-            </Link>
+            <AdminNote fallback={<p>{AUTO_UPDATE_NOTE}</p>}>
+              <h2>Cotizaciones intradía no configuradas</h2>
+              <p>
+                {quoteData?.reason ??
+                  "Se requiere una clave de Finnhub para mostrar precios verificables."}{" "}
+                No se muestran precios sin una respuesta real de la fuente.
+              </p>
+              <Link className="source-link-button" to="/admin/sources">
+                Configurar integraciones
+              </Link>
+            </AdminNote>
           </div>
         )}
       </section>
@@ -379,8 +386,10 @@ export function MarketPage() {
           ) : (
             <div className="honest-empty">
               <p>
-                Ejecuta «Sincronizar mercado» para indexar ingresos y utilidad
-                neta reportados oficialmente ante la SEC.
+                <AdminNote fallback={AUTO_UPDATE_NOTE}>
+                  Ejecuta «Sincronizar mercado» para indexar ingresos y utilidad
+                  neta reportados oficialmente ante la SEC.
+                </AdminNote>
               </p>
             </div>
           )}
@@ -506,8 +515,10 @@ export function MarketPage() {
           ) : (
             <div className="honest-empty">
               <p>
-                Sin series de FRED indexadas. Configura FRED_API_KEY en
-                Configuración › Integraciones y ejecuta «Sincronizar mercado».
+                <AdminNote fallback={AUTO_UPDATE_NOTE}>
+                  Sin series de FRED indexadas. Configura FRED_API_KEY en
+                  Administración y ejecuta «Sincronizar mercado».
+                </AdminNote>
               </p>
             </div>
           )}
@@ -645,11 +656,13 @@ export function MarketPage() {
           </div>
         ) : (
           <div className="honest-empty">
-            <h2>Sin fundamentos sincronizados</h2>
+            <h2>Fundamentos en preparación</h2>
             <p>
-              Ejecuta «Sincronizar mercado» para indexar ingresos y utilidad
-              neta reportados oficialmente ante la SEC (NVIDIA, Microsoft,
-              Alphabet, Meta, AMD, Palantir).
+              <AdminNote fallback={AUTO_UPDATE_NOTE}>
+                Ejecuta «Sincronizar mercado» para indexar ingresos y utilidad
+                neta reportados oficialmente ante la SEC (NVIDIA, Microsoft,
+                Alphabet, Meta, AMD, Palantir).
+              </AdminNote>
             </p>
           </div>
         )}

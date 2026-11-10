@@ -111,8 +111,7 @@ export function ProviderDetail({
               <h2>Sin ranking de uso para este proveedor</h2>
               <p>
                 Ningún modelo de {provider.name} apareció en los rankings de uso
-                real por categoría de la última sincronización. Ejecuta
-                «Sincronizar modelos» para actualizarlos.
+                real por categoría de la última sincronización.
               </p>
             </div>
           )}

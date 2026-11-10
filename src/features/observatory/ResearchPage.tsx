@@ -19,6 +19,7 @@ import {
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import type { ObservatoryRecord, SourceHealth } from "../../../types/api";
+import { useIsAdmin } from "../admin/AdminNote";
 import { getRecords, getSources } from "./api";
 import { formatDate, verificationLabel } from "./format";
 import { RecordContext } from "./RecordContext";
@@ -157,6 +158,7 @@ function SourceTile({ source }: { source: SourceHealth }) {
 }
 
 export function ResearchPage() {
+  const isAdmin = useIsAdmin();
   const [query, setQuery] = useState("");
   const [dateRange, setDateRange] = useState<ResearchDateRange>("all");
   const [type, setType] = useState("all");
@@ -261,7 +263,7 @@ export function ResearchPage() {
           ))}
         </section>
 
-        {pendingSources.length ? (
+        {isAdmin && pendingSources.length ? (
           <div className="panel status-banner">
             <Database />
             <div>

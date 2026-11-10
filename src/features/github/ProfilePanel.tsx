@@ -144,9 +144,11 @@ export function ProfilePanel({
         </div>
       ) : (
         <p className="gh-note">
-          {providers.isLoading
-            ? "Buscando proveedores configurados…"
-            : "No hay proveedor de modelos configurado en el Laboratorio de APIs: se usa el sugeridor local por palabras clave, sin IA."}
+          {session.data?.authenticated !== true
+            ? "Sugerencias por palabras clave, sin IA."
+            : providers.isLoading
+              ? "Buscando proveedores configurados…"
+              : "No hay proveedor de modelos configurado en el Laboratorio de APIs: se usa el sugeridor local por palabras clave, sin IA."}
         </p>
       )}
       <div className="gh-actions">
