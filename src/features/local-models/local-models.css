@@ -323,3 +323,7 @@
     grid-template-columns: 1fr;
   }
 }
+.lm-btn-danger:hover:not(:disabled) {
+  border-color: var(--danger);
+  color: var(--danger);
+}

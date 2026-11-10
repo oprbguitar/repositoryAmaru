@@ -6,6 +6,7 @@ import {
   Pause,
   RefreshCw,
   Search,
+  Trash2,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -14,6 +15,7 @@ import {
   ensurePermission,
   pickRootFolder,
   readLibrary,
+  removeFolder,
   supportsFolderAccess,
 } from "./downloader";
 import {
@@ -54,7 +56,7 @@ import {
   selectGgufPackage,
   selectSafetensorsPackage,
 } from "./selection";
-import { loadRootHandle, saveRootHandle } from "./store";
+import { deleteInventory, loadRootHandle, saveRootHandle } from "./store";
 import "./local-models.css";
 
 const FULL = "__full__";
@@ -230,6 +232,26 @@ export function LocalModelManager() {
       return;
     }
     startDownload({ root, folder, manifest });
+  }
+
+  async function removeModel(entry: LibraryEntry) {
+    if (!root || isDownloading(entry.folder)) return;
+    const ok = window.confirm(
+      `¿Eliminar «${entry.manifest.repo}» (${formatBytes(entry.manifest.totalBytes)}) de la carpeta «${root.name}»? Se borrarán sus archivos del disco y no se puede deshacer.`,
+    );
+    if (!ok) return;
+    setError(null);
+    try {
+      if (!(await ensurePermission(root, true)))
+        throw new Error("Sin permiso de escritura en la carpeta elegida.");
+      await removeFolder(root, entry.folder);
+      await deleteInventory(entry.folder).catch(() => undefined);
+      dismissDownload(entry.folder);
+    } catch (cause) {
+      setError(`No se pudo eliminar: ${(cause as Error).message}`);
+    } finally {
+      await refreshLibrary(root);
+    }
   }
 
   async function checkVersion(entry: LibraryEntry) {
@@ -444,6 +466,14 @@ export function LocalModelManager() {
                             onClick={() => checkVersion(entry)}
                           >
                             <RefreshCw aria-hidden /> Versión
+                          </button>
+                          <button
+                            type="button"
+                            className="lm-btn lm-btn-danger"
+                            disabled={isDownloading(entry.folder)}
+                            onClick={() => removeModel(entry)}
+                          >
+                            <Trash2 aria-hidden /> Eliminar
                           </button>
                         </div>
                         {check ? (

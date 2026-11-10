@@ -23,6 +23,8 @@ export type ManifestFile = PackageFile & {
   hashState?: Sha256State;
   /** True when the partial data is stored under `<path>.partial`. */
   usesPartialName?: boolean;
+  /** Bytes committed per parallel segment, so each one resumes on its own. */
+  segments?: number[];
 };
 
 export type ModelManifest = {
@@ -217,6 +219,10 @@ export function parseManifest(value: unknown): ModelManifest | null {
         ? { hashState: file.hashState as Sha256State }
         : {}),
       ...(file.usesPartialName === true ? { usesPartialName: true } : {}),
+      ...(Array.isArray(file.segments) &&
+      file.segments.every((n: unknown) => typeof n === "number" && n >= 0)
+        ? { segments: file.segments as number[] }
+        : {}),
     });
   }
   const text = (key: string) =>

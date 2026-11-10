@@ -226,78 +226,138 @@ function concat(chunks: Uint8Array[], size: number): Uint8Array<ArrayBuffer> {
   return out;
 }
 
-class SegmentError extends Error {
-  constructor(
-    message: string,
-    readonly contiguous: number,
-    readonly original: unknown,
-  ) {
-    super(message);
-  }
+const MAX_SEGMENT_RETRIES = 12;
+
+function wait(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(resolve, ms);
+    signal.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timer);
+        reject(signal.reason);
+      },
+      { once: true },
+    );
+  });
+}
+
+class FatalDownloadError extends Error {}
+
+/** Splits a file into equal segments: [start, length] pairs. */
+export function segmentLayout(size: number, count = PARALLEL_CONNECTIONS) {
+  const segment = Math.ceil(size / count);
+  return Array.from({ length: count }, (_, i) => ({
+    from: i * segment,
+    length: Math.max(0, Math.min(segment, size - i * segment)),
+  }));
 }
 
 /**
- * Fetches a whole file with several Range connections, writing each segment
- * at its position. On failure throws a SegmentError carrying how many leading
- * bytes are complete, so a resume continues sequentially from there.
+ * Initial per-segment progress for a resume: saved segment counters when
+ * present, otherwise derived from a contiguous byte count. Clamped to what
+ * is really on disk.
+ */
+export function resumeSegments(
+  size: number,
+  saved: number[] | undefined,
+  contiguous: number,
+  onDisk: number,
+): number[] {
+  const layout = segmentLayout(size);
+  return layout.map(({ from, length }, i) => {
+    const wanted =
+      saved && saved.length === layout.length
+        ? saved[i]
+        : Math.max(0, Math.min(length, contiguous - from));
+    return Math.max(0, Math.min(wanted, length, onDisk - from));
+  });
+}
+
+/**
+ * Fetches a file with several Range connections (like a torrent client),
+ * writing each segment at its own position. A dropped connection retries
+ * that segment from where it stopped, with backoff; only a fatal HTTP error
+ * or a pause stops the whole download. `progress` is updated in place.
  */
 async function fetchParallel(
   url: string,
   size: number,
+  progress: number[],
   writable: FileSystemWritableFileStream,
   signal: AbortSignal,
   onBytes: (count: number) => void,
 ): Promise<void> {
-  const count = PARALLEL_CONNECTIONS;
-  const segment = Math.ceil(size / count);
-  const progress = new Array<number>(count).fill(0);
-  const lengths = Array.from({ length: count }, (_, i) =>
-    Math.max(0, Math.min(segment, size - i * segment)),
-  );
+  const layout = segmentLayout(size);
   const inner = new AbortController();
   const onAbort = () => inner.abort(signal.reason);
   signal.addEventListener("abort", onAbort);
+
   const run = async (i: number) => {
-    const from = i * segment;
-    const length = lengths[i];
-    if (!length) return;
-    const response = await fetch(url, {
-      signal: inner.signal,
-      headers: { Range: `bytes=${from}-${from + length - 1}` },
-    });
-    if (response.status !== 206 || !response.body)
-      throw new Error(
-        response.status === 401 || response.status === 403
-          ? "Modelo restringido: acepta sus condiciones en Hugging Face."
-          : `El servidor respondió ${response.status} a una descarga por partes.`,
-      );
-    const reader = response.body.getReader();
-    let buffer: Uint8Array[] = [];
-    let buffered = 0;
-    const flush = async () => {
-      if (!buffered) return;
-      const data = concat(buffer, buffered);
-      const position = from + progress[i];
-      buffer = [];
-      buffered = 0;
-      await writable.write({ type: "write", position, data });
-      progress[i] += data.length;
-    };
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer.push(value);
-      buffered += value.length;
-      onBytes(value.length);
-      if (buffered >= WRITE_BUFFER_BYTES) await flush();
+    const { from, length } = layout[i];
+    let failures = 0;
+    while (progress[i] < length) {
+      inner.signal.throwIfAborted();
+      try {
+        const offset = from + progress[i];
+        const response = await fetch(url, {
+          signal: inner.signal,
+          headers: { Range: `bytes=${offset}-${from + length - 1}` },
+        });
+        if (response.status === 401 || response.status === 403)
+          throw new FatalDownloadError(
+            "Modelo restringido: acepta sus condiciones en Hugging Face.",
+          );
+        if (response.status === 404)
+          throw new FatalDownloadError(
+            "El archivo ya no existe en esa revisión.",
+          );
+        if (response.status !== 206 || !response.body)
+          throw new Error(`El servidor respondió ${response.status}.`);
+        const reader = response.body.getReader();
+        let buffer: Uint8Array[] = [];
+        let buffered = 0;
+        const flush = async () => {
+          if (!buffered) return;
+          const data = concat(buffer, buffered);
+          const position = from + progress[i];
+          buffer = [];
+          buffered = 0;
+          await writable.write({ type: "write", position, data });
+          progress[i] += data.length;
+        };
+        try {
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const room = length - progress[i] - buffered;
+            const chunk = value.length > room ? value.subarray(0, room) : value;
+            buffer.push(chunk);
+            buffered += chunk.length;
+            onBytes(chunk.length);
+            if (buffered >= WRITE_BUFFER_BYTES) await flush();
+          }
+        } finally {
+          // Keep whatever arrived before the connection dropped.
+          await flush();
+        }
+        failures = 0;
+      } catch (error) {
+        if (error instanceof FatalDownloadError || inner.signal.aborted)
+          throw error;
+        failures += 1;
+        if (failures > MAX_SEGMENT_RETRIES)
+          throw new Error(
+            "La conexión se cortó demasiadas veces. Pulsa «Reanudar» para continuar desde donde quedó.",
+          );
+        await wait(Math.min(15_000, 1000 * 2 ** (failures - 1)), inner.signal);
+      }
     }
-    await flush();
-    if (progress[i] !== length)
-      throw new Error("Una parte de la descarga llegó incompleta.");
   };
+
   try {
     const results = await Promise.allSettled(
-      lengths.map((_, i) =>
+      layout.map((_, i) =>
         run(i).catch((error) => {
           inner.abort(error);
           throw error;
@@ -307,19 +367,7 @@ async function fetchParallel(
     const failed = results.find(
       (r): r is PromiseRejectedResult => r.status === "rejected",
     );
-    if (failed) {
-      let contiguous = 0;
-      for (let i = 0; i < count; i += 1) {
-        contiguous += progress[i];
-        if (progress[i] < lengths[i]) break;
-      }
-      const reason = signal.aborted ? signal.reason : failed.reason;
-      throw new SegmentError(
-        (reason as Error)?.message ?? "Descarga interrumpida.",
-        contiguous,
-        reason,
-      );
-    }
+    if (failed) throw signal.aborted ? signal.reason : failed.reason;
   } finally {
     signal.removeEventListener("abort", onAbort);
   }
@@ -404,9 +452,11 @@ export async function runDownload(
       create: true,
     });
     const onDisk = (await partial.getFile()).size;
-    let start = Math.min(file.bytesWritten, onDisk);
-    let hasher =
-      file.hashState && file.hashState.length === start
+    const useParallel = file.size >= PARALLEL_MIN_BYTES;
+    let start = useParallel ? 0 : Math.min(file.bytesWritten, onDisk);
+    let hasher = useParallel
+      ? new Sha256()
+      : file.hashState && file.hashState.length === start
         ? Sha256.restore(file.hashState)
         : await rehash(await partial.getFile(), start);
 
@@ -434,33 +484,48 @@ export async function runDownload(
     const url = resolveUrl(manifest.repo, manifest.revision, file.path);
     let hashedInline = true;
 
-    if (start === 0 && file.size >= PARALLEL_MIN_BYTES) {
-      // Several connections at once; hashed afterwards in a worker.
+    if (useParallel && start < file.size) {
+      // Several connections at once, each resumable; hashed afterwards in a worker.
       hashedInline = false;
+      const segments = resumeSegments(
+        file.size,
+        file.segments,
+        file.bytesWritten,
+        onDisk,
+      );
+      written = segments.reduce((sum, n) => sum + n, 0);
       const writable = await partial.createWritable({
-        keepExistingData: false,
+        keepExistingData: written > 0,
       });
-      try {
-        await fetchParallel(url, file.size, writable, signal, (bytes) => {
-          written += bytes;
-          fetchedThisRun += bytes;
-          throttledReport(written);
-        });
-        await writable.close();
-        written = file.size;
-      } catch (error) {
-        await writable.close().catch(() => undefined);
-        const contiguous = error instanceof SegmentError ? error.contiguous : 0;
+      const persist = async () => {
         manifest = patchFile(manifest, file.path, {
           status: "partial",
-          bytesWritten: contiguous,
+          bytesWritten: segments[0] ?? 0,
+          segments: [...segments],
           hashState: undefined,
           usesPartialName: true,
         });
         await save().catch(() => undefined);
-        throw error instanceof SegmentError && error.original instanceof Error
-          ? error.original
-          : error;
+      };
+      try {
+        await fetchParallel(
+          url,
+          file.size,
+          segments,
+          writable,
+          signal,
+          (bytes) => {
+            written += bytes;
+            fetchedThisRun += bytes;
+            throttledReport(written);
+          },
+        );
+        await writable.close();
+        written = file.size;
+      } catch (error) {
+        await writable.close().catch(() => undefined);
+        await persist();
+        throw error;
       }
     } else if (start < file.size) {
       const response = await fetch(url, {
@@ -564,6 +629,7 @@ export async function runDownload(
         status: "failed",
         bytesWritten: 0,
         hashState: undefined,
+        segments: undefined,
       });
       await save();
       throw new Error(`${file.path}: ${verdict.reason}`);
@@ -576,6 +642,7 @@ export async function runDownload(
       bytesWritten: file.size,
       verified: verdict.kind,
       hashState: undefined,
+      segments: undefined,
       usesPartialName: false,
     });
     await save();
