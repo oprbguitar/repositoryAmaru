@@ -42,6 +42,28 @@ El usuario pide **bajo consumo de tokens, trabajar de uno en uno, sin subagentes
   - vista «En vivo» (`LiveConsole.tsx`): streaming SSE, razonamiento y respuesta por separado, máximo de salida configurable (4096 por defecto), métricas y promedio de costo por modelo (`/api/developer-lab/runs/stats`);
   - banco de pruebas: ahora devuelve `reasoningText` y `finishReason`, y avisa si el límite de tokens se gastó razonando.
 
+## Favoritos (iniciado)
+- `src/features/favorites/favorites.ts` es un almacén en localStorage (`amaru.favorites.v1`) de tipos `model`, `repo` y `guide`, con el hook `useFavorites()`. `FavoriteStar.tsx` es el botón de estrella reutilizable.
+- Ya está conectado al ranking del explorador de Modelos, que muestra una barra «★ Favoritos».
+- **Falta:**
+  - poner la estrella en GitHub (`src/features/github/`, tipo `repo`) y en Open y local;
+  - una vista «Mis favoritos» con filtro por tipo;
+  - opcional: sincronizar los favoritos en D1 para que no dependan del navegador.
+
+## Pedido nuevo del usuario: análisis de repositorios y contraste con los suyos
+No requiere IA para los datos técnicos: se obtiene todo de forma determinista con la API de GitHub. La IA es opcional, solo para redactar un resumen narrativo, por ejemplo con Workers AI (`env.AI`) o un proveedor del laboratorio, y debe ir rotulada como generada.
+1. **Mis repositorios:**
+   - campo en Ajustes para el usuario de GitHub (personal);
+   - endpoint `/api/github/user-repos?user=` (GET `users/{u}/repos?per_page=100&sort=pushed`, con caché en KV);
+   - pestaña «Mis repositorios» en `GitHubPage`, con selección múltiple y opción de añadir repositorios propios a mano.
+2. **Ficha técnica del repositorio** (`/api/github/analyze?repo=`, en `worker/routes/github.ts`, lógica en `lib/github/analyze.ts`):
+   - lenguajes (`/languages`), topics, licencia, `pushed_at`, issues abiertos, estrellas y forks, si está archivado;
+   - tecnologías detectadas: leer `package.json`, `pyproject.toml`/`requirements.txt`, `Cargo.toml`, `go.mod`, `Dockerfile`, `vite.config`, `next.config`, `tailwind.config` y `tsconfig`. Mapear dependencias a categorías (framework UI, CSS, build, tests, backend, base de datos, IA);
+   - desfase: consultar `https://registry.npmjs.org/<pkg>/latest` para las 10–15 dependencias principales y comparar versión mayor (al día / 1 versión atrás / desfasado), más los meses desde el último push;
+   - para repositorios de diseño, detectar design tokens, Storybook, Figma tokens, Tailwind o shadcn, y fuentes;
+   - salida en lista: «qué es», «tecnologías», «qué conviene usar», «riesgos y desfase», «cómo ejecutarlo». Cada dato con su fuente (archivo y URL).
+3. **Contraste:** al elegir uno o varios repositorios propios, comparar tecnologías comunes y faltantes, versiones (cuál es más nuevo) y prácticas (tests, CI, licencia). Mostrar una tabla lado a lado y recomendaciones deterministas («adoptar X de este repo», «tu repo usa React 18, este React 19»).
+
 ## Pendiente
 1. **Probar en el navegador** lo último:
    - descarga paralela con reanudación tras un corte de red, y la opción «Eliminar»;

@@ -167,7 +167,7 @@
 }
 .mh-ranking li > button {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1.4fr) minmax(0, 1fr) 140px;
+  grid-template-columns: 44px 28px minmax(0, 1.4fr) minmax(0, 1fr) 140px;
   align-items: center;
   gap: var(--space-3);
   inline-size: 100%;
@@ -445,11 +445,11 @@
 }
 @media (max-width: 640px) {
   .mh-ranking li > button {
-    grid-template-columns: 36px minmax(0, 1fr);
+    grid-template-columns: 36px 28px minmax(0, 1fr);
   }
   .mh-meta,
   .mh-score {
-    grid-column: 2;
+    grid-column: 3;
   }
   .mh-need {
     flex-wrap: wrap;
@@ -464,4 +464,25 @@
   .mh-loading-bar {
     animation: none;
   }
+}
+.mh-favorites {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-block-end: var(--space-3);
+  font-size: var(--text-sm);
+}
+.mh-favorites span {
+  color: var(--amber);
+  font-weight: 600;
+}
+.mh-favorites a {
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+}
+.mh-favorites a:hover {
+  border-color: var(--amber);
 }

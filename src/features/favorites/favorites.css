@@ -1,0 +1,24 @@
+.fav-star {
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--control-sm);
+  block-size: var(--control-sm);
+  border-radius: var(--radius-sm);
+  color: var(--text-subtle);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+.fav-star svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+.fav-star:hover {
+  color: var(--amber);
+}
+.fav-star[aria-pressed="true"] {
+  color: var(--amber);
+}
+.fav-star:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

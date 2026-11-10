@@ -26,6 +26,8 @@ import {
   type SpecialtyId,
 } from "../../../lib/models/specialties";
 import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
+import { FavoriteStar } from "../favorites/FavoriteStar";
+import { useFavorites } from "../favorites/favorites";
 import { getHubOverview, getSpecialtyPool, searchHub } from "./api";
 import { ModelSheet } from "./ModelSheet";
 import "./models-hub.css";
@@ -64,6 +66,7 @@ export function ModelExplorer({ onSwitch }: { onSwitch: () => void }) {
   const [remainder, setRemainder] = useState("");
   const [criterion, setCriterion] = useState<RankingCriterion>("balanced");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const favorites = useFavorites().filter((f) => f.kind === "model");
 
   function applyNeed(event: React.FormEvent) {
     event.preventDefault();
@@ -190,6 +193,16 @@ export function ModelExplorer({ onSwitch }: { onSwitch: () => void }) {
         </button>
       </form>
 
+      {favorites.length ? (
+        <nav className="mh-favorites" aria-label="Modelos favoritos">
+          <span>★ Favoritos</span>
+          {favorites.map((f) => (
+            <a key={f.id} href={f.url ?? "#"} target="_blank" rel="noreferrer">
+              {f.label}
+            </a>
+          ))}
+        </nav>
+      ) : null}
       <div className="mh-filters">
         <fieldset>
           <legend>Especialidad</legend>
@@ -309,6 +322,12 @@ export function ModelExplorer({ onSwitch }: { onSwitch: () => void }) {
                     onClick={() => setSelectedId(entry.model.id)}
                   >
                     <span className="mh-pos">{entry.position}</span>
+                    <FavoriteStar
+                      kind="model"
+                      id={entry.model.id}
+                      label={entry.model.name}
+                      url={`https://huggingface.co/${entry.model.id}`}
+                    />
                     <ModelIdentity model={entry.model} />
                     <span className="mh-meta">
                       <DistributionMark value={entry.model.distribution} />
