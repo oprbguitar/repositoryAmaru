@@ -5,9 +5,7 @@ Instrucciones para la IA que continúe. Rama: `feat/integrations-market-realtime
 ## Estado verificado al cerrar
 - `npx tsc -b` pasa sin errores; `npx vitest run` dio 193 tests OK.
 - `npx biome check .` limpio (se excluyó `docs/architecture-map.html` y se desactivó `noDescendingSpecificity`).
-  - `src/features/evolution/EvolutionPage.tsx`: `useSemanticElements` y `useExhaustiveDependencies`.
-  - `src/features/evolution/BranchTree.tsx`: `noArrayIndexKey`.
-  - Avisos `noDescendingSpecificity` en los CSS.
+- `pnpm build` OK. `evolution.css` lo escribió el orquestador al final (el agente se detuvo antes): revisarlo en el navegador.
 - No se ha abierto nada en el navegador. Hay que arrancar `pnpm dev` (127.0.0.1:5174) y revisar cada módulo a 360, 768, 1280 y 1600 px.
 - No se ejecutó la guía de diseño: `node ..\AI-Design-Harness\bin\design-lint.mjs .` ni `design-log.mjs`.
 
