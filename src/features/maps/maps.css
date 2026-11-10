@@ -180,3 +180,20 @@
     transition: none;
   }
 }
+
+/* Larger canvas: the stage fills the module height (floor 460px). */
+.map-layout .lm-stage {
+  flex: 1 0 auto;
+  grid-template-rows: minmax(max(460px, calc(100dvh - 300px)), 1fr) auto;
+}
+.map-layout .lm-canvas {
+  min-block-size: max(460px, calc(100dvh - 300px));
+}
+@media (max-width: 900px) {
+  .map-layout .lm-stage {
+    grid-template-rows: minmax(max(380px, 62dvh), 1fr) auto;
+  }
+  .map-layout .lm-canvas {
+    min-block-size: max(380px, 62dvh);
+  }
+}

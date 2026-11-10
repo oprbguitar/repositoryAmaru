@@ -10,7 +10,7 @@ import {
   TRAIT_TOKENS,
 } from "./llmModel";
 
-const BASEMAP_STYLE = "https://tiles.openfreemap.org/styles/dark";
+const BASEMAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
 
 function token(name: string): string {
   return getComputedStyle(document.documentElement)
@@ -111,7 +111,6 @@ export function LlmMapCanvas({
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }));
     map.on("load", () => {
-      const halo = modeColors().halo;
       map.addSource("orgs", {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
@@ -146,7 +145,7 @@ export function LlmMapCanvas({
         filter: ["==", ["get", "id"], ""],
         paint: {
           "circle-color": "rgba(0,0,0,0)",
-          "circle-stroke-color": "#ffffff",
+          "circle-stroke-color": "#2b2140",
           "circle-stroke-width": 2.5,
           "circle-radius": [
             "interpolate",
@@ -172,8 +171,9 @@ export function LlmMapCanvas({
           "text-optional": true,
         },
         paint: {
-          "text-color": "#e8f1f8",
-          "text-halo-color": halo,
+          // The basemap uses its normal (light) colours: dark label, white halo.
+          "text-color": "#2b2140",
+          "text-halo-color": "#ffffff",
           "text-halo-width": 1.2,
         },
       });

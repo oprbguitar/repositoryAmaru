@@ -4,7 +4,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useRef } from "react";
 import type { MapGeoJson } from "../../../types/api";
 
-const BASEMAP_STYLE = "https://tiles.openfreemap.org/styles/dark";
+const BASEMAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
 
 export type MapLayerVisibility = {
   countries: boolean;
@@ -95,8 +95,8 @@ export function MapCanvas({
           "text-anchor": "top",
         },
         paint: {
-          "text-color": "#c9e6f2",
-          "text-halo-color": "#05121f",
+          "text-color": "#2b2140",
+          "text-halo-color": "#ffffff",
           "text-halo-width": 1.2,
         },
       });

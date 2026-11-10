@@ -16,6 +16,7 @@ import type {
   RepoDetail,
   SearchSort,
 } from "../../../lib/github/types";
+import { useAdminSession } from "../admin/adminApi";
 import {
   GithubApiError,
   githubApi,
@@ -32,11 +33,14 @@ type Source =
   | { kind: "type"; id: string }
   | { kind: "topic"; topic: string }
   | { kind: "personal" }
-  | { kind: "mine" }
+  | { kind: "mine"; user: string }
   | { kind: "custom"; label: string; spec: QuerySpec };
 
 const TOPICS_KEY = "amaru-github-topics";
-const PERSONAL_USER = "oprbguitar";
+const OWNERS_KEY = "amaru-github-owners";
+/** Only the local install starts with the owner's account; online, visitors add their own. */
+const LOCAL_DEFAULT_OWNER = "oprbguitar";
+const GITHUB_LOGIN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
 type Visibility = "all" | "public" | "private";
 const SORT_LABELS: Record<SearchSort, string> = {
   stars: "Más estrellas",
@@ -49,7 +53,7 @@ function sourceLabel(source: Source): string {
   if (source.kind === "type") return findRepoType(source.id)?.label ?? "Tipo";
   if (source.kind === "topic") return `topic:${source.topic}`;
   if (source.kind === "personal") return "Mis topics";
-  if (source.kind === "mine") return `Mis repositorios · ${PERSONAL_USER}`;
+  if (source.kind === "mine") return `Repositorios · ${source.user}`;
   return source.label;
 }
 
@@ -68,6 +72,32 @@ export function GitHubPage() {
   const [matchAll, setMatchAll] = useState(false);
   const [draft, setDraft] = useState("");
   const [visibility, setVisibility] = useState<Visibility>("all");
+  const session = useAdminSession();
+  const [storedOwners, setStoredOwners] = useState<string[] | null>(() =>
+    readStored<string[] | null>(OWNERS_KEY, null),
+  );
+  const owners =
+    storedOwners ??
+    (session.data?.mode === "local" ? [LOCAL_DEFAULT_OWNER] : []);
+  const [ownerDraft, setOwnerDraft] = useState("");
+  const ownerValid = GITHUB_LOGIN.test(ownerDraft.trim());
+  function saveOwners(next: string[]) {
+    setStoredOwners(next);
+    writeStored(OWNERS_KEY, next);
+  }
+  function addOwner() {
+    const login = ownerDraft.trim();
+    if (!GITHUB_LOGIN.test(login)) return;
+    if (!owners.some((o) => o.toLowerCase() === login.toLowerCase()))
+      saveOwners([...owners, login].slice(0, 12));
+    setOwnerDraft("");
+    pick({ kind: "mine", user: login });
+  }
+  function removeOwner(login: string) {
+    saveOwners(owners.filter((o) => o !== login));
+    if (source.kind === "mine" && source.user === login)
+      pick({ kind: "type", id: "design-systems" });
+  }
 
   const spec = useMemo<QuerySpec | null>(() => {
     if (source.kind === "type") return findRepoType(source.id)?.spec ?? null;
@@ -96,8 +126,8 @@ export function GitHubPage() {
     placeholderData: (previous) => previous,
   });
   const mineQ = useQuery({
-    queryKey: ["gh-mine", PERSONAL_USER],
-    queryFn: () => githubApi.mine(PERSONAL_USER),
+    queryKey: ["gh-mine", source.kind === "mine" ? source.user : ""],
+    queryFn: () => githubApi.mine(source.kind === "mine" ? source.user : ""),
     enabled: source.kind === "mine",
     staleTime: 300_000,
     retry: false,
@@ -166,18 +196,60 @@ export function GitHubPage() {
           <details open={source.kind === "mine"}>
             <summary>Mis repositorios</summary>
             <ul>
-              <li>
-                <button
-                  type="button"
-                  className="gh-rail-item"
-                  aria-current={source.kind === "mine"}
-                  onClick={() => pick({ kind: "mine" })}
-                >
-                  {PERSONAL_USER} · todos mis proyectos
-                </button>
-              </li>
+              {owners.map((owner) => (
+                <li key={owner} className="gh-owner">
+                  <button
+                    type="button"
+                    className="gh-rail-item"
+                    aria-current={
+                      source.kind === "mine" && source.user === owner
+                    }
+                    onClick={() => pick({ kind: "mine", user: owner })}
+                  >
+                    {owner}
+                  </button>
+                  <button
+                    type="button"
+                    className="gh-owner-remove"
+                    aria-label={`Quitar ${owner}`}
+                    onClick={() => removeOwner(owner)}
+                  >
+                    <X aria-hidden="true" />
+                  </button>
+                </li>
+              ))}
             </ul>
-            {source.kind === "mine" ? (
+            <form
+              className="gh-owner-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                addOwner();
+              }}
+            >
+              <input
+                value={ownerDraft}
+                onChange={(event) => setOwnerDraft(event.target.value)}
+                placeholder="usuario de GitHub"
+                aria-label="Agregar usuario de GitHub"
+                maxLength={39}
+              />
+              <button
+                type="submit"
+                className="gh-chip"
+                disabled={!ownerValid}
+                aria-label="Agregar repositorios de este usuario"
+              >
+                <Plus aria-hidden="true" />
+              </button>
+            </form>
+            {owners.length === 0 ? (
+              <p className="gh-hint">
+                Escribe tu usuario de GitHub para ver tus repositorios públicos.
+                Se guarda solo en este navegador.
+              </p>
+            ) : null}
+            {source.kind === "mine" &&
+            allItems.some((item) => item.isPrivate) ? (
               <p className="gh-topics">
                 {(
                   [
@@ -198,7 +270,9 @@ export function GitHubPage() {
                 ))}
               </p>
             ) : null}
-            {source.kind === "mine" && !tokenOn ? (
+            {source.kind === "mine" &&
+            !tokenOn &&
+            session.data?.mode === "local" ? (
               <p className="gh-hint">
                 Sin GITHUB_TOKEN solo se ven los públicos. Para ver los
                 privados, crea un token en GitHub (Settings → Developer settings

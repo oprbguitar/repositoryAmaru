@@ -288,7 +288,6 @@ export function AppShell() {
 
   // --- Menus / dialogs --------------------------------------------------------
   const display = useMenu();
-  const languageMenu = useMenu();
   const [shutdownOpen, setShutdownOpen] = useState(false);
   const [serverStopped, setServerStopped] = useState(false);
 
@@ -525,52 +524,35 @@ export function AppShell() {
             ) : null}
           </div>
 
-          <div className="shell-menu" ref={languageMenu.rootRef}>
-            <button
-              ref={languageMenu.triggerRef}
-              className="shell-menu-trigger is-icon"
-              type="button"
-              aria-label={t("shell.languageLabel")}
-              title={t("shell.languageLabel")}
-              aria-haspopup="menu"
-              aria-expanded={languageMenu.open}
-              onClick={() => languageMenu.setOpen((open) => !open)}
-              onKeyDown={languageMenu.onTriggerKeyDown}
-            >
-              <Globe aria-hidden="true" />
-              <span aria-hidden="true">{language.toUpperCase()}</span>
-            </button>
-            {languageMenu.open ? (
-              <div
-                className="shell-menu-panel"
-                role="menu"
-                aria-label={t("shell.language")}
-                ref={languageMenu.menuRef}
-              >
-                {LANGUAGES.map((option) => (
-                  <button
-                    key={option.code}
-                    type="button"
-                    role="menuitemradio"
-                    tabIndex={-1}
-                    aria-checked={language === option.code}
-                    className="shell-menu-item"
-                    onClick={() => {
-                      setLanguage(option.code);
-                      languageMenu.close(true);
-                    }}
-                  >
-                    <span className="shell-menu-text">
-                      <strong>{option.label}</strong>
-                    </span>
-                    {language === option.code ? (
-                      <Check className="shell-menu-check" aria-hidden="true" />
-                    ) : null}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
+          <a
+            className="topbar-credit"
+            href="https://andesnova.solutions"
+            target="_blank"
+            rel="noreferrer"
+            title="Creado por andesnova.solutions"
+          >
+            <span aria-hidden="true">©</span>
+            <span className="topbar-credit-text">andesnova.solutions</span>
+          </a>
+
+          {/* One click switches language: ES ⇄ EN, no menu. */}
+          <button
+            className="shell-menu-trigger is-icon"
+            type="button"
+            aria-label={`${t("shell.languageLabel")}: ${
+              LANGUAGES.find((option) => option.code !== language)?.label ?? ""
+            }`}
+            title={t("shell.languageLabel")}
+            onClick={() =>
+              setLanguage(
+                LANGUAGES.find((option) => option.code !== language)?.code ??
+                  "es",
+              )
+            }
+          >
+            <Globe aria-hidden="true" />
+            <span aria-hidden="true">{language.toUpperCase()}</span>
+          </button>
         </div>
       </header>
 

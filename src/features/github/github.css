@@ -845,3 +845,76 @@ textarea.gh-input {
 .gh-private {
   color: var(--warn);
 }
+
+/* Owner list in «Mis repositorios»: visitors add their own GitHub users. */
+.gh-owner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.gh-owner .gh-rail-item {
+  flex: 1;
+  min-width: 0;
+}
+.gh-owner-remove {
+  display: inline-grid;
+  place-items: center;
+  width: var(--control-sm);
+  height: var(--control-sm);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-subtle);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.gh-owner:hover .gh-owner-remove,
+.gh-owner-remove:focus-visible {
+  opacity: 1;
+}
+.gh-owner-remove:hover {
+  color: var(--danger);
+  background: var(--surface-hover);
+}
+.gh-owner-remove:focus-visible {
+  outline: 2px solid var(--accent);
+}
+.gh-owner-remove svg {
+  width: 14px;
+  height: 14px;
+}
+.gh-owner-form {
+  display: flex;
+  gap: var(--space-1);
+  margin: var(--space-2) 0;
+}
+.gh-owner-form input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--control-sm);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+}
+.gh-owner-form input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.gh-owner-form .gh-chip svg {
+  width: 14px;
+  height: 14px;
+}
+.gh-owner-form .gh-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+@media (hover: none) {
+  .gh-owner-remove {
+    opacity: 1;
+  }
+}

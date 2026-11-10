@@ -412,8 +412,8 @@ export const githubRouter: ExtraRouter = async (request, env, url) => {
       }
       case "mine": {
         // Personal repos: with a token, every repo the token owns (public and
-        // private); without one, only the public repos of PERSONAL_USER.
-        const user = (url.searchParams.get("user") ?? "oprbguitar").trim();
+        // private, administrator only); otherwise the public repos of `user`.
+        const user = (url.searchParams.get("user") ?? "").trim();
         if (!/^[A-Za-z0-9-]{1,39}$/.test(user))
           return fail(
             new GithubError("invalid_query", "Usuario no válido.", 400),

@@ -389,3 +389,31 @@
     animation: none;
   }
 }
+
+/* Discreet author credit in the top bar. */
+.topbar-credit {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  opacity: 0.65;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.topbar-credit:hover,
+.topbar-credit:focus-visible {
+  opacity: 1;
+  color: var(--accent);
+}
+.topbar-credit:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (max-width: 760px) {
+  .topbar-credit-text {
+    display: none;
+  }
+}
