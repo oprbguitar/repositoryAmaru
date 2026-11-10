@@ -47,7 +47,10 @@ El usuario pide **bajo consumo de tokens, trabajar de uno en uno, sin subagentes
 - La estrella está en el ranking de Modelos, en el inspector de GitHub (`RepoInspector.tsx`) y en las tarjetas de Open y local.
 - La vista `/favorites` («Mis favoritos», en el menú, `FavoritesPage.tsx`) muestra:
   - los guardados, filtrados por tipo;
-  - «Mis repositorios» del usuario `oprbguitar` (`PERSONAL_GITHUB_USER`), consultados desde el navegador a `api.github.com` (60 consultas por hora sin token).
+  - solo los guardados, filtrados por tipo.
+- **Mis repositorios** se movió al explorador de GitHub, como primer grupo del menú lateral (`GitHubPage.tsx`, `Source` del tipo `mine`).
+  - Endpoint `/api/github/mine?user=oprbguitar` en `worker/routes/github.ts`: con un `GITHUB_TOKEN` del mismo usuario usa `/user/repos?affiliation=owner`, que incluye los privados; sin token, solo los públicos.
+  - Hay un filtro Todos / Públicos / Privados y la marca `isPrivate` en `RepoSummary`.
 - El CSP de `worker/index.ts` ahora permite `api.github.com` y Hugging Face en `connect-src`.
 - **Falta:**
   - mover el usuario de GitHub a Ajustes;

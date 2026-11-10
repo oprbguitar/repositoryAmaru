@@ -9,6 +9,8 @@ export type RateLimitInfo = {
 };
 
 export type RepoSummary = {
+  /** True for private repos (only visible with an authorized token). */
+  isPrivate?: boolean;
   id: number;
   fullName: string;
   owner: string;

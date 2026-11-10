@@ -836,3 +836,12 @@ textarea.gh-input {
   gap: var(--space-1);
   align-items: center;
 }
+.gh-hint {
+  margin: var(--space-2) 0 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+.gh-private {
+  color: var(--warn);
+}

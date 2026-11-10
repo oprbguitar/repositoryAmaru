@@ -410,6 +410,53 @@ export const githubRouter: ExtraRouter = async (request, env, url) => {
         };
         return ok(status);
       }
+      case "mine": {
+        // Personal repos: with a token, every repo the token owns (public and
+        // private); without one, only the public repos of PERSONAL_USER.
+        const user = (url.searchParams.get("user") ?? "oprbguitar").trim();
+        if (!/^[A-Za-z0-9-]{1,39}$/.test(user))
+          return fail(
+            new GithubError("invalid_query", "Usuario no válido.", 400),
+          );
+        const key = `github:mine:${user}:${ctx.token ? "auth" : "anon"}`;
+        const result = await cached(
+          ctx,
+          key,
+          300,
+          async (): Promise<
+            SearchResult & { stale?: boolean; includesPrivate: boolean }
+          > => {
+            let raw: unknown = null;
+            if (ctx.token) {
+              const me = (await ghJson(ctx, "/user")) as { login?: string };
+              if (me?.login?.toLowerCase() === user.toLowerCase())
+                raw = await ghJson(
+                  ctx,
+                  "/user/repos?affiliation=owner&per_page=100&sort=pushed",
+                );
+            }
+            if (!Array.isArray(raw))
+              raw = await ghJson(
+                ctx,
+                `/users/${user}/repos?per_page=100&sort=pushed`,
+              );
+            const items = (Array.isArray(raw) ? raw : []).map(normalizeRepo);
+            return {
+              query: `user:${user}`,
+              sort: "updated" as SearchSort,
+              page: 1,
+              perPage: 100,
+              totalCount: items.length,
+              incomplete: false,
+              items,
+              fetchedAt: new Date().toISOString(),
+              includesPrivate: items.some((item) => item.isPrivate),
+              stale: false,
+            };
+          },
+        );
+        return ok(result);
+      }
       case "search": {
         const query = (url.searchParams.get("q") ?? "").trim();
         if (!isSafeSearchQuery(query))

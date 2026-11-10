@@ -51,6 +51,7 @@ async function get<T>(
 
 export const githubApi = {
   status: () => get<GithubStatus>("status", {}),
+  mine: (user: string) => get<SearchResult>("mine", { user }),
   search: (q: string, sort: SearchSort, page: number) =>
     get<SearchResult>("search", { q, sort, page, per_page: 25 }),
   repo: (owner: string, repo: string) =>

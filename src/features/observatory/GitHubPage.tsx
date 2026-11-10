@@ -32,9 +32,12 @@ type Source =
   | { kind: "type"; id: string }
   | { kind: "topic"; topic: string }
   | { kind: "personal" }
+  | { kind: "mine" }
   | { kind: "custom"; label: string; spec: QuerySpec };
 
 const TOPICS_KEY = "amaru-github-topics";
+const PERSONAL_USER = "oprbguitar";
+type Visibility = "all" | "public" | "private";
 const SORT_LABELS: Record<SearchSort, string> = {
   stars: "Más estrellas",
   updated: "Actualizados",
@@ -46,6 +49,7 @@ function sourceLabel(source: Source): string {
   if (source.kind === "type") return findRepoType(source.id)?.label ?? "Tipo";
   if (source.kind === "topic") return `topic:${source.topic}`;
   if (source.kind === "personal") return "Mis topics";
+  if (source.kind === "mine") return `Mis repositorios · ${PERSONAL_USER}`;
   return source.label;
 }
 
@@ -63,11 +67,13 @@ export function GitHubPage() {
   );
   const [matchAll, setMatchAll] = useState(false);
   const [draft, setDraft] = useState("");
+  const [visibility, setVisibility] = useState<Visibility>("all");
 
   const spec = useMemo<QuerySpec | null>(() => {
     if (source.kind === "type") return findRepoType(source.id)?.spec ?? null;
     if (source.kind === "topic") return { topics: [source.topic] };
     if (source.kind === "custom") return source.spec;
+    if (source.kind === "mine") return null;
     if (!myTopics.length) return null;
     return matchAll
       ? { topics: myTopics, minStars: 10 }
@@ -81,7 +87,7 @@ export function GitHubPage() {
     staleTime: 30_000,
     retry: false,
   });
-  const results = useQuery({
+  const searchQ = useQuery({
     queryKey: ["gh-search", query, sort, page],
     queryFn: () => githubApi.search(query, sort, page),
     enabled: !!query,
@@ -89,7 +95,21 @@ export function GitHubPage() {
     retry: false,
     placeholderData: (previous) => previous,
   });
-  const items = results.data?.data.items ?? [];
+  const mineQ = useQuery({
+    queryKey: ["gh-mine", PERSONAL_USER],
+    queryFn: () => githubApi.mine(PERSONAL_USER),
+    enabled: source.kind === "mine",
+    staleTime: 300_000,
+    retry: false,
+  });
+  const results = source.kind === "mine" ? mineQ : searchQ;
+  const allItems = results.data?.data.items ?? [];
+  const items =
+    source.kind !== "mine" || visibility === "all"
+      ? allItems
+      : allItems.filter((item) =>
+          visibility === "private" ? item.isPrivate : !item.isPrivate,
+        );
   const chosen = items.find((item) => item.fullName === selected) ?? null;
   const rate =
     results.error instanceof GithubApiError ? results.error.rateLimit : null;
@@ -143,6 +163,50 @@ export function GitHubPage() {
 
       <div className="gh-grid" data-viewing={viewing ? "true" : "false"}>
         <nav className="gh-rail" aria-label="Tipos de repositorio">
+          <details open={source.kind === "mine"}>
+            <summary>Mis repositorios</summary>
+            <ul>
+              <li>
+                <button
+                  type="button"
+                  className="gh-rail-item"
+                  aria-current={source.kind === "mine"}
+                  onClick={() => pick({ kind: "mine" })}
+                >
+                  {PERSONAL_USER} · todos mis proyectos
+                </button>
+              </li>
+            </ul>
+            {source.kind === "mine" ? (
+              <p className="gh-topics">
+                {(
+                  [
+                    ["all", "Todos"],
+                    ["public", "Públicos"],
+                    ["private", "Privados"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className="gh-chip"
+                    aria-pressed={visibility === id}
+                    onClick={() => setVisibility(id)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </p>
+            ) : null}
+            {source.kind === "mine" && !tokenOn ? (
+              <p className="gh-hint">
+                Sin GITHUB_TOKEN solo se ven los públicos. Para ver los
+                privados, crea un token en GitHub (Settings → Developer settings
+                → Fine-grained tokens, permiso «Metadata» y «Contents» de solo
+                lectura) y guárdalo en Integraciones o en .dev.vars.
+              </p>
+            ) : null}
+          </details>
           {REPO_GROUPS.map((group) => (
             <details
               key={group.id}
@@ -365,6 +429,11 @@ export function GitHubPage() {
                         <span>{item.license?.spdxId ?? "sin licencia"}</span>
                         <span>{formatDate(item.pushedAt)}</span>
                         {item.archived ? <b>archivado</b> : null}
+                        {source.kind === "mine" ? (
+                          <b className={item.isPrivate ? "gh-private" : ""}>
+                            {item.isPrivate ? "privado" : "público"}
+                          </b>
+                        ) : null}
                       </span>
                     </button>
                   </li>

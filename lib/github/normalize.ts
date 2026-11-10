@@ -91,6 +91,7 @@ export function normalizeRepo(value: unknown): RepoSummary {
     createdAt: asString(raw.created_at),
     archived: raw.archived === true,
     fork: raw.fork === true,
+    isPrivate: raw.private === true,
     isTemplate: raw.is_template === true,
     homepage: asString(raw.homepage),
     defaultBranch: asString(raw.default_branch) ?? "main",
