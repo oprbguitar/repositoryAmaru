@@ -1,5 +1,5 @@
 import { ChevronDown } from "lucide-react";
-import { type RefObject, useEffect, useState } from "react";
+import { type RefObject, useCallback, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { isMobileViewport } from "./mobile";
 
@@ -39,12 +39,12 @@ export function MobileDetailSheet({
   const location = useLocation();
   const [layout, setLayout] = useState<HTMLElement | null>(null);
 
-  function close() {
+  const close = useCallback(() => {
     setLayout((current) => {
       current?.classList.remove("sheet-open");
       return null;
     });
-  }
+  }, []);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: close on route change only
   useEffect(() => {
@@ -107,7 +107,7 @@ export function MobileDetailSheet({
       document.removeEventListener("keydown", onKey);
       window.removeEventListener("resize", onResize);
     };
-  }, [layout]);
+  }, [layout, close]);
 
   if (!layout) return null;
   return (
