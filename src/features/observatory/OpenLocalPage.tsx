@@ -26,6 +26,7 @@ import type {
   ObservatoryRecord,
 } from "../../../types/api";
 import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
+import { LocalModelManager } from "../local-models/LocalModelManager";
 import { getGithubRankings, getModelRankings, getRecords } from "./api";
 import { formatDate, formatNumber, missing } from "./format";
 import { ResourceAvatar } from "./ResourceAvatar";
@@ -417,11 +418,14 @@ export function OpenLocalPage() {
         <div>
           <h1>Open y local</h1>
           <p>
-            Proyectos abiertos, modelos, demos publicadas y datasets obtenidos
-            de GitHub, Hugging Face y OpenRouter.
+            Qué es: el catálogo de IA que puedes descargar y ejecutar en tu
+            propia computadora, sin depender de una API de pago. Aquí ves
+            proyectos abiertos, modelos, demos y datasets de GitHub, Hugging
+            Face y OpenRouter, y puedes descargar un modelo a tu carpeta.
           </p>
         </div>
       </header>
+      <LocalModelManager />
 
       <div className="resource-stats">
         {[

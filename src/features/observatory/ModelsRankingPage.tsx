@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { Bot, ExternalLink, Server, Tags, X } from "lucide-react";
+import { Bot, Compass, ExternalLink, Server, Tags, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { CapabilityTag, ModelRankingEntry } from "../../../types/api";
 import { SyncActionButton } from "../../components/common/SyncActionButton";
 import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
+import { ModelExplorer } from "../models/ModelExplorer";
 import {
   getModelDetail,
   getModelOfferings,
@@ -340,7 +341,7 @@ function ModelContextPanel({
   );
 }
 
-export function ModelsRankingPage() {
+function ApiRankingsView({ onSwitch }: { onSwitch: () => void }) {
   const [tab, setTab] = useState("category-programming");
   const [selected, setSelected] = useState<ModelRankingEntry | null>(null);
   const [drawer, setDrawer] = useState<ModelRankingEntry | null>(null);
@@ -416,6 +417,9 @@ export function ModelsRankingPage() {
             inventadas.
           </p>
         </div>
+        <button type="button" className="mh-btn" onClick={onSwitch}>
+          <Compass aria-hidden /> Explorador por necesidad
+        </button>
         <SyncActionButton
           label="Sincronizar modelos"
           busy={syncing}
@@ -583,5 +587,14 @@ export function ModelsRankingPage() {
         <OfferingsDrawer entry={drawer} onClose={() => setDrawer(null)} />
       ) : null}
     </CollapsibleLayout>
+  );
+}
+
+export function ModelsRankingPage() {
+  const [mode, setMode] = useState<"explorer" | "api">("explorer");
+  return mode === "explorer" ? (
+    <ModelExplorer onSwitch={() => setMode("api")} />
+  ) : (
+    <ApiRankingsView onSwitch={() => setMode("explorer")} />
   );
 }

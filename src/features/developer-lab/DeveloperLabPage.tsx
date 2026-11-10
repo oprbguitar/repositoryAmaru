@@ -17,6 +17,7 @@ import {
   PanelRightOpen,
   Play,
   PlugZap,
+  Radio,
   RefreshCw,
   ServerCog,
   ShieldCheck,
@@ -38,8 +39,9 @@ import {
   listProviderModels,
   testProviderCredential,
 } from "./api";
+import { LiveConsole } from "./LiveConsole";
 
-type View = "providers" | "workspace";
+type View = "providers" | "live" | "workspace";
 type Mode = "basic" | "advanced";
 
 const TEST_TYPES: Array<{
@@ -1023,6 +1025,13 @@ export function DeveloperLabPage() {
           </button>
           <button
             type="button"
+            className={view === "live" ? "active" : ""}
+            onClick={() => setView("live")}
+          >
+            <Radio /> En vivo
+          </button>
+          <button
+            type="button"
             className={view === "workspace" ? "active" : ""}
             onClick={() => setView("workspace")}
           >
@@ -1044,6 +1053,8 @@ export function DeveloperLabPage() {
         </div>
       ) : view === "providers" ? (
         <ProviderDirectory providers={items} />
+      ) : view === "live" ? (
+        <LiveConsole providers={items} />
       ) : (
         <TestWorkspace providers={items} />
       )}

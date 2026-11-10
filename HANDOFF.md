@@ -20,6 +20,12 @@ Instrucciones para la IA que continúe. Rama: `feat/integrations-market-realtime
 - **GitHub:** explorador por tipos y topics, «Aprende sobre mí», visor interno de README y árbol (`/api/github/*`).
 - **Evolución IA:** timeline alternado tipo Prevenir, árbol de ramas y grafo de conceptos (falta el lint).
 
+## Completado después (2026-11-09, sesión 2)
+- **Modelos:** `src/features/models/ModelExplorer.tsx` (vista por defecto en `/models`): necesidad en texto libre → filtros combinables, ranking 1–10 con criterio y metodología, panel de procedencia por país, ficha técnica (`ModelSheet`) con enlace a `/open-local?model=`. El botón «Rankings de APIs» abre la vista anterior.
+- **Modelos locales:** `src/features/local-models/LocalModelManager.tsx` en `/open-local`: elegir carpeta (File System Access, Chrome/Edge), paquete GGUF o modelo completo safetensors, descarga reanudable con verificación, biblioteca y control de versiones (nunca borra). Pendiente: hardware, Ollama y categoría «modificados» en la UI.
+- **Laboratorio de APIs:** vista «En vivo» (`LiveConsole.tsx`): streaming SSE, métricas y promedio de costo por modelo (`/api/developer-lab/runs/stats`). Migración 0012 aplicada en local.
+- No verificado en el navegador.
+
 ## Parcial (agentes detenidos a mitad: revisar el diff y completar)
 1. **Modelos** (`ModelsRankingPage.tsx`, `lib/models/hub.ts`, `memory.ts`, `organizations.ts`, quizá `worker/routes/model-hub.ts`): explorador por necesidad, rankings 1–10, procedencia visual y ficha técnica con enlace a `/open-local?model=`.
 2. **Modelos locales** (`src/features/local-models/`, `OpenLocalPage.tsx`):
