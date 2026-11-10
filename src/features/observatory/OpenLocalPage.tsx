@@ -26,6 +26,7 @@ import type {
   ObservatoryRecord,
 } from "../../../types/api";
 import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
+import { FavoriteStar } from "../favorites/FavoriteStar";
 import { LocalModelManager } from "../local-models/LocalModelManager";
 import { getGithubRankings, getModelRankings, getRecords } from "./api";
 import { formatDate, formatNumber, missing } from "./format";
@@ -558,6 +559,16 @@ export function OpenLocalPage() {
                   source={item.source}
                 />
                 <h2>{item.title}</h2>
+                <FavoriteStar
+                  kind={
+                    item.source.toLowerCase().includes("github")
+                      ? "repo"
+                      : "model"
+                  }
+                  id={item.id}
+                  label={item.title}
+                  url={item.url}
+                />
               </div>
               <p>
                 {item.description ?? "Descripción no publicada por la fuente."}

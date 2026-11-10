@@ -22,3 +22,119 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+.fav-page {
+  display: grid;
+  gap: var(--space-5);
+  align-content: start;
+  height: 100%;
+  overflow-y: auto;
+  padding: var(--space-4);
+}
+.fav-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  margin-block-end: var(--space-2);
+}
+.fav-section-head h2 {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin: 0;
+  font-size: var(--text-lg);
+}
+.fav-section-head h2 svg {
+  inline-size: 18px;
+  block-size: 18px;
+  color: var(--accent-2);
+}
+.fav-section-head a {
+  color: var(--accent);
+}
+.fav-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.fav-tabs button {
+  min-block-size: var(--control-sm);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.fav-tabs button:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+.fav-tabs button[aria-pressed="true"] {
+  border-color: var(--amber);
+  color: var(--text);
+}
+.fav-tabs button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.fav-list {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fav-list li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.fav-list li:hover {
+  border-color: var(--line-strong);
+}
+.fav-list li > div {
+  display: grid;
+  min-inline-size: 0;
+}
+.fav-list strong {
+  overflow-wrap: anywhere;
+}
+.fav-list em {
+  color: var(--text-subtle);
+  font-style: normal;
+  font-weight: 400;
+  font-size: var(--text-xs);
+}
+.fav-list small {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+.fav-list a {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  color: var(--accent);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+.fav-list a svg {
+  inline-size: 12px;
+  block-size: 12px;
+}
+.fav-empty {
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+}

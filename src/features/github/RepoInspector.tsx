@@ -8,6 +8,7 @@ import {
   Minus,
 } from "lucide-react";
 import type { RepoSummary, SignalState } from "../../../lib/github/types";
+import { FavoriteStar } from "../favorites/FavoriteStar";
 import { formatDate, formatNumber } from "../observatory/format";
 import { GithubApiError, githubApi } from "./api";
 
@@ -45,7 +46,15 @@ export function RepoInspector({
   const shown = data?.repo ?? repo;
   return (
     <aside className="gh-inspector" aria-label="Detalle del repositorio">
-      <h2 className="gh-inspector-title">{repo.fullName}</h2>
+      <h2 className="gh-inspector-title">
+        <FavoriteStar
+          kind="repo"
+          id={repo.fullName}
+          label={repo.fullName}
+          url={repo.url || `https://github.com/${repo.fullName}`}
+        />
+        {repo.fullName}
+      </h2>
       <p>{shown.description ?? "Sin descripción en GitHub."}</p>
       <div className="gh-actions">
         <button

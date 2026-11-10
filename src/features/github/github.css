@@ -831,3 +831,8 @@ textarea.gh-input {
     transition: none;
   }
 }
+.gh-inspector-title {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}

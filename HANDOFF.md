@@ -42,18 +42,21 @@ El usuario pide **bajo consumo de tokens, trabajar de uno en uno, sin subagentes
   - vista «En vivo» (`LiveConsole.tsx`): streaming SSE, razonamiento y respuesta por separado, máximo de salida configurable (4096 por defecto), métricas y promedio de costo por modelo (`/api/developer-lab/runs/stats`);
   - banco de pruebas: ahora devuelve `reasoningText` y `finishReason`, y avisa si el límite de tokens se gastó razonando.
 
-## Favoritos (iniciado)
-- `src/features/favorites/favorites.ts` es un almacén en localStorage (`amaru.favorites.v1`) de tipos `model`, `repo` y `guide`, con el hook `useFavorites()`. `FavoriteStar.tsx` es el botón de estrella reutilizable.
-- Ya está conectado al ranking del explorador de Modelos, que muestra una barra «★ Favoritos».
+## Favoritos (hecho)
+- `src/features/favorites/favorites.ts` es un almacén en localStorage (`amaru.favorites.v1`) de tipos `model`, `repo` y `guide`, con el hook `useFavorites()`. `FavoriteStar.tsx` es el botón de estrella.
+- La estrella está en el ranking de Modelos, en el inspector de GitHub (`RepoInspector.tsx`) y en las tarjetas de Open y local.
+- La vista `/favorites` («Mis favoritos», en el menú, `FavoritesPage.tsx`) muestra:
+  - los guardados, filtrados por tipo;
+  - «Mis repositorios» del usuario `oprbguitar` (`PERSONAL_GITHUB_USER`), consultados desde el navegador a `api.github.com` (60 consultas por hora sin token).
+- El CSP de `worker/index.ts` ahora permite `api.github.com` y Hugging Face en `connect-src`.
 - **Falta:**
-  - poner la estrella en GitHub (`src/features/github/`, tipo `repo`) y en Open y local;
-  - una vista «Mis favoritos» con filtro por tipo;
-  - opcional: sincronizar los favoritos en D1 para que no dependan del navegador.
+  - mover el usuario de GitHub a Ajustes;
+  - opcional: guardar los favoritos en D1.
 
 ## Pedido nuevo del usuario: análisis de repositorios y contraste con los suyos
 No requiere IA para los datos técnicos: se obtiene todo de forma determinista con la API de GitHub. La IA es opcional, solo para redactar un resumen narrativo, por ejemplo con Workers AI (`env.AI`) o un proveedor del laboratorio, y debe ir rotulada como generada.
 1. **Mis repositorios:**
-   - campo en Ajustes para el usuario de GitHub (personal);
+   - **hecho, en básico:** lista de los repositorios de `oprbguitar` en `/favorites`. Falta el campo en Ajustes;
    - endpoint `/api/github/user-repos?user=` (GET `users/{u}/repos?per_page=100&sort=pushed`, con caché en KV);
    - pestaña «Mis repositorios» en `GitHubPage`, con selección múltiple y opción de añadir repositorios propios a mano.
 2. **Ficha técnica del repositorio** (`/api/github/analyze?repo=`, en `worker/routes/github.ts`, lógica en `lib/github/analyze.ts`):

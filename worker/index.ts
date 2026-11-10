@@ -120,7 +120,7 @@ type IndexJob = {
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 const SECURITY_HEADERS = {
   "content-security-policy":
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com https://*.fbcdn.net https://scontent.xx.fbcdn.net; connect-src 'self' https://tiles.openfreemap.org; font-src 'self'; worker-src 'self' blob:; child-src blob:; frame-src https://www.youtube-nocookie.com https://www.facebook.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com https://*.fbcdn.net https://scontent.xx.fbcdn.net; connect-src 'self' https://tiles.openfreemap.org https://api.github.com https://huggingface.co https://*.huggingface.co https://*.hf.co; font-src 'self'; worker-src 'self' blob:; child-src blob:; frame-src https://www.youtube-nocookie.com https://www.facebook.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
   "referrer-policy": "strict-origin-when-cross-origin",
   "x-content-type-options": "nosniff",
   "x-frame-options": "DENY",

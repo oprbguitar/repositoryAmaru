@@ -13,6 +13,7 @@ import {
   Newspaper,
   PlaySquare,
   ServerCog,
+  Star,
   Wrench,
 } from "lucide-react";
 import type { TranslationKey } from "../../i18n/dictionary";
@@ -62,6 +63,12 @@ export const navigation = [
     icon: BookOpen,
   },
   { label: "GitHub", labelKey: "nav.github", path: "/github", icon: GitFork },
+  {
+    label: "Mis favoritos",
+    labelKey: "nav.favorites",
+    path: "/favorites",
+    icon: Star,
+  },
   {
     label: "Videos",
     labelKey: "nav.videos",
