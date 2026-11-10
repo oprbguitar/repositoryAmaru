@@ -1,0 +1,45 @@
+-- Additional model providers. Every URL below answered HTTP 200 (or a redirect
+-- to a 200) on 2026-11-09 via curl; slots that returned 403/404/503 or could not
+-- be confirmed are left NULL on purpose. Existing rows are never overwritten.
+
+INSERT OR IGNORE INTO providers
+  (id, name, country, categories_json, api_available, free_tier_status, local_execution_available,
+   documentation_url, models_url, pricing_url, api_key_url, changelog_url, console_url, examples_url,
+   source_id, last_verified_at)
+VALUES
+  ('alibaba-qwen','Qwen / Alibaba Cloud','China','["API (Model Studio)","Modelos abiertos","Multimodal"]',1,'No informado por la fuente',1,
+   'https://www.alibabacloud.com/help/en/model-studio/','https://www.alibabacloud.com/help/en/model-studio/models','https://www.alibabacloud.com/help/en/model-studio/model-pricing','https://www.alibabacloud.com/help/en/model-studio/get-api-key','https://www.alibabacloud.com/help/en/model-studio/newly-released-models','https://bailian.console.alibabacloud.com/','https://qwen.ai/',NULL,'2026-11-09'),
+  ('moonshot','Moonshot AI (Kimi)','China','["API","Modelos abiertos","Agentes"]',1,'No informado por la fuente',1,
+   'https://platform.moonshot.ai/docs/introduction','https://platform.moonshot.ai/docs/introduction','https://platform.moonshot.ai/docs/pricing/chat','https://platform.moonshot.ai/console/api-keys',NULL,'https://platform.moonshot.ai/','https://platform.moonshot.ai/docs/guide/start-using-kimi-api',NULL,'2026-11-09'),
+  ('zhipu','Zhipu AI (GLM / Z.ai)','China','["API","Modelos abiertos","Agentes de código"]',1,'No informado por la fuente',1,
+   'https://docs.z.ai/guides/overview/quick-start','https://docs.z.ai/guides/llm/glm-4.6','https://docs.z.ai/guides/overview/pricing','https://z.ai/manage-apikey/apikey-list',NULL,'https://z.ai/model-api','https://docs.z.ai/guides/overview/quick-start',NULL,'2026-11-09'),
+  ('minimax','MiniMax','China','["API","Modelos abiertos","Voz y video"]',1,'No informado por la fuente',1,
+   'https://platform.minimax.io/docs/guides/quickstart','https://platform.minimax.io/docs/release-notes/models','https://platform.minimax.io/docs/guides/pricing','https://platform.minimax.io/user-center/basic-information/interface-key','https://platform.minimax.io/docs/release-notes/models','https://platform.minimax.io/','https://platform.minimax.io/docs/guides/quickstart',NULL,'2026-11-09'),
+  ('ai21','AI21 Labs','Israel','["API","Modelos abiertos","Empresas"]',1,'No informado por la fuente',1,
+   'https://docs.ai21.com/','https://docs.ai21.com/docs/jamba-foundation-models','https://www.ai21.com/pricing/','https://studio.ai21.com/account/api-key','https://docs.ai21.com/changelog','https://studio.ai21.com/',NULL,NULL,'2026-11-09'),
+  ('microsoft','Microsoft (Phi / Azure AI Foundry)','Estados Unidos','["Modelos abiertos (Phi)","Plataforma de modelos","Nube"]',1,'No informado por la fuente',1,
+   'https://learn.microsoft.com/en-us/azure/ai-foundry/','https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/models','https://azure.microsoft.com/en-us/pricing/details/ai-foundry-models/microsoft/',NULL,'https://learn.microsoft.com/en-us/azure/ai-foundry/whats-new-azure-ai-foundry','https://ai.azure.com/','https://huggingface.co/microsoft',NULL,'2026-11-09'),
+  ('meta','Meta (Llama)','Estados Unidos','["Modelos abiertos","API (Llama API)"]',1,'No informado por la fuente',1,
+   'https://www.llama.com/docs/overview/','https://www.llama.com/models/llama-4/',NULL,NULL,NULL,'https://llama.developer.meta.com/','https://llama.developer.meta.com/docs/overview',NULL,'2026-11-09'),
+  ('ibm','IBM (Granite)','Estados Unidos','["Modelos abiertos","Empresas","watsonx"]',1,'No informado por la fuente',1,
+   'https://www.ibm.com/granite/docs','https://huggingface.co/ibm-granite','https://www.ibm.com/products/watsonx-ai/pricing',NULL,'https://www.ibm.com/granite/docs/resources/whats-new','https://dataplatform.cloud.ibm.com/','https://www.ibm.com/granite',NULL,'2026-11-09'),
+  ('tencent','Tencent (Hunyuan)','China','["API","Modelos abiertos","Multimodal"]',1,'No informado por la fuente',1,
+   'https://cloud.tencent.com/document/product/1729','https://huggingface.co/tencent','https://cloud.tencent.com/document/product/1729/97731',NULL,NULL,'https://console.cloud.tencent.com/hunyuan','https://github.com/Tencent-Hunyuan',NULL,'2026-11-09'),
+  ('baidu','Baidu (ERNIE)','China','["API (Qianfan)","Modelos abiertos"]',1,'No informado por la fuente',1,
+   'https://cloud.baidu.com/doc/qianfan/index.html','https://huggingface.co/baidu',NULL,NULL,NULL,'https://console.bce.baidu.com/qianfan/overview','https://github.com/PaddlePaddle/ERNIE',NULL,'2026-11-09'),
+  ('bytedance','ByteDance (Seed / Doubao)','China','["API (Volcengine / BytePlus)","Modelos abiertos","Multimodal"]',1,'No informado por la fuente',1,
+   'https://docs.byteplus.com/en/docs/ModelArk','https://seed.bytedance.com/en/',NULL,NULL,NULL,'https://console.volcengine.com/ark','https://www.volcengine.com/docs/82379',NULL,'2026-11-09'),
+  ('stepfun','StepFun','China','["API","Modelos abiertos","Multimodal"]',1,'No informado por la fuente',1,
+   'https://platform.stepfun.ai/',NULL,NULL,'https://platform.stepfun.ai/interface-key',NULL,'https://platform.stepfun.ai/',NULL,NULL,'2026-11-09'),
+  ('liquid','Liquid AI','Estados Unidos','["Modelos abiertos","Modelos en dispositivo"]',1,'No informado por la fuente',1,
+   'https://docs.liquid.ai/','https://huggingface.co/LiquidAI',NULL,NULL,'https://www.liquid.ai/blog','https://playground.liquid.ai/',NULL,NULL,'2026-11-09'),
+  ('ai2','Ai2 (OLMo)','Estados Unidos','["Modelos totalmente abiertos","Investigación"]',0,'Descarga abierta',1,
+   'https://allenai.org/olmo','https://huggingface.co/allenai',NULL,NULL,'https://allenai.org/blog','https://playground.allenai.org/',NULL,NULL,'2026-11-09'),
+  ('reka','Reka AI','Estados Unidos','["API","Multimodal"]',1,'No informado por la fuente',0,
+   'https://docs.reka.ai/',NULL,NULL,NULL,'https://reka.ai/news','https://platform.reka.ai/',NULL,NULL,'2026-11-09'),
+  ('perplexity','Perplexity','Estados Unidos','["API de búsqueda","Modelos con citas"]',1,'No informado por la fuente',0,
+   'https://docs.perplexity.ai/','https://docs.perplexity.ai/getting-started/models','https://docs.perplexity.ai/getting-started/pricing',NULL,'https://docs.perplexity.ai/changelog/changelog',NULL,NULL,NULL,'2026-11-09'),
+  ('amazon','Amazon (Nova)','Estados Unidos','["Modelos (Nova)","Amazon Bedrock","Nube"]',1,'No informado por la fuente',0,
+   'https://docs.aws.amazon.com/nova/','https://aws.amazon.com/ai/generative-ai/nova/','https://aws.amazon.com/bedrock/pricing/',NULL,'https://docs.aws.amazon.com/bedrock/latest/userguide/doc-history.html','https://console.aws.amazon.com/bedrock/','https://docs.aws.amazon.com/nova/latest/userguide/what-is-nova.html',NULL,'2026-11-09'),
+  ('sambanova','SambaNova','Estados Unidos','["API de inferencia","Hardware"]',1,'No informado por la fuente',0,
+   'https://docs.sambanova.ai/','https://docs.sambanova.ai/docs/en/models/sambacloud-models',NULL,'https://cloud.sambanova.ai/apis',NULL,'https://cloud.sambanova.ai/',NULL,NULL,'2026-11-09');

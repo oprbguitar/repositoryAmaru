@@ -26,11 +26,29 @@ import {
   getDashboard,
   getGlobalMap,
   getLiveEvents,
+  getModelRankings,
   getPriceHistory,
   getSources,
 } from "../observatory/api";
 import { formatDate, formatNumber } from "../observatory/format";
 import { PriceTrend } from "./PriceTrend";
+import { TodayModelsTable } from "./TodayModelsTable";
+import "./today.css";
+
+const DAY_MS = 86_400_000;
+
+/** "hoy", "ayer" or "hace N días" relative to the user's clock. */
+function relativeDay(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const start = (input: Date) =>
+    new Date(input.getFullYear(), input.getMonth(), input.getDate()).getTime();
+  const days = Math.round((start(new Date()) - start(date)) / DAY_MS);
+  if (days <= 0) return "hoy";
+  if (days === 1) return "ayer";
+  return `hace ${days} días`;
+}
 
 async function getStatus(): Promise<ApiResponse<LibraryStats>> {
   const response = await fetch("/api/status");
@@ -53,7 +71,11 @@ export function TodayPage() {
   });
   const priceHistory = useQuery({
     queryKey: ["price-history"],
-    queryFn: getPriceHistory,
+    queryFn: () => getPriceHistory(8),
+  });
+  const pricing = useQuery({
+    queryKey: ["rankings", "pricing-low"],
+    queryFn: () => getModelRankings("pricing-low"),
   });
   const map = useQuery({ queryKey: ["map", "global"], queryFn: getGlobalMap });
   const events = useQuery({
@@ -75,6 +97,16 @@ export function TodayPage() {
   const maxModels = countries[0]?.models ?? 0;
   const healthy =
     (stats?.failedSources ?? 0) === 0 && (stats?.staleSources ?? 0) === 0;
+  const lastSync = sourceItems
+    .map((source) => source.lastSuccessAt)
+    .filter((value): value is string => Boolean(value))
+    .sort()
+    .at(-1);
+  const rankingDate = pricing.data?.data.rankingDate ?? null;
+  const rankingAge = relativeDay(rankingDate);
+  const rankingStale =
+    rankingDate !== null &&
+    Date.now() - new Date(rankingDate).getTime() > 7 * DAY_MS;
 
   const modules = [
     {
@@ -152,6 +184,15 @@ export function TodayPage() {
           </h1>
           <p>{t("today.subtitle")}</p>
         </div>
+        <span
+          className="today-fresh"
+          title="Última sincronización exitosa de cualquier fuente"
+        >
+          Actualizado:{" "}
+          {lastSync
+            ? `${formatDate(lastSync)} (${relativeDay(lastSync)})`
+            : "sin sincronizaciones"}
+        </span>
         <Link className="secondary-button compact" to="/admin/sources">
           {t("today.sync")}
         </Link>
@@ -219,8 +260,22 @@ export function TodayPage() {
               </h2>
               <span>{t("today.priceTrendHint")}</span>
             </div>
+            {rankingDate ? (
+              <span
+                className={`state-badge ${rankingStale ? "not-configured" : "verified"}`}
+              >
+                Ranking {rankingAge ?? formatDate(rankingDate)}
+                {rankingStale ? " · pendiente de sincronizar" : ""}
+              </span>
+            ) : null}
           </div>
-          <div className="today-section-body">
+          <div className="today-section-body today-trend-body">
+            <TodayModelsTable
+              entries={pricing.data?.data.entries ?? []}
+              history={priceHistory.data?.data}
+              rankingDate={rankingDate}
+              loading={pricing.isLoading}
+            />
             <PriceTrend
               history={priceHistory.data?.data}
               emptyLabel={t("today.noSeries")}

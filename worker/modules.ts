@@ -1340,7 +1340,10 @@ const PRICE_SERIES_LIMIT = 5;
  * much their price actually moved, so the chart shows real movement rather than
  * an arbitrary slice of the catalogue.
  */
-export async function getPriceHistory(env: ModulesEnv) {
+export async function getPriceHistory(
+  env: ModulesEnv,
+  limit = PRICE_SERIES_LIMIT,
+) {
   const rows = await env.DB.prepare(
     `SELECT ranking_date, model_external_id, model_title, score
      FROM model_rankings
@@ -1396,7 +1399,10 @@ export async function getPriceHistory(env: ModulesEnv) {
       const move = Math.abs(right.changePercent) - Math.abs(left.changePercent);
       return move !== 0 ? move : right.current - left.current;
     })
-    .slice(0, PRICE_SERIES_LIMIT);
+    .slice(
+      0,
+      Math.min(Math.max(Math.trunc(limit) || PRICE_SERIES_LIMIT, 1), 40),
+    );
 
   return {
     dates,

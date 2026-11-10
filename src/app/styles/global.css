@@ -10,7 +10,8 @@
 :root {
   color-scheme: dark;
   /* Self-hosted (@fontsource): Public Sans for UI, IBM Plex Mono for data. */
-  --font-sans: "Public Sans Variable", "Public Sans", "Segoe UI", Arial, sans-serif;
+  --font-sans:
+    "Public Sans Variable", "Public Sans", "Segoe UI", Arial, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
   font-family: var(--font-sans);
   font-synthesis: none;
@@ -7115,7 +7116,11 @@ html[data-theme="light"] .provider-card-select {
 }
 .catalog-card.selected {
   border-color: var(--card-accent, var(--accent));
-  background: color-mix(in srgb, var(--card-accent, var(--accent)) 8%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--card-accent, var(--accent)) 8%,
+    transparent
+  );
 }
 .catalog-card-head {
   display: flex;

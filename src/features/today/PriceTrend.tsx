@@ -35,7 +35,7 @@ export function PriceTrend({
   emptyLabel: string;
 }) {
   const dates = history?.dates ?? [];
-  const series = history?.series ?? [];
+  const series = (history?.series ?? []).slice(0, SERIES_COLORS.length);
 
   if (!history || !history.available) {
     return (
@@ -64,41 +64,6 @@ export function PriceTrend({
 
   return (
     <div className="trend">
-      {/* Per-model summary: current price and the real change across the window. */}
-      <div className="trend-cards">
-        {series.map((entry, index) => (
-          <article className="trend-card" key={entry.modelExternalId}>
-            <span className="trend-card-name" title={entry.modelExternalId}>
-              <i
-                style={{
-                  background: SERIES_COLORS[index % SERIES_COLORS.length],
-                }}
-              />
-              {entry.modelTitle}
-            </span>
-            <strong>{money(entry.current)}</strong>
-            <span
-              className={
-                entry.changePercent < 0
-                  ? "delta-down"
-                  : entry.changePercent > 0
-                    ? "delta-up"
-                    : "delta-flat"
-              }
-            >
-              {entry.changePercent > 0
-                ? "↑ +"
-                : entry.changePercent < 0
-                  ? "↓ "
-                  : "→ "}
-              {entry.changePercent === 0
-                ? "sin cambio"
-                : `${Math.abs(entry.changePercent)}%`}
-            </span>
-          </article>
-        ))}
-      </div>
-
       <svg
         className="trend-chart"
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}

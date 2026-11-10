@@ -1,0 +1,22 @@
+data: {"id":"016dd8fa-2cc3-4915-9b96-975a5465e768","choices":[{"index":0,"finish_reason":null,"delta":{"content":"","role":"assistant"},"logprobs":null}],"created":1794270283,"model":"command-r7b-12-2024","object":"chat.completion.chunk"}
+
+data: {"id":"016dd8fa-2cc3-4915-9b96-975a5465e768","choices":[{"index":0,"finish_reason":null,"delta":{"content":"¡"},"logprobs":null}],"created":1794270283,"model":"command-r7b-12-2024","object":"chat.completion.chunk"}
+
+data: {"id":"016dd8fa-2cc3-4915-9b96-975a5465e768","choices":[{"index":0,"finish_reason":null,"delta":{"content":"H"},"logprobs":null}],"created":1794270283,"model":"command-r7b-12-2024","object":"chat.completion.chunk"}
+
+data: {"id":"016dd8fa-2cc3-4915-9b96-975a5465e768","choices":[{"index":0,"finish_reason":null,"delta":{"content":"ola"},"logprobs":null}],"created":1794270283,"model":"command-r7b-12-2024","object":"chat.completion.chunk"}
+
+data: {"id":"016dd8fa-2cc3-4915-9b96-975a5465e768","choices":[{"index":0,"finish_reason":null,"delta":{"content":" mundo"},"logprobs":null}],"created":1794270283,"model":"command-r7b-12-2024","object":"chat.completion.chunk"}
+
+data: {"id":"016dd8fa-2cc3-4915-9b96-975a5465e768","choices":[{"index":0,"finish_reason":null,"delta":{"content":" desde"},"logprobs":null}],"created":1794270283,"model":"command-r7b-12-2024","object":"chat.completion.chunk"}
+
+data: {"id":"016dd8fa-2cc3-4915-9b96-975a5465e768","choices":[{"index":0,"finish_reason":null,"delta":{"content":" el"},"logprobs":null}],"created":1794270283,"model":"command-r7b-12-2024","object":"chat.completion.chunk"}
+
+data: {"id":"016dd8fa-2cc3-4915-9b96-975a5465e768","choices":[{"index":0,"finish_reason":null,"delta":{"content":" laboratorio"},"logprobs":null}],"created":1794270283,"model":"command-r7b-12-2024","object":"chat.completion.chunk"}
+
+data: {"id":"016dd8fa-2cc3-4915-9b96-975a5465e768","choices":[{"index":0,"finish_reason":null,"delta":{"content":"!"},"logprobs":null}],"created":1794270283,"model":"command-r7b-12-2024","object":"chat.completion.chunk"}
+
+data: {"id":"016dd8fa-2cc3-4915-9b96-975a5465e768","choices":[{"index":0,"finish_reason":"stop","delta":{},"logprobs":null}],"created":1794270283,"model":"command-r7b-12-2024","object":"chat.completion.chunk"}
+
+data: [DONE]
+

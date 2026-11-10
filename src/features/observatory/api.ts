@@ -82,9 +82,9 @@ export function getProviderModels(providerId: string) {
   );
 }
 
-export function getPriceHistory() {
+export function getPriceHistory(limit?: number) {
   return read<import("../../../types/api").PriceHistoryResponse>(
-    "/api/dashboard/price-history",
+    `/api/dashboard/price-history${limit ? `?limit=${limit}` : ""}`,
   );
 }
 

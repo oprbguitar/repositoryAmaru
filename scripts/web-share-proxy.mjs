@@ -80,6 +80,27 @@ function isAllowedPath(requestUrl) {
   }
 }
 
+// Local control endpoints (health/shutdown of the dev server) must never be
+// reachable through the shared link: the proxy runs on loopback, so the dev
+// server alone cannot tell a shared visitor from the local user.
+function isControlPath(requestUrl) {
+  try {
+    const pathname = new URL(requestUrl, `http://${upstreamHost}`).pathname;
+    return pathname.toLowerCase().startsWith("/__amaru");
+  } catch {
+    return true;
+  }
+}
+
+function sendNotFound(response) {
+  response.writeHead(404, {
+    "Cache-Control": "no-store",
+    "Content-Length": "0",
+    Connection: "close",
+  });
+  response.end();
+}
+
 function sendUnauthorized(response) {
   response.writeHead(401, {
     "WWW-Authenticate": challenge,
@@ -148,6 +169,7 @@ function forwardedHeaders(request) {
     headers[lowerName] = value;
   }
   headers.host = upstreamHost;
+  headers["x-amaru-via-share"] = "1";
   return headers;
 }
 
@@ -159,6 +181,10 @@ function proxyHttpRequest(request, response, sendContinue = false) {
   if (!isAllowedPath(request.url)) {
     response.writeHead(400, { "Content-Length": "0", Connection: "close" });
     response.end();
+    return;
+  }
+  if (isControlPath(request.url)) {
+    sendNotFound(response);
     return;
   }
   if (sendContinue) response.writeContinue();
@@ -201,6 +227,13 @@ function proxyUpgrade(request, clientSocket, head) {
     return;
   }
 
+  if (isControlPath(request.url)) {
+    clientSocket.end(
+      "HTTP/1.1 404 Not Found\r\nConnection: close\r\nContent-Length: 0\r\n\r\n",
+    );
+    return;
+  }
+
   const upstreamSocket = connect(upstreamPort, loopback);
   let connected = false;
   const fail = () => {
@@ -235,6 +268,7 @@ function proxyUpgrade(request, clientSocket, head) {
     }
     headers.push(
       `Host: ${upstreamHost}`,
+      "X-Amaru-Via-Share: 1",
       "Connection: Upgrade",
       `Upgrade: ${request.headers.upgrade ?? "websocket"}`,
     );

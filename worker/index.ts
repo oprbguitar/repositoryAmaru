@@ -1217,7 +1217,10 @@ async function moduleRouter(
     );
   }
   if (request.method === "GET" && path === "/api/dashboard/price-history") {
-    const history = await getPriceHistory(env);
+    const history = await getPriceHistory(
+      env,
+      Number(url.searchParams.get("limit")) || undefined,
+    );
     return json(
       envelope(history, {
         sourceStatus: history.available ? "ready" : "empty",

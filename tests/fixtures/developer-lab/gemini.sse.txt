@@ -1,0 +1,8 @@
+data: {"candidates": [{"content": {"parts": [{"text": "hola mundo desde el laboratorio."}],"role": "model"},"index": 0}],"usageMetadata": {"promptTokenCount": 23,"candidatesTokenCount": 6,"totalTokenCount": 29,"promptTokensDetails": [{"modality": "TEXT","tokenCount": 23}],"serviceTier": "standard"},"modelVersion": "gemini-2.5-flash-lite","responseId": "TmTyat_UAfqwytMPt5jcuQo"}
+
+data: {"candidates": [{"content": {"parts": [{"text": "\nuno\ndos\ntres\ncuatro\ncinco\nseis\ns"}],"role": "model"},"index": 0}],"usageMetadata": {"promptTokenCount": 23,"candidatesTokenCount": 22,"totalTokenCount": 45,"promptTokensDetails": [{"modality": "TEXT","tokenCount": 23}],"serviceTier": "standard"},"modelVersion": "gemini-2.5-flash-lite","responseId": "TmTyat_UAfqwytMPt5jcuQo"}
+
+data: {"candidates": [{"content": {"parts": [{"text": "iete\nocho\nnueve\ndiez\nonce\ndoce\ntrece\ncatorce\nquince\ndieciséis\ndiecisiete\ndieciocho\ndiecinueve\nveinte\nveinti"}],"role": "model"},"index": 0}],"usageMetadata": {"promptTokenCount": 23,"candidatesTokenCount": 70,"totalTokenCount": 93,"promptTokensDetails": [{"modality": "TEXT","tokenCount": 23}],"serviceTier": "standard"},"modelVersion": "gemini-2.5-flash-lite","responseId": "TmTyat_UAfqwytMPt5jcuQo"}
+
+data: {"candidates": [{"content": {"parts": [{"text": "uno\nveintidós\nveintitrés\nveinticuatro\nveinticinco\nveintiséis\nveintisiete\nveintiocho\nveintinueve\ntreinta"}],"role": "model"},"finishReason": "STOP","index": 0}],"usageMetadata": {"promptTokenCount": 23,"candidatesTokenCount": 113,"totalTokenCount": 136,"promptTokensDetails": [{"modality": "TEXT","tokenCount": 23}],"serviceTier": "standard"},"modelVersion": "gemini-2.5-flash-lite","responseId": "TmTyat_UAfqwytMPt5jcuQo"}
+
