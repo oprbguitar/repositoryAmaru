@@ -394,7 +394,7 @@ export function GitHubPage() {
                 GitHub está limitando las consultas.
               </p>
             ) : null}
-            {!query ? (
+            {!query && source.kind !== "mine" ? (
               <p className="gh-empty">
                 Agrega topics en «Mis topics» o elige un tipo de repositorio.
               </p>
@@ -440,7 +440,7 @@ export function GitHubPage() {
                 ))}
               </ul>
             )}
-            {items.length ? (
+            {items.length && source.kind !== "mine" ? (
               <div className="gh-pager">
                 <button
                   type="button"
