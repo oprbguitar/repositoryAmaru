@@ -203,12 +203,10 @@ export function TodayPage() {
           <Activity />
         </span>
         <div>
-          <strong>
-            AMARU reúne datos externos trazables
-          </strong>
+          <strong>AMARU reúne datos externos trazables</strong>
           <p>
-            D1, KV y R2 permanecen locales; las solicitudes públicas se ejecutan
-            en el Worker y conservan la última copia válida.
+            Cada cifra viene de una fuente pública con fecha; si una fuente
+            falla, se conserva la última copia válida y se indica.
           </p>
         </div>
         <span className="state-badge verified">
