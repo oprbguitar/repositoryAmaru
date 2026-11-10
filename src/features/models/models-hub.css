@@ -486,3 +486,46 @@
 .mh-favorites a:hover {
   border-color: var(--amber);
 }
+.price-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  align-items: center;
+  margin-block-end: var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+.price-filter-bar select {
+  min-block-size: var(--control-sm);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+}
+.price-filter-bar button {
+  min-block-size: var(--control-sm);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.price-filter-bar button:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+.price-filter-bar button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-quiet);
+  color: var(--text);
+}
+.price-filter-bar :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

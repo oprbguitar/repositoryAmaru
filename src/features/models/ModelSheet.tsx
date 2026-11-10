@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { HUB_FORMAT_LABELS, type HubModel } from "../../../lib/models/hub";
 import { MEMORY_FORMULA, memoryTable } from "../../../lib/models/memory";
 import { countryName } from "../../../lib/models/organizations";
+import { FavoriteButton } from "../favorites/FavoriteStar";
 import { getHubModel } from "./api";
 import {
   DistributionMark,
@@ -68,6 +69,12 @@ export function ModelSheet({ model }: { model: HubModel }) {
         >
           <Download aria-hidden /> Descargar / añadir a biblioteca local
         </button>
+        <FavoriteButton
+          kind="model"
+          id={full.id}
+          label={full.name}
+          url={`https://huggingface.co/${full.id}`}
+        />
       </header>
 
       <dl className="mh-facts">

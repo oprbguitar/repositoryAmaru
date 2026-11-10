@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { CapabilityTag, ModelRankingEntry } from "../../../types/api";
 import { SyncActionButton } from "../../components/common/SyncActionButton";
 import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
+import { FavoriteButton, FavoriteStar } from "../favorites/FavoriteStar";
 import { ModelExplorer } from "../models/ModelExplorer";
 import {
   getModelDetail,
@@ -33,6 +34,45 @@ const RANKING_TABS: Array<{ id: string; label: string }> = [
   { id: "top-weekly", label: "Más utilizados (global)" },
   { id: "intelligence", label: "Inteligencia" },
 ];
+
+type PriceSide = "input" | "output";
+type PriceBand = "all" | "free" | "lt1" | "1to5" | "5to20" | "gt20";
+const PRICE_BANDS: Array<{ id: PriceBand; label: string }> = [
+  { id: "all", label: "Todos" },
+  { id: "free", label: "Gratis" },
+  { id: "lt1", label: "< US$ 1" },
+  { id: "1to5", label: "US$ 1–5" },
+  { id: "5to20", label: "US$ 5–20" },
+  { id: "gt20", label: "> US$ 20" },
+];
+
+/** Cheapest price per 1M tokens for one side, or null when unknown. */
+function pricePerMillion(
+  entry: ModelRankingEntry,
+  side: PriceSide,
+): number | null {
+  const summary = entry.offeringSummary;
+  const fromSummary =
+    side === "input"
+      ? summary?.minInputPerMillion
+      : summary?.minOutputPerMillion;
+  if (typeof fromSummary === "number" && Number.isFinite(fromSummary))
+    return fromSummary;
+  const raw = Number(
+    side === "input" ? entry.inputPricePerToken : entry.outputPricePerToken,
+  );
+  return Number.isFinite(raw) ? raw * 1_000_000 : null;
+}
+
+function inBand(price: number | null, band: PriceBand): boolean {
+  if (band === "all") return true;
+  if (price === null) return false;
+  if (band === "free") return price === 0;
+  if (band === "lt1") return price > 0 && price < 1;
+  if (band === "1to5") return price >= 1 && price <= 5;
+  if (band === "5to20") return price > 5 && price <= 20;
+  return price > 20;
+}
 
 function money(value: number | null | undefined): string {
   return typeof value === "number"
@@ -174,6 +214,12 @@ function ModelContextPanel({
       </div>
       <section>
         <h2 className="context-record-title">{entry.modelTitle}</h2>
+        <FavoriteButton
+          kind="model"
+          id={entry.modelExternalId}
+          label={entry.modelTitle}
+          url={entry.url}
+        />
         <p>{entry.summary ?? missing}</p>
       </section>
 
@@ -347,6 +393,9 @@ function ApiRankingsView({ onSwitch }: { onSwitch: () => void }) {
   const [drawer, setDrawer] = useState<ModelRankingEntry | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const [priceSide, setPriceSide] = useState<PriceSide>("input");
+  const [priceBand, setPriceBand] = useState<PriceBand>("all");
+  const [priceSort, setPriceSort] = useState<"rank" | "asc" | "desc">("rank");
   const rankings = useQuery({
     queryKey: ["model-rankings", tab],
     queryFn: () => getModelRankings(tab),
@@ -367,12 +416,19 @@ function ApiRankingsView({ onSwitch }: { onSwitch: () => void }) {
   }, [data]);
 
   const entries = useMemo(() => {
-    const all = data?.entries ?? [];
-    if (!tagFilter) return all;
-    return all.filter((entry) =>
-      (entry.capabilities ?? []).some((tag) => tag.id === tagFilter),
+    const all = (data?.entries ?? []).filter(
+      (entry) =>
+        (!tagFilter ||
+          (entry.capabilities ?? []).some((tag) => tag.id === tagFilter)) &&
+        inBand(pricePerMillion(entry, priceSide), priceBand),
     );
-  }, [data, tagFilter]);
+    if (priceSort === "rank") return all;
+    return [...all].sort((a, b) => {
+      const pa = pricePerMillion(a, priceSide) ?? Number.POSITIVE_INFINITY;
+      const pb = pricePerMillion(b, priceSide) ?? Number.POSITIVE_INFINITY;
+      return priceSort === "asc" ? pa - pb : pb - pa;
+    });
+  }, [data, tagFilter, priceSide, priceBand, priceSort]);
 
   const chosen =
     entries.find(
@@ -443,6 +499,38 @@ function ApiRankingsView({ onSwitch }: { onSwitch: () => void }) {
           </button>
         ))}
       </div>
+      <section className="price-filter-bar" aria-label="Filtrar por precio">
+        <span>Precio por 1M tokens de</span>
+        <select
+          aria-label="Tipo de precio"
+          value={priceSide}
+          onChange={(event) => setPriceSide(event.target.value as PriceSide)}
+        >
+          <option value="input">entrada</option>
+          <option value="output">salida</option>
+        </select>
+        {PRICE_BANDS.map((band) => (
+          <button
+            key={band.id}
+            type="button"
+            aria-pressed={priceBand === band.id}
+            onClick={() => setPriceBand(band.id)}
+          >
+            {band.label}
+          </button>
+        ))}
+        <select
+          aria-label="Ordenar por precio"
+          value={priceSort}
+          onChange={(event) =>
+            setPriceSort(event.target.value as "rank" | "asc" | "desc")
+          }
+        >
+          <option value="rank">Orden del ranking</option>
+          <option value="asc">Más barato primero</option>
+          <option value="desc">Más caro primero</option>
+        </select>
+      </section>
       {availableTags.length ? (
         <section className="tag-filter-bar" aria-label="Filtrar por etiqueta">
           <span className="tag-filter-label">
@@ -502,6 +590,9 @@ function ApiRankingsView({ onSwitch }: { onSwitch: () => void }) {
                 <thead>
                   <tr>
                     <th>#</th>
+                    <th>
+                      <span className="sr-only">Favorito</span>
+                    </th>
                     <th>Modelo</th>
                     <th>Para qué sirve</th>
                     <th>Contexto</th>
@@ -524,6 +615,14 @@ function ApiRankingsView({ onSwitch }: { onSwitch: () => void }) {
                       onClick={() => setSelected(entry)}
                     >
                       <td>{entry.position}</td>
+                      <td>
+                        <FavoriteStar
+                          kind="model"
+                          id={entry.modelExternalId}
+                          label={entry.modelTitle}
+                          url={entry.url}
+                        />
+                      </td>
                       <td>
                         <strong>{entry.modelTitle}</strong>
                         <small>{entry.modelExternalId}</small>

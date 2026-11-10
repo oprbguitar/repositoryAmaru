@@ -35,3 +35,20 @@ export function FavoriteStar(props: Omit<Favorite, "savedAt">) {
     </span>
   );
 }
+
+/** Labelled save button for detail panels (sheets, inspectors). */
+export function FavoriteButton(props: Omit<Favorite, "savedAt">) {
+  const favorites = useFavorites();
+  const on = favorites.some((f) => f.kind === props.kind && f.id === props.id);
+  return (
+    <button
+      type="button"
+      className="fav-button"
+      aria-pressed={on}
+      onClick={() => toggleFavorite(props)}
+    >
+      <Star aria-hidden fill={on ? "currentColor" : "none"} />
+      {on ? "Guardado en favoritos" : "Guardar en favoritos"}
+    </button>
+  );
+}
