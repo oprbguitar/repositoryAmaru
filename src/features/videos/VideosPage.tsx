@@ -7,6 +7,7 @@ import { SyncActionButton } from "../../components/common/SyncActionButton";
 import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
 import { revealOnMobile, useIsMobile } from "../../components/layout/mobile";
 import "./videos.css";
+import { ContextEmpty } from "../../components/layout/ContextEmpty";
 import { AdminNote, AUTO_UPDATE_NOTE, useIsAdmin } from "../admin/AdminNote";
 import { getVideos, synchronize } from "../observatory/api";
 import { formatDate, formatNumber, missing } from "../observatory/format";
@@ -144,15 +145,7 @@ export function VideosPage() {
       </section>
     </aside>
   ) : (
-    <aside className="context-panel scroll-region">
-      <div className="context-title">
-        <Info />
-        <strong>Información contextual</strong>
-      </div>
-      <section>
-        <p>Selecciona un video para ver su procedencia y reproducirlo.</p>
-      </section>
-    </aside>
+    <ContextEmpty />
   );
 
   return (

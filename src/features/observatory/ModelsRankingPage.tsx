@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { CapabilityTag, ModelRankingEntry } from "../../../types/api";
 import { SyncActionButton } from "../../components/common/SyncActionButton";
 import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
+import { ContextEmpty } from "../../components/layout/ContextEmpty";
 import { AUTO_UPDATE_NOTE, useIsAdmin } from "../admin/AdminNote";
 import { FavoriteButton, FavoriteStar } from "../favorites/FavoriteStar";
 import { ModelExplorer } from "../models/ModelExplorer";
@@ -191,17 +192,7 @@ function ModelContextPanel({
   });
 
   if (!entry) {
-    return (
-      <aside className="context-panel scroll-region">
-        <div className="context-title">
-          <Bot />
-          <strong>Información contextual</strong>
-        </div>
-        <section>
-          <p>Selecciona un modelo para revisar procedencia y precios.</p>
-        </section>
-      </aside>
-    );
+    return <ContextEmpty />;
   }
 
   const data = detail.data?.data;

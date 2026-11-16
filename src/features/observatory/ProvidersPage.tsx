@@ -18,6 +18,7 @@ import type React from "react";
 import { useMemo, useState } from "react";
 import type { ProviderRecord } from "../../../types/api";
 import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
+import { ContextEmpty } from "../../components/layout/ContextEmpty";
 import { Pagination } from "../../components/layout/Pagination";
 import { getDashboard, getProviders, getSources } from "./api";
 import { formatDate, formatNumber, missing } from "./format";
@@ -244,15 +245,7 @@ export function ProvidersPage() {
       </section>
     </aside>
   ) : (
-    <aside className="context-panel scroll-region">
-      <div className="context-title">
-        <Info />
-        <strong>Información contextual</strong>
-      </div>
-      <section>
-        <p>Selecciona un proveedor para revisar sus datos y enlaces.</p>
-      </section>
-    </aside>
+    <ContextEmpty />
   );
 
   return (

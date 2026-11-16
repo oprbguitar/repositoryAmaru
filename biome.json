@@ -13,7 +13,8 @@
       "!playwright-report",
       "!developer-lab-test-output",
       "!docs/ui-redesign",
-      "!docs/architecture-map.html"
+      "!docs/architecture-map.html",
+      "!design"
     ]
   },
   "formatter": {

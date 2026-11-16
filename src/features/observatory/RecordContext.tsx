@@ -1,5 +1,6 @@
 import { ExternalLink, Info, ShieldCheck } from "lucide-react";
 import type { ObservatoryRecord } from "../../../types/api";
+import { ContextEmpty } from "../../components/layout/ContextEmpty";
 import { formatDate, missing, stringDetail, verificationLabel } from "./format";
 
 export function RecordContext({
@@ -8,18 +9,7 @@ export function RecordContext({
   record: ObservatoryRecord | null;
 }) {
   if (!record) {
-    return (
-      <aside className="context-panel scroll-region">
-        <div className="context-title">
-          <Info />
-          <strong>Información contextual</strong>
-        </div>
-        <section>
-          <h3>Selección</h3>
-          <p>Selecciona un registro para revisar su procedencia y metadatos.</p>
-        </section>
-      </aside>
-    );
+    return <ContextEmpty />;
   }
   const capabilities = Array.isArray(record.data.supportedParameters)
     ? record.data.supportedParameters.filter(

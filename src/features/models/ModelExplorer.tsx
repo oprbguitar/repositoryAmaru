@@ -31,6 +31,7 @@ import { useFavorites } from "../favorites/favorites";
 import { getHubOverview, getSpecialtyPool, searchHub } from "./api";
 import { ModelSheet } from "./ModelSheet";
 import "./models-hub.css";
+import { ContextEmpty } from "../../components/layout/ContextEmpty";
 import {
   DistributionMark,
   EmptyState,
@@ -155,15 +156,13 @@ export function ModelExplorer({ onSwitch }: { onSwitch: () => void }) {
   const total = ranking.entries.length;
 
   const panel = selected ? (
-    <ModelSheet model={selected} />
+    <ModelSheet key={selected.id} model={selected} />
   ) : (
-    <EmptyState title="Sin modelo seleccionado">
-      Elige un modelo del ranking para ver su ficha técnica.
-    </EmptyState>
+    <ContextEmpty hint="Elige un modelo del ranking para ver su ficha aquí" />
   );
 
   return (
-    <CollapsibleLayout storageKey="models-explorer" panel={panel}>
+    <CollapsibleLayout storageKey="models-explorer-v2" panel={panel}>
       <header className="page-heading">
         <div>
           <h1>

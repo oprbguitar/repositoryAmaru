@@ -1,5 +1,23 @@
 # AMARU AI Observatory — DESIGN.md
 
+## Rediseño 2026-11-16 — «Observatorio lúdico» (vigente)
+Pedido del usuario: la interfaz era difícil de entender para alguien nuevo. Referencia elegida por el usuario: `design/` (Playful AI Observatory + Obsidian Telemetry).
+
+1. **Dominio / usuarios:** visitantes que aprenden IA + el administrador. La interfaz pasa de "panel del dueño" a **fase de aprendizaje**.
+2. **Arquitectura:** menú agrupado por intención — *Descubrir* (Hoy, Noticias, Investigación, Videos), *Entender* (Modelos, Evolución, Mapa, Mercado), *Construir* (Prompts, Open y local, APIs, GitHub), *Mi espacio* (Favoritos, solo navegador) y *Administración* (Proveedores, Laboratorio de APIs, Biblioteca local, Mi laboratorio — ocultos y bloqueados para visitantes).
+3. **Capa de aprendizaje:** `SectionIntroBar` (una línea «qué es esto», se abre sola la primera visita, 1–3 pasos + un concepto clave) y `ContextEmpty` (los paneles laterales vacíos enseñan en lugar de decir «selecciona…»). Contenido en `src/components/layout/sectionIntros.ts` (es/en).
+4. **Tipografía:** `Plus Jakarta Sans` (UI y titulares, 800 en display) + `IBM Plex Mono` para etiquetas, cifras y kickers en mayúsculas.
+5. **Paletas (9):** `playful` Observatorio (defecto, marfil + lavanda + menta), `mint`, `sunset`, `pastel`, `obsidian` (oscuro cian/violeta), `dark` Noche, `light`, `contrast-light`, `contrast-dark`. Cada paleta = *base* (`data-theme`) + *re-tinte* (`data-palette`), así heredan todas las reglas existentes. Clave de almacenamiento `amaru-theme-v3`.
+6. **Geometría y motion:** cards 14px, controles 10px, chips pill; fondo con retícula de puntos; transición de ruta (fade + 10px), entrada escalonada, hover con elevación y resorte (`--ease-spring`), barras que crecen. Todo anulado con `prefers-reduced-motion`.
+
+> `design-pick` propuso "grafito + naranja, radio 0, motion mínimo". Se descartó porque el usuario entregó una referencia explícita (lúdica y animada); se conservan sus restricciones de no usar Inter/Geist/Roboto, ni degradados morado→azul, ni blobs.
+
+Archivos clave: `src/app/styles/redesign.css` (capa de tokens/estilos del rediseño), `src/components/layout/{theme,navigation,sectionIntros}.ts`, `SectionIntroBar.tsx`, `ContextEmpty.tsx`, `src/features/today/TodayPage.tsx`.
+
+---
+
+## Histórico
+
 Dirección visual vigente desde 2026-11-09 (rediseño "observatorio de modelos"). Desde 2026-11-10 el tema por defecto es **pastel** (pedido del usuario: vista amigable y divertida para todo público); la estructura no cambia.
 
 ## Dirección (6 líneas)

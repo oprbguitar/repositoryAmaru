@@ -3,18 +3,13 @@ import {
   ArrowRight,
   Check,
   ChevronRight,
-  Contrast,
   Globe,
   Library,
-  Moon,
-  Palette,
   PanelLeftClose,
   PanelLeftOpen,
   PowerOff,
   Search,
   Settings2,
-  Sun,
-  SunMoon,
 } from "lucide-react";
 import {
   Suspense,
@@ -36,22 +31,30 @@ import { normalizeSearch } from "../../../lib/normalization/search";
 import type { ApiResponse, LibraryStats } from "../../../types/api";
 import { useIsAdmin } from "../../features/admin/AdminNote";
 import { getLiveEvents, getSources } from "../../features/observatory/api";
-import { LANGUAGES, type TranslationKey } from "../../i18n/dictionary";
+import { LANGUAGES } from "../../i18n/dictionary";
 import { useLanguage } from "../../i18n/LanguageProvider";
 import { Brand } from "./Brand";
 import { GuideControls } from "./GuideSystem";
 import { MobileDetailSheet } from "./MobileDetailSheet";
 import { PrivacyNotice } from "./PrivacyNotice";
 import "./shell-extras.css";
-import { mobileNavigation, navigation } from "./navigation";
+import {
+  mobileNavigation,
+  NAV_GROUPS,
+  navigation,
+  visibleNavigation,
+} from "./navigation";
+import { SectionIntroBar } from "./SectionIntroBar";
 import {
   ServerStoppedScreen,
   ShutdownDialog,
   useDevServerHealth,
 } from "./ServerControl";
+import { GROUP_LABELS } from "./sectionIntros";
 import { summarizeSources } from "./sourceSummary";
 import {
   type AppTheme,
+  applyTheme,
   type NavMode,
   readStorage,
   resolveInitialTheme,
@@ -60,45 +63,73 @@ import {
 } from "./theme";
 import { useMenu } from "./useMenu";
 
-const THEME_KEY = "amaru-theme-v2";
+const THEME_KEY = "amaru-theme-v3";
 const NAV_KEY = "amaru-nav";
 const DRAWER_QUERY = "(max-width: 900px)";
 
+/** Theme picker entries; `swatch` paints the preview dot (bg, accent, support). */
 const THEME_OPTIONS: ReadonlyArray<{
   value: AppTheme;
-  labelKey: TranslationKey;
-  hintKey: TranslationKey;
-  icon: typeof Sun;
+  label: { es: string; en: string };
+  hint: { es: string; en: string };
+  swatch: [string, string, string];
 }> = [
   {
+    value: "playful",
+    label: { es: "Observatorio", en: "Observatory" },
+    hint: {
+      es: "Marfil y lavanda (predeterminado)",
+      en: "Ivory and lavender (default)",
+    },
+    swatch: ["#faf8f5", "#8b5cf6", "#10b981"],
+  },
+  {
+    value: "mint",
+    label: { es: "Menta", en: "Mint" },
+    hint: { es: "Fresco y verde", en: "Fresh and green" },
+    swatch: ["#f3faf6", "#0f9f6e", "#0ea5e9"],
+  },
+  {
+    value: "sunset",
+    label: { es: "Atardecer", en: "Sunset" },
+    hint: { es: "Durazno y coral", en: "Peach and coral" },
+    swatch: ["#fff6f0", "#e8590c", "#d6336c"],
+  },
+  {
     value: "pastel",
-    labelKey: "shell.themePastel",
-    hintKey: "shell.themePastelHint",
-    icon: Palette,
+    label: { es: "Pastel", en: "Pastel" },
+    hint: { es: "Rosa y crema", en: "Pink and cream" },
+    swatch: ["#fff8f1", "#c2386b", "#12775a"],
+  },
+  {
+    value: "obsidian",
+    label: { es: "Obsidiana", en: "Obsidian" },
+    hint: { es: "Oscuro con cian telemétrico", en: "Dark with telemetry cyan" },
+    swatch: ["#0b0f17", "#22d3ee", "#a78bfa"],
   },
   {
     value: "dark",
-    labelKey: "shell.dark",
-    hintKey: "shell.themeDarkHint",
-    icon: Moon,
+    label: { es: "Noche", en: "Night" },
+    hint: { es: "Navy del logo", en: "Logo navy" },
+    swatch: ["#05121f", "#2ec7d4", "#22e3a0"],
   },
   {
     value: "light",
-    labelKey: "shell.light",
-    hintKey: "shell.themeLightHint",
-    icon: Sun,
+    label: { es: "Claro", en: "Light" },
+    hint: { es: "Superficies neutras", en: "Neutral surfaces" },
+    swatch: ["#eef4f8", "#0a6f7c", "#087a52"],
   },
   {
     value: "contrast-light",
-    labelKey: "shell.themeContrastLight",
-    hintKey: "shell.themeContrastLightHint",
-    icon: Contrast,
+    label: { es: "Alto contraste claro", en: "High contrast light" },
+    hint: { es: "Negro sobre blanco", en: "Black on white" },
+    swatch: ["#ffffff", "#000000", "#00566b"],
   },
   {
     value: "contrast-dark",
-    labelKey: "shell.themeContrastDark",
-    hintKey: "shell.themeContrastDarkHint",
-    icon: SunMoon,
+    label: { es: "Alto contraste oscuro", en: "High contrast dark" },
+    hint: { es: "Blanco sobre negro", en: "White on black" },
+    swatch: ["#000000", "#ffffff", "#5ff0ff"],
   },
 ];
 
@@ -167,7 +198,7 @@ export function AppShell() {
     ),
   );
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
+    applyTheme(theme);
     writeStorage(THEME_KEY, theme);
   }, [theme]);
 
@@ -285,6 +316,7 @@ export function AppShell() {
     () => navigation.find((item) => location.pathname.startsWith(item.path)),
     [location.pathname],
   );
+  const navItems = useMemo(() => visibleNavigation(isAdmin), [isAdmin]);
   const activeLabel = activeItem
     ? t(activeItem.labelKey)
     : location.pathname.startsWith("/admin")
@@ -298,8 +330,8 @@ export function AppShell() {
 
   if (serverStopped) return <ServerStoppedScreen />;
 
-  const ThemeIcon =
-    THEME_OPTIONS.find((option) => option.value === theme)?.icon ?? Moon;
+  const activeTheme =
+    THEME_OPTIONS.find((option) => option.value === theme) ?? THEME_OPTIONS[0];
 
   return (
     <div
@@ -353,7 +385,7 @@ export function AppShell() {
           </nav>
         </div>
 
-        <GlobalSearch inputRef={searchRef} />
+        <GlobalSearch inputRef={searchRef} items={navItems} />
 
         <div className="topbar-actions">
           {isAdmin ? (
@@ -404,7 +436,7 @@ export function AppShell() {
               onClick={() => display.setOpen((open) => !open)}
               onKeyDown={display.onTriggerKeyDown}
             >
-              <ThemeIcon aria-hidden="true" />
+              <ThemeDot swatch={activeTheme?.swatch} />
               <span>{t("shell.display")}</span>
             </button>
             {display.open ? (
@@ -418,39 +450,38 @@ export function AppShell() {
                   <span className="shell-menu-heading" aria-hidden="true">
                     {t("shell.theme")}
                   </span>
-                  {THEME_OPTIONS.map((option) => {
-                    const Icon = option.icon;
-                    const checked = theme === option.value;
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        role="menuitemradio"
-                        aria-checked={checked}
-                        tabIndex={-1}
-                        className="shell-menu-item"
-                        data-theme-preview={option.value}
-                        onClick={() => {
-                          setTheme(option.value);
-                          display.close(true);
-                        }}
-                      >
-                        <span className="theme-swatch" aria-hidden="true">
-                          <Icon />
-                        </span>
-                        <span className="shell-menu-text">
-                          <strong>{t(option.labelKey)}</strong>
-                          <small>{t(option.hintKey)}</small>
-                        </span>
-                        {checked ? (
-                          <Check
-                            className="shell-menu-check"
-                            aria-hidden="true"
-                          />
-                        ) : null}
-                      </button>
-                    );
-                  })}
+                  <div className="theme-grid">
+                    {THEME_OPTIONS.map((option) => {
+                      const checked = theme === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          role="menuitemradio"
+                          aria-checked={checked}
+                          tabIndex={-1}
+                          className="shell-menu-item theme-option"
+                          title={option.hint[language]}
+                          onClick={() => {
+                            setTheme(option.value);
+                            display.close(true);
+                          }}
+                        >
+                          <ThemeDot swatch={option.swatch} />
+                          <span className="shell-menu-text">
+                            <strong>{option.label[language]}</strong>
+                            <small>{option.hint[language]}</small>
+                          </span>
+                          {checked ? (
+                            <Check
+                              className="shell-menu-check"
+                              aria-hidden="true"
+                            />
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
                 {isDrawer ? null : (
                   <div className="shell-menu-group">
@@ -489,28 +520,30 @@ export function AppShell() {
                   <span className="shell-menu-heading" aria-hidden="true">
                     {t("shell.system")}
                   </span>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    tabIndex={-1}
-                    className="shell-menu-item"
-                    onClick={() => {
-                      display.close();
-                      navigate("/admin/sources");
-                    }}
-                  >
-                    <span className="theme-swatch" aria-hidden="true">
-                      <Settings2 />
-                    </span>
-                    <span className="shell-menu-text">
-                      <strong>{t("shell.configureIntegrations")}</strong>
-                      <small>
-                        {library
-                          ? `${t("shell.library")}: ${library.processed} ${t("shell.files")}`
-                          : t("shell.checking")}
-                      </small>
-                    </span>
-                  </button>
+                  {isAdmin ? (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      tabIndex={-1}
+                      className="shell-menu-item"
+                      onClick={() => {
+                        display.close();
+                        navigate("/admin/sources");
+                      }}
+                    >
+                      <span className="theme-swatch" aria-hidden="true">
+                        <Settings2 />
+                      </span>
+                      <span className="shell-menu-text">
+                        <strong>{t("shell.configureIntegrations")}</strong>
+                        <small>
+                          {library
+                            ? `${t("shell.library")}: ${library.processed} ${t("shell.files")}`
+                            : t("shell.checking")}
+                        </small>
+                      </span>
+                    </button>
+                  ) : null}
                   {devHealth ? (
                     <button
                       type="button"
@@ -575,25 +608,40 @@ export function AppShell() {
         inert={isDrawer && !drawerOpen}
       >
         <nav>
-          {navigation.map((item, index) => {
-            const Icon = item.icon;
-            const label = t(item.labelKey);
+          {NAV_GROUPS.map((group) => {
+            const items = navItems.filter((item) => item.group === group);
+            if (!items.length) return null;
+            const groupInfo = GROUP_LABELS[language][group];
             return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                data-bubble={(index % 6) + 1}
-                className={({ isActive }) => (isActive ? "active" : "")}
-                onMouseEnter={(event) =>
-                  showTooltip(event.currentTarget, label)
-                }
-                onMouseLeave={() => setTooltip(null)}
-                onFocus={(event) => showTooltip(event.currentTarget, label)}
-                onBlur={() => setTooltip(null)}
-              >
-                <Icon aria-hidden="true" />
-                <span className="nav-label">{label}</span>
-              </NavLink>
+              <div className="nav-group" key={group} data-group={group}>
+                <span className="nav-group-label" title={groupInfo.hint}>
+                  {groupInfo.label}
+                </span>
+                {items.map((item) => {
+                  const Icon = item.icon;
+                  const label = t(item.labelKey);
+                  const index = navigation.indexOf(item);
+                  return (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      data-bubble={(index % 6) + 1}
+                      className={({ isActive }) => (isActive ? "active" : "")}
+                      onMouseEnter={(event) =>
+                        showTooltip(event.currentTarget, label)
+                      }
+                      onMouseLeave={() => setTooltip(null)}
+                      onFocus={(event) =>
+                        showTooltip(event.currentTarget, label)
+                      }
+                      onBlur={() => setTooltip(null)}
+                    >
+                      <Icon aria-hidden="true" />
+                      <span className="nav-label">{label}</span>
+                    </NavLink>
+                  );
+                })}
+              </div>
             );
           })}
         </nav>
@@ -611,7 +659,13 @@ export function AppShell() {
           onBlur={() => setTooltip(null)}
         >
           <Settings2 aria-hidden="true" />
-          <span className="nav-label">{t("shell.configureIntegrations")}</span>
+          <span className="nav-label">
+            {isAdmin
+              ? t("shell.configureIntegrations")
+              : language === "en"
+                ? "Administrator access"
+                : "Acceso administrador"}
+          </span>
         </Link>
       </aside>
       {tooltip ? (
@@ -642,7 +696,13 @@ export function AppShell() {
             </div>
           }
         >
-          <Outlet />
+          <SectionIntroBar pathname={location.pathname} />
+          <div
+            className="route-stage"
+            key={activeItem?.path ?? location.pathname}
+          >
+            <Outlet />
+          </div>
         </Suspense>
       </main>
 
@@ -695,8 +755,10 @@ export function AppShell() {
  */
 function GlobalSearch({
   inputRef,
+  items,
 }: {
   inputRef: React.RefObject<HTMLInputElement | null>;
+  items: ReadonlyArray<(typeof navigation)[number]>;
 }) {
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -709,7 +771,7 @@ function GlobalSearch({
     const trimmed = query.trim();
     if (!trimmed) return [];
     const needle = normalizeSearch(trimmed);
-    const sections = navigation
+    const sections = items
       .filter((item) => normalizeSearch(t(item.labelKey)).includes(needle))
       .slice(0, 5)
       .map((item) => ({
@@ -729,7 +791,7 @@ function GlobalSearch({
         kind: "library" as const,
       },
     ];
-  }, [query, t]);
+  }, [query, t, items]);
 
   function choose(index: number) {
     const option = options[index];
@@ -823,5 +885,17 @@ function GlobalSearch({
         })}
       </div>
     </form>
+  );
+}
+
+/** Three-stop preview of a palette: canvas, main accent and support accent. */
+function ThemeDot({ swatch }: { swatch?: [string, string, string] }) {
+  const [bg, a, b] = swatch ?? ["#faf8f5", "#8b5cf6", "#10b981"];
+  return (
+    <i className="theme-dot" aria-hidden="true">
+      <b style={{ background: bg }} />
+      <b style={{ background: a }} />
+      <b style={{ background: b }} />
+    </i>
   );
 }

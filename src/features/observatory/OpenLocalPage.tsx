@@ -26,6 +26,7 @@ import type {
   ObservatoryRecord,
 } from "../../../types/api";
 import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
+import { ContextEmpty } from "../../components/layout/ContextEmpty";
 import { FavoriteStar } from "../favorites/FavoriteStar";
 import { LocalModelManager } from "../local-models/LocalModelManager";
 import { LocalRunGuide } from "../local-models/LocalRunGuide";
@@ -400,15 +401,7 @@ export function OpenLocalPage() {
       </section>
     </aside>
   ) : (
-    <aside className="context-panel scroll-region resource-panel">
-      <div className="context-title">
-        <Boxes />
-        <strong>Ficha del recurso</strong>
-      </div>
-      <section>
-        <p>Selecciona un recurso para revisar sus metadatos y procedencia.</p>
-      </section>
-    </aside>
+    <ContextEmpty />
   );
 
   return (

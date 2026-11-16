@@ -115,7 +115,14 @@ export default function App() {
       <Route element={<AppShell />}>
         <Route path="/" element={<Navigate to="/today" replace />} />
         <Route path="/today" element={<TodayPage />} />
-        <Route path="/providers/*" element={<ProvidersPage />} />
+        <Route
+          path="/providers/*"
+          element={
+            <AdminOnly title="Proveedores">
+              <ProvidersPage />
+            </AdminOnly>
+          }
+        />
         <Route path="/models/*" element={<ModelsRankingPage />} />
         <Route path="/api-catalog/*" element={<ApiCatalogPage />} />
         <Route path="/evolution/*" element={<EvolutionPage />} />
@@ -129,7 +136,14 @@ export default function App() {
         />
         <Route path="/map/*" element={<GlobalMapPage />} />
         <Route path="/videos/*" element={<VideosPage />} />
-        <Route path="/laboratory/*" element={<LaboratoryPage />} />
+        <Route
+          path="/laboratory/*"
+          element={
+            <AdminOnly title="Mi laboratorio">
+              <LaboratoryPage />
+            </AdminOnly>
+          }
+        />
         <Route path="/open-local/*" element={<OpenLocalPage />} />
         <Route path="/news/*" element={<NewsPage />} />
         <Route path="/research/*" element={<ResearchPage />} />
@@ -138,10 +152,21 @@ export default function App() {
         <Route path="/markets/*" element={<MarketPage />} />
         <Route path="/admin/*" element={<AdminConsole />} />
         <Route path="/prompts/*" element={<PromptStudioPage />} />
-        <Route path="/local-library" element={<LocalLibraryPage />} />
+        <Route
+          path="/local-library"
+          element={
+            <AdminOnly title="Biblioteca local">
+              <LocalLibraryPage />
+            </AdminOnly>
+          }
+        />
         <Route
           path="/local-library/:documentId"
-          element={<LocalLibraryPage />}
+          element={
+            <AdminOnly title="Biblioteca local">
+              <LocalLibraryPage />
+            </AdminOnly>
+          }
         />
         {placeholderRoutes.map(([path, title, description]) => (
           <Route

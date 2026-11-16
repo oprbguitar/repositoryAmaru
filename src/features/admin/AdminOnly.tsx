@@ -25,9 +25,9 @@ export function AdminOnly({
         <Lock aria-hidden="true" className="adm-login-icon" />
         <h1>{title}</h1>
         <p>
-          Esta sección usa las claves de pago del administrador, así que solo
-          está disponible con su sesión. Puedes probar modelos gratis desde
-          «Prompts y agentes».
+          Esta sección es una herramienta interna del administrador y solo está
+          disponible con su sesión. Mientras tanto, puedes practicar con la IA
+          gratuita en «Prompts y agentes».
         </p>
         <Link className="adm-link-button" to="/prompts">
           Ir a Prompts y agentes

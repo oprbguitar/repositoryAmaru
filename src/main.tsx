@@ -6,9 +6,11 @@ import App from "./app/App";
 import "@fontsource-variable/public-sans";
 import "@fontsource-variable/manrope";
 import "@fontsource-variable/fredoka";
+import "@fontsource-variable/plus-jakarta-sans";
 import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 import "./app/styles/global.css";
+import "./app/styles/redesign.css";
 import { LanguageProvider } from "./i18n/LanguageProvider";
 
 const queryClient = new QueryClient({
