@@ -4,93 +4,64 @@ import { AppShell } from "../components/layout/AppShell";
 import { AdminOnly } from "../features/admin/AdminOnly";
 import { PlaceholderWorkspace } from "../features/common/PlaceholderWorkspace";
 import { TodayPage } from "../features/today/TodayPage";
+import { loaders } from "./routeLoaders";
 
 // Every section except «Hoy» loads on demand: the first visit (mobile above
 // all) downloads only the shell and the landing page.
 const AdminConsole = lazy(() =>
-  import("../features/admin/AdminConsole").then((module) => ({
-    default: module.AdminConsole,
-  })),
+  loaders.admin().then((module) => ({ default: module.AdminConsole })),
 );
 const ApiCatalogPage = lazy(() =>
-  import("../features/api-catalog/ApiCatalogPage").then((module) => ({
-    default: module.ApiCatalogPage,
-  })),
+  loaders.apiCatalog().then((module) => ({ default: module.ApiCatalogPage })),
 );
 const DeveloperLabPage = lazy(() =>
-  import("../features/developer-lab/DeveloperLabPage").then((module) => ({
-    default: module.DeveloperLabPage,
-  })),
+  loaders
+    .developerLab()
+    .then((module) => ({ default: module.DeveloperLabPage })),
 );
 const EvolutionPage = lazy(() =>
-  import("../features/evolution/EvolutionPage").then((module) => ({
-    default: module.EvolutionPage,
-  })),
+  loaders.evolution().then((module) => ({ default: module.EvolutionPage })),
 );
 const FavoritesPage = lazy(() =>
-  import("../features/favorites/FavoritesPage").then((module) => ({
-    default: module.FavoritesPage,
-  })),
+  loaders.favorites().then((module) => ({ default: module.FavoritesPage })),
 );
 const LaboratoryPage = lazy(() =>
-  import("../features/laboratory/LaboratoryPage").then((module) => ({
-    default: module.LaboratoryPage,
-  })),
+  loaders.laboratory().then((module) => ({ default: module.LaboratoryPage })),
 );
 const LocalLibraryPage = lazy(() =>
-  import("../features/local-library/LocalLibraryPage").then((module) => ({
-    default: module.LocalLibraryPage,
-  })),
+  loaders
+    .localLibrary()
+    .then((module) => ({ default: module.LocalLibraryPage })),
 );
 const GlobalMapPage = lazy(() =>
-  import("../features/maps/GlobalMapPage").then((module) => ({
-    default: module.GlobalMapPage,
-  })),
+  loaders.map().then((module) => ({ default: module.GlobalMapPage })),
 );
 const GitHubPage = lazy(() =>
-  import("../features/observatory/GitHubPage").then((module) => ({
-    default: module.GitHubPage,
-  })),
+  loaders.github().then((module) => ({ default: module.GitHubPage })),
 );
 const MarketPage = lazy(() =>
-  import("../features/observatory/MarketPage").then((module) => ({
-    default: module.MarketPage,
-  })),
+  loaders.markets().then((module) => ({ default: module.MarketPage })),
 );
 const ModelsRankingPage = lazy(() =>
-  import("../features/observatory/ModelsRankingPage").then((module) => ({
-    default: module.ModelsRankingPage,
-  })),
+  loaders.models().then((module) => ({ default: module.ModelsRankingPage })),
 );
 const NewsPage = lazy(() =>
-  import("../features/observatory/NewsPage").then((module) => ({
-    default: module.NewsPage,
-  })),
+  loaders.news().then((module) => ({ default: module.NewsPage })),
 );
 const OpenLocalPage = lazy(() =>
-  import("../features/observatory/OpenLocalPage").then((module) => ({
-    default: module.OpenLocalPage,
-  })),
+  loaders.openLocal().then((module) => ({ default: module.OpenLocalPage })),
 );
 const ProvidersPage = lazy(() =>
-  import("../features/observatory/ProvidersPage").then((module) => ({
-    default: module.ProvidersPage,
-  })),
+  loaders.providers().then((module) => ({ default: module.ProvidersPage })),
 );
 const ResearchPage = lazy(() =>
-  import("../features/observatory/ResearchPage").then((module) => ({
-    default: module.ResearchPage,
-  })),
+  loaders.research().then((module) => ({ default: module.ResearchPage })),
 );
 const PromptStudioPage = lazy(() =>
-  import("../features/prompts/PromptStudioPage").then((module) => ({
-    default: module.PromptStudioPage,
-  })),
+  loaders.prompts().then((module) => ({ default: module.PromptStudioPage })),
 );
 const VideosPage = lazy(() =>
-  import("../features/videos/VideosPage").then((module) => ({
-    default: module.VideosPage,
-  })),
+  loaders.videos().then((module) => ({ default: module.VideosPage })),
 );
 
 const placeholderRoutes = [

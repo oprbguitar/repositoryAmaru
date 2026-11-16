@@ -25,3 +25,14 @@ React 19 + Vite + Cloudflare Workers; CSS con tokens (`src/app/styles/redesign.c
 - Para mover una sección de grupo o hacerla solo-admin: `src/components/layout/navigation.ts` (`group`, `adminOnly`) y envolver la ruta con `AdminOnly` en `src/app/App.tsx`.
 - Para una paleta nueva: añadirla en `APP_THEMES`/`THEME_BASE` (`theme.ts`), en `THEME_OPTIONS` (`AppShell.tsx`) y sus tokens en `redesign.css` bajo `html[data-palette="…"]`.
 - La carpeta `design/` contiene las referencias visuales entregadas; está excluida del linter.
+
+## Iteración 2 (2026-11-16)
+- **Menú lateral con más aire:** ítems de 38 px y más separación entre grupos para que la selección se note.
+- **La barra de guía ya no ocupa espacio:** ahora es la nota **«¿Qué es esto?»** junto a «Visualización». Al pasar el mouse (o con foco de teclado) aparece la explicación de la sección y al alejarlo desaparece; en móvil se abre con un toque. La primera vez que visitas una sección, la nota da unos saltitos para llamar la atención. Componente: `src/components/layout/SectionHint.tsx`.
+- **Carga más rápida:** el código de cada sección se precarga al pasar el mouse o tocar el enlace del menú y, en segundo plano, en tiempo ocioso tras abrir la app (el mapa, que es el más pesado, va al final; se omite con «ahorro de datos» o 2G). La transición entre secciones bajó a 200 ms. Archivo: `src/app/routeLoaders.ts`.
+- **Prompts y agentes más avanzados:**
+  - Cada cadena tiene un **Prompt maestro · todo en uno**: un prompt extenso con rol, contexto, tareas por fases, formato de salida y autoverificación, al lado de un **ejemplo simulado del resultado**. Se copia con un clic y trae accesos a ChatGPT, Claude, Gemini y Copilot. En pantallas angostas se alterna entre «Prompt» y «Resultado».
+  - Debajo sigue la versión **paso a paso**, que indica que la salida de cada paso es la entrada del siguiente.
+  - Cada agente incluye el **system prompt del orquestador**, que se genera de sus fases: bucle pensar → actuar → observar → verificar, contrato de traspaso en JSON, barandas, presupuesto de tokens y manejo de errores.
+  - En «Técnicas» hay una sección nueva de **Eficiencia de tokens** con la etiqueta «Ahorra tokens»: caché de prompt, Chain of Draft, salida acotada, TOON/CSV, instrucciones en viñetas, RAG, resumir y reiniciar, API por lotes, enrutamiento y presupuesto de razonamiento. Las mismas etiquetas aparecen en cada prompt maestro.
+  - Contenido en `src/features/prompts/masters.ts`; prueba en `tests/prompt-masters.test.ts`.

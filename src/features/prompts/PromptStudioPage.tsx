@@ -7,6 +7,7 @@ import {
   GraduationCap,
   History,
   Layers,
+  Leaf,
   Plus,
   Search,
   Trash2,
@@ -41,6 +42,8 @@ import {
   PARAMETERS,
 } from "./course";
 import { addHistory, removeHistory, useHistory } from "./history";
+import { MasterPromptPanel, TokenSaverTag } from "./MasterPromptPanel";
+import { blueprintSystemPrompt, TOKEN_SAVERS } from "./masters";
 import { saveTextFile, slugify } from "./saveFile";
 import { ToolSuggestions } from "./ToolSuggestions";
 import { TryFreeAi } from "./TryFreeAi";
@@ -282,8 +285,6 @@ function ChainInspector({ chain }: { chain: PromptChain }) {
         <p>{chain.summary}</p>
       </header>
 
-      <ToolSuggestions category={chain.category} />
-
       <fieldset className="pr-vars">
         <legend>Completa las variables</legend>
         {chain.variables.map((variable) => (
@@ -303,6 +304,14 @@ function ChainInspector({ chain }: { chain: PromptChain }) {
         ))}
       </fieldset>
 
+      <MasterPromptPanel chainId={chain.id} values={values} />
+
+      <h3 className="pr-h3 pr-steps-title">
+        O paso a paso: cadena de {chain.steps.length} prompts
+        <small>
+          Pega cada paso en orden; la salida de uno es la entrada del siguiente.
+        </small>
+      </h3>
       <ol className="pr-steps">
         {chain.steps.map((step, index) => {
           const text = fillTemplate(step.prompt, values);
@@ -385,6 +394,8 @@ function ChainInspector({ chain }: { chain: PromptChain }) {
           {saved}
         </p>
       ) : null}
+
+      <ToolSuggestions category={chain.category} />
 
       <TryFreeAi initialPrompt={firstPrompt} />
 
@@ -765,7 +776,18 @@ function AgentsTab() {
 
 function BlueprintDetail({ blueprint }: { blueprint: AgentBlueprint }) {
   const { copied, copy } = useCopy();
-  const markdown = blueprintToMarkdown(blueprint);
+  const systemPrompt = blueprintSystemPrompt(
+    blueprint,
+    (tier) => MODEL_TIERS[tier as keyof typeof MODEL_TIERS]?.label ?? tier,
+  );
+  const markdown = `${blueprintToMarkdown(blueprint)}
+
+## System prompt del orquestador
+
+\`\`\`text
+${systemPrompt}
+\`\`\`
+`;
   return (
     <article className="pr-inspector" aria-label={blueprint.product}>
       <header>
@@ -798,6 +820,41 @@ function BlueprintDetail({ blueprint }: { blueprint: AgentBlueprint }) {
           </li>
         ))}
       </ol>
+      <section className="pr-master" aria-label="System prompt del orquestador">
+        <header className="pr-master-head">
+          <div>
+            <span className="pr-master-kicker">
+              <Bot aria-hidden="true" /> System prompt del orquestador
+              (avanzado)
+            </span>
+            <p>
+              Instrucciones completas para el agente que coordina las fases:
+              bucle pensar → actuar → observar → verificar, contrato de traspaso
+              en JSON, barandas, presupuesto de tokens y manejo de errores.
+              Pégalo como «system prompt» o instrucciones del proyecto.
+            </p>
+          </div>
+        </header>
+        <pre className="pr-master-solo">{systemPrompt}</pre>
+        <div className="pr-master-savers">
+          <TokenSaverTag id="cache" />
+          <TokenSaverTag id="enrutar" />
+          <TokenSaverTag id="resumen-sesion" />
+        </div>
+        <div className="pr-master-actions">
+          <button
+            type="button"
+            className="pr-button pr-button-primary"
+            onClick={() => copy(`${blueprint.id}:system`, systemPrompt)}
+          >
+            <Copy aria-hidden="true" />
+            {copied === `${blueprint.id}:system`
+              ? "Copiado"
+              : "Copiar system prompt"}
+          </button>
+        </div>
+      </section>
+
       <h3 className="pr-h3">Barandas</h3>
       <ul className="pr-bullets">
         {blueprint.guardrails.map((item) => (
@@ -870,6 +927,42 @@ function TechniquesTab() {
           </li>
         ))}
       </ul>
+      <h2 className="pr-h2" id="pr-tokens">
+        Eficiencia de tokens
+        <small>
+          Gasta menos y responde más rápido en tu IA favorita. Revisado en
+          noviembre de 2026.
+        </small>
+      </h2>
+      <ul className="pr-mini-grid pr-token-grid">
+        {TOKEN_SAVERS.map((saver) => (
+          <li key={saver.id} className="pr-mini pr-token-card">
+            <span className="pr-token-tag">
+              <Leaf aria-hidden="true" /> Ahorra tokens
+            </span>
+            <strong>{saver.name}</strong>
+            <span>{saver.what}</span>
+            <small>Cómo: {saver.how}</small>
+            <em className="pr-token-saving">{saver.saving}</em>
+            {saver.template ? (
+              <>
+                <code>{saver.template}</code>
+                <button
+                  type="button"
+                  className="pr-button pr-button-ghost"
+                  onClick={() =>
+                    copy(`saver:${saver.id}`, saver.template ?? "")
+                  }
+                >
+                  <Copy aria-hidden="true" />
+                  {copied === `saver:${saver.id}` ? "Copiado" : "Copiar"}
+                </button>
+              </>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+
       <h2 className="pr-h2">Parámetros de ejecución</h2>
       <div className="pr-table-wrap">
         <table className="pr-table">

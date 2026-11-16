@@ -38,13 +38,14 @@ import { GuideControls } from "./GuideSystem";
 import { MobileDetailSheet } from "./MobileDetailSheet";
 import { PrivacyNotice } from "./PrivacyNotice";
 import "./shell-extras.css";
+import { preloadInIdle, preloadRoute } from "../../app/routeLoaders";
 import {
   mobileNavigation,
   NAV_GROUPS,
   navigation,
   visibleNavigation,
 } from "./navigation";
-import { SectionIntroBar } from "./SectionIntroBar";
+import { SectionHint } from "./SectionHint";
 import {
   ServerStoppedScreen,
   ShutdownDialog,
@@ -317,6 +318,8 @@ export function AppShell() {
     [location.pathname],
   );
   const navItems = useMemo(() => visibleNavigation(isAdmin), [isAdmin]);
+  // Warm every section's code in idle time so clicks feel instant.
+  useEffect(() => preloadInIdle(navItems.map((item) => item.path)), [navItems]);
   const activeLabel = activeItem
     ? t(activeItem.labelKey)
     : location.pathname.startsWith("/admin")
@@ -424,6 +427,8 @@ export function AppShell() {
               </span>
             </Link>
           ) : null}
+
+          <SectionHint pathname={location.pathname} />
 
           <div className="shell-menu" ref={display.rootRef}>
             <button
@@ -627,13 +632,16 @@ export function AppShell() {
                       to={item.path}
                       data-bubble={(index % 6) + 1}
                       className={({ isActive }) => (isActive ? "active" : "")}
-                      onMouseEnter={(event) =>
-                        showTooltip(event.currentTarget, label)
-                      }
+                      onMouseEnter={(event) => {
+                        preloadRoute(item.path);
+                        showTooltip(event.currentTarget, label);
+                      }}
                       onMouseLeave={() => setTooltip(null)}
-                      onFocus={(event) =>
-                        showTooltip(event.currentTarget, label)
-                      }
+                      onTouchStart={() => preloadRoute(item.path)}
+                      onFocus={(event) => {
+                        preloadRoute(item.path);
+                        showTooltip(event.currentTarget, label);
+                      }}
                       onBlur={() => setTooltip(null)}
                     >
                       <Icon aria-hidden="true" />
@@ -696,7 +704,6 @@ export function AppShell() {
             </div>
           }
         >
-          <SectionIntroBar pathname={location.pathname} />
           <div
             className="route-stage"
             key={activeItem?.path ?? location.pathname}
@@ -726,7 +733,11 @@ export function AppShell() {
         {mobileNavigation.map((item) => {
           const Icon = item.icon;
           return (
-            <NavLink key={item.path} to={item.path}>
+            <NavLink
+              key={item.path}
+              to={item.path}
+              onTouchStart={() => preloadRoute(item.path)}
+            >
               <Icon aria-hidden="true" />
               <span>{t(item.labelKey)}</span>
             </NavLink>
