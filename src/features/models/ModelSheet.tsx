@@ -1,11 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
-import { Download, ExternalLink, FileBox, Info } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Bot, ExternalLink, FileBox, Info, PlaySquare } from "lucide-react";
+import { Link } from "react-router-dom";
+import { agentsForLocalModels } from "../../../lib/models/agents";
 import { HUB_FORMAT_LABELS, type HubModel } from "../../../lib/models/hub";
+import { classifyLineage } from "../../../lib/models/lineage";
 import { MEMORY_FORMULA, memoryTable } from "../../../lib/models/memory";
 import { countryName } from "../../../lib/models/organizations";
+import { FILE_TYPES } from "../../../lib/models/runtime";
 import { FavoriteButton } from "../favorites/FavoriteStar";
+import { AgentCatalog } from "./AgentCatalog";
 import { getHubModel } from "./api";
+import { DeviceChips } from "./Devices";
+import { DownloadCta, PcFit, videoTopic } from "./LocalFit";
 import {
   DistributionMark,
   fmtDate,
@@ -13,6 +19,7 @@ import {
   fmtInt,
   fmtParams,
   fmtTokens,
+  LineageBadge,
   LoadingRows,
   NO_DATA,
   SignalBlock,
@@ -30,8 +37,16 @@ const LICENSE_CLASS_LABELS: Record<HubModel["licenseClass"], string> = {
  * from the list record (instant) and enriches it with file sizes, config.json
  * and the card's limitations once the detail request resolves.
  */
-export function ModelSheet({ model }: { model: HubModel }) {
-  const navigate = useNavigate();
+export function ModelSheet({
+  model,
+  alternatives = [],
+  onSelect,
+}: {
+  model: HubModel;
+  /** Ranked pool, used to suggest models that fit the user's PC. */
+  alternatives?: HubModel[];
+  onSelect?: (id: string) => void;
+}) {
   const detail = useQuery({
     queryKey: ["model-hub", "model", model.id],
     queryFn: () => getHubModel(model.id),
@@ -47,35 +62,53 @@ export function ModelSheet({ model }: { model: HubModel }) {
     : full.contextLength
       ? "gguf.context_length"
       : null;
+  const lineage = classifyLineage(full);
+  const topic = videoTopic(full);
 
   return (
     <div className="mh-sheet">
-      <header className="mh-sheet-head">
+      <header className="mh-sheet-head" data-lineage={lineage.kind}>
         <span className="mh-eyebrow">Ficha técnica</span>
         <h2>{full.name}</h2>
         <p className="mh-mono">{full.id}</p>
         <div className="mh-sheet-marks">
+          <LineageBadge lineage={lineage} />
           <DistributionMark value={full.distribution} />
           {full.gated ? (
             <span className="mh-dist">Acceso con registro</span>
           ) : null}
         </div>
-        <button
-          type="button"
-          className="mh-primary"
-          onClick={() =>
-            navigate(`/open-local?model=${encodeURIComponent(full.id)}`)
-          }
-        >
-          <Download aria-hidden /> Descargar / añadir a biblioteca local
-        </button>
-        <FavoriteButton
-          kind="model"
-          id={full.id}
-          label={full.name}
-          url={`https://huggingface.co/${full.id}`}
-        />
+        <p className="mh-lineage-note" title={lineage.hint}>
+          {lineage.summary}
+        </p>
+        <div className="mh-where-runs">
+          <span>Dónde funciona</span>
+          <DeviceChips model={full} />
+        </div>
+        <DownloadCta model={full} />
+        <div className="mh-sheet-tools">
+          <FavoriteButton
+            kind="model"
+            id={full.id}
+            label={full.name}
+            url={`https://huggingface.co/${full.id}`}
+          />
+          <Link
+            className="mh-btn"
+            to={`/videos?q=${encodeURIComponent(topic)}`}
+            title={`Videos indexados que mencionan «${topic}»`}
+          >
+            <PlaySquare aria-hidden /> Videos sobre {topic}
+          </Link>
+        </div>
       </header>
+
+      <PcFit
+        model={full}
+        packages={data?.packages.packages ?? null}
+        alternatives={alternatives}
+        onSelect={onSelect}
+      />
 
       <dl className="mh-facts">
         <dt>Familia</dt>
@@ -214,19 +247,38 @@ export function ModelSheet({ model }: { model: HubModel }) {
         ) : data?.packages.packages.length ? (
           <ul className="mh-packages">
             {data.packages.packages.map((pack) => (
-              <li key={pack.format}>
-                <span>
+              <li
+                key={pack.format}
+                data-local={FILE_TYPES[pack.format].local || undefined}
+              >
+                <span className="mh-pack-head">
                   <strong>{HUB_FORMAT_LABELS[pack.format]}</strong>
+                  <code>{FILE_TYPES[pack.format].extension}</code>
                   <small>
                     {pack.files} archivo{pack.files === 1 ? "" : "s"}
+                    {FILE_TYPES[pack.format].local
+                      ? " · listo para uso local"
+                      : " · requiere Python / GPU"}
                   </small>
+                  <span className="mh-mono">{fmtGb(pack.bytes)}</span>
                 </span>
-                <span className="mh-mono">{fmtGb(pack.bytes)}</span>
+                <p className="mh-pack-what">
+                  {FILE_TYPES[pack.format].what}{" "}
+                  <em>Acompañan: {FILE_TYPES[pack.format].companions}</em>
+                </p>
                 {pack.variants.length ? (
                   <ul className="mh-variants">
-                    {pack.variants.slice(0, 8).map((variant) => (
+                    {pack.variants.slice(0, 14).map((variant) => (
                       <li key={variant.label}>
-                        <span className="mh-mono">{variant.label}</span>
+                        <span className="mh-mono">
+                          {variant.label}
+                          {variant.label === "mmproj" ? (
+                            <small>
+                              {" "}
+                              · proyector de visión (solo si usarás imágenes)
+                            </small>
+                          ) : null}
+                        </span>
                         <span className="mh-mono">{fmtGb(variant.bytes)}</span>
                       </li>
                     ))}
@@ -280,6 +332,17 @@ export function ModelSheet({ model }: { model: HubModel }) {
             Sin parámetros publicados: no se puede estimar la memoria.
           </p>
         )}
+      </section>
+
+      <section className="mh-sheet-section">
+        <h3>
+          <Bot aria-hidden /> Agentes que pueden usar este modelo
+        </h3>
+        <p className="mh-muted">
+          Con el modelo corriendo en Ollama o LM Studio, estos agentes de código
+          abierto lo usan sin enviar nada a la nube.
+        </p>
+        <AgentCatalog compact ids={agentsForLocalModels().map((a) => a.id)} />
       </section>
 
       <section className="mh-sheet-section">

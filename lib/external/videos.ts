@@ -211,6 +211,24 @@ export const VIDEO_QUERY_GROUPS: Array<{
     queries: ["Ollama tutorial", "vLLM deployment", "local LLM tutorial"],
   },
   {
+    group: "open-models",
+    topic: "Modelos abiertos",
+    language: "en",
+    queries: [
+      "Qwen DeepSeek Llama open model review",
+      "GGUF quantization LM Studio",
+    ],
+  },
+  {
+    group: "agents",
+    topic: "Agentes de código",
+    language: "en",
+    queries: [
+      "Claude Code OpenCode Aider coding agent",
+      "MCP model context protocol tutorial",
+    ],
+  },
+  {
     group: "research",
     topic: "Investigación",
     language: "en",

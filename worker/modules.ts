@@ -65,23 +65,51 @@ export type ModuleSyncResult = {
 const USER_AGENT =
   "AMARU-AI-Observatory/0.1 (local-first research application)";
 
+/** Plain-language fix for Google API refusal codes the user can act on. */
+const GOOGLE_REASON_HINTS: Record<string, string> = {
+  API_KEY_HTTP_REFERRER_BLOCKED:
+    "la clave está restringida a «Sitios web» (referer). Las llamadas del servidor no salen de un navegador: en Google Cloud → Credenciales → tu clave, cambia «Restricciones de aplicación» a «Ninguna» y deja la restricción de API en «YouTube Data API v3»",
+  API_KEY_IP_ADDRESS_BLOCKED:
+    "la clave está restringida por IP y Cloudflare no usa IP fija: quita la restricción de IP",
+  API_KEY_SERVICE_BLOCKED:
+    "la clave no tiene permitido «YouTube Data API v3» en sus restricciones de API",
+  SERVICE_DISABLED:
+    "la API «YouTube Data API v3» no está habilitada en el proyecto de Google Cloud",
+  quotaExceeded:
+    "se agotó la cuota diaria de YouTube (10 000 unidades); se renueva a medianoche, hora del Pacífico",
+  keyInvalid: "la clave no es válida",
+};
+
 async function fetchJson(
   url: string,
+  extraHeaders: Record<string, string> = {},
 ): Promise<{ payload: unknown; status: number }> {
   const response = await fetch(url, {
-    headers: { accept: "application/json", "user-agent": USER_AGENT },
+    headers: {
+      accept: "application/json",
+      "user-agent": USER_AGENT,
+      ...extraHeaders,
+    },
     signal: AbortSignal.timeout(30_000),
   });
   if (!response.ok) {
-    // Google APIs explain the refusal in error.errors[0].reason (keyInvalid,
-    // accessNotConfigured, quotaExceeded…). Only that short code is kept: the
-    // full message can name the cloud project.
+    // Google APIs explain the refusal in error.details[].reason (most
+    // specific, e.g. API_KEY_HTTP_REFERRER_BLOCKED) and error.errors[0].reason
+    // (keyInvalid, quotaExceeded…). Only those short codes are kept: the full
+    // message can name the cloud project.
     const body = (await response.json().catch(() => null)) as {
-      error?: { errors?: Array<{ reason?: string }>; status?: string };
+      error?: {
+        errors?: Array<{ reason?: string }>;
+        details?: Array<{ reason?: string }>;
+        status?: string;
+      };
     } | null;
-    const reason = body?.error?.errors?.[0]?.reason ?? body?.error?.status;
+    const detail = body?.error?.details?.find((d) => d.reason)?.reason;
+    const reason =
+      detail ?? body?.error?.errors?.[0]?.reason ?? body?.error?.status;
+    const hint = reason ? GOOGLE_REASON_HINTS[reason] : undefined;
     throw new Error(
-      `La fuente respondió HTTP ${response.status}${reason ? ` · ${reason}` : ""} (${new URL(url).pathname}).`,
+      `La fuente respondió HTTP ${response.status}${reason ? ` · ${reason}` : ""} (${new URL(url).pathname})${hint ? `: ${hint}` : ""}.`,
     );
   }
   return { payload: await response.json(), status: response.status };
@@ -347,6 +375,16 @@ export async function syncOpenAlexInstitutions(
 // YouTube Data API v3 (cuota-eficiente)
 // ---------------------------------------------------------------------------
 
+/**
+ * Keys restricted to "websites" reject server calls without a referer. We
+ * identify ourselves as the public site so a key that allows AMARU's domain
+ * works; keys without application restriction ignore the header.
+ */
+const YOUTUBE_HEADERS = { referer: "https://amaru.andesnova.solutions/" };
+
+/** Thematic searches only look at recent uploads so each sync brings news. */
+export const YOUTUBE_RECENT_DAYS = 45;
+
 async function resolveChannelIds(env: ModulesEnv, key: string): Promise<void> {
   const pending = await env.DB.prepare(
     "SELECT id FROM video_sources WHERE platform = 'youtube' AND channel_id IS NULL",
@@ -357,6 +395,7 @@ async function resolveChannelIds(env: ModulesEnv, key: string): Promise<void> {
     try {
       const { payload } = await fetchJson(
         `https://www.googleapis.com/youtube/v3/channels?part=id,contentDetails&forHandle=${encodeURIComponent(handle)}&key=${key}`,
+        YOUTUBE_HEADERS,
       );
       const items = (payload as Record<string, unknown>).items;
       const first = Array.isArray(items)
@@ -460,6 +499,7 @@ export async function syncYouTube(
     try {
       const { payload } = await fetchJson(
         `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylist}&maxResults=8&key=${key}`,
+        YOUTUBE_HEADERS,
       );
       collected.push(
         ...normalizeYouTubePlaylist(
@@ -484,11 +524,17 @@ export async function syncYouTube(
       url.searchParams.set("maxResults", "8");
       url.searchParams.set("order", "relevance");
       url.searchParams.set("videoEmbeddable", "true");
+      url.searchParams.set(
+        "publishedAfter",
+        new Date(
+          Date.parse(now) - YOUTUBE_RECENT_DAYS * 86_400_000,
+        ).toISOString(),
+      );
       if (group.language)
         url.searchParams.set("relevanceLanguage", group.language);
       url.searchParams.set("key", key);
       try {
-        const { payload } = await fetchJson(url.toString());
+        const { payload } = await fetchJson(url.toString(), YOUTUBE_HEADERS);
         collected.push(
           ...normalizeYouTubeSearch(
             payload,
@@ -521,6 +567,7 @@ export async function syncYouTube(
         `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,statistics,snippet&id=${slice
           .map((video) => video.externalId)
           .join(",")}&key=${key}`,
+        YOUTUBE_HEADERS,
       );
       enriched = enriched.concat(enrichVideoDetails(slice, payload));
     } catch {

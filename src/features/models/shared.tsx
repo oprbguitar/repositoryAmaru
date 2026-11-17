@@ -4,6 +4,7 @@ import {
   type Distribution,
   type HubModel,
 } from "../../../lib/models/hub";
+import { classifyLineage, type Lineage } from "../../../lib/models/lineage";
 import { BYTES_PER_GB } from "../../../lib/models/memory";
 import type { SignalKind } from "../../../lib/models/ranking";
 
@@ -94,13 +95,34 @@ export function DistributionMark({ value }: { value: Distribution }) {
   );
 }
 
+/** Colour-coded lineage: official, repack, adapted, uncensored, community. */
+export function LineageBadge({
+  lineage,
+  withHint = false,
+}: {
+  lineage: Lineage;
+  withHint?: boolean;
+}) {
+  return (
+    <span
+      className="mh-lineage"
+      data-lineage={lineage.kind}
+      title={withHint ? undefined : `${lineage.summary} ${lineage.hint}`}
+    >
+      <i aria-hidden />
+      {lineage.label}
+    </span>
+  );
+}
+
 export function ModelIdentity({ model }: { model: HubModel }) {
+  const lineage = classifyLineage(model);
   return (
     <span className="mh-identity">
       <strong>{model.name}</strong>
       <small>
-        {model.org ? model.org.name : model.author}
-        {model.originKind === "official" ? " · oficial" : " · comunidad"}
+        <LineageBadge lineage={lineage} />
+        <span>{model.org ? model.org.name : model.author}</span>
       </small>
     </span>
   );

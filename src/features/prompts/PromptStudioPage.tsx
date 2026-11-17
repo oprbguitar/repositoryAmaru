@@ -15,8 +15,9 @@ import {
   Workflow,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { revealOnMobile } from "../../components/layout/mobile";
+import { AgentCatalog } from "../models/AgentCatalog";
 import {
   AGENT_BLUEPRINTS,
   AGENT_PATTERNS,
@@ -751,6 +752,19 @@ function AgentsTab() {
           </ul>
         </div>
         {selected ? <BlueprintDetail blueprint={selected} /> : null}
+      </section>
+
+      <section aria-labelledby="pr-ready-agents">
+        <h2 id="pr-ready-agents" className="pr-h2">
+          Agentes listos para usar (nube y offline)
+        </h2>
+        <p className="pr-note">
+          Lo que ya existe para no construir desde cero: qué hace cada agente,
+          cómo orquesta, qué modelos usa y si funciona con un modelo local. Los
+          modelos descargables están en <Link to="/models">Modelos</Link> y se
+          instalan desde <Link to="/open-local#descargar">Open y local</Link>.
+        </p>
+        <AgentCatalog />
       </section>
 
       <section aria-labelledby="pr-frameworks">

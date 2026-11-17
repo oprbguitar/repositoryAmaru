@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { BadgeCheck, Info, PlaySquare, Search, Tv } from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import type { VideoItem } from "../../../types/api";
 import { SyncActionButton } from "../../components/common/SyncActionButton";
 import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
@@ -39,7 +39,9 @@ export function VideosPage() {
   const isMobile = useIsMobile();
   // Phones play the video inside its own card instead of the side panel.
   const [playing, setPlaying] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
+  // Other modules (e.g. a model sheet) link here with ?q= to pre-filter.
+  const [urlParams] = useSearchParams();
+  const [query, setQuery] = useState(() => urlParams.get("q") ?? "");
   const [topic, setTopic] = useState("");
   const [language, setLanguage] = useState("");
   const [officialOnly, setOfficialOnly] = useState(false);
@@ -325,6 +327,22 @@ export function VideosPage() {
               </button>
             </Fragment>
           ))}
+        </div>
+      ) : query.trim() ? (
+        <div className="panel honest-empty">
+          <h2>Aún no hay videos indexados sobre «{query.trim()}»</h2>
+          <p>
+            La biblioteca solo guarda lo sincronizado desde YouTube. Mientras
+            tanto puedes{" "}
+            <a
+              href={`https://www.youtube.com/results?search_query=${encodeURIComponent(query.trim())}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              ver resultados en YouTube
+            </a>{" "}
+            o quitar el filtro de búsqueda.
+          </p>
         </div>
       ) : (
         <div className="panel honest-empty">

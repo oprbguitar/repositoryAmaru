@@ -1,12 +1,26 @@
 import { useQueries } from "@tanstack/react-query";
-import { Compass, ExternalLink, ListOrdered, Search } from "lucide-react";
+import { Bot, Compass, ExternalLink, ListOrdered, Search } from "lucide-react";
 import { useMemo, useState } from "react";
+import {
+  DEVICE_TARGETS,
+  type DeviceId,
+  deviceById,
+  deviceFromPlatform,
+  fitsDevice,
+} from "../../../lib/models/devices";
 import {
   DISTRIBUTION_LABELS,
   type Distribution,
   type HubModel,
   LOCAL_FORMATS,
 } from "../../../lib/models/hub";
+import {
+  classifyLineage,
+  LINEAGE_HINTS,
+  LINEAGE_LABELS,
+  LINEAGE_ORDER,
+  type LineageKind,
+} from "../../../lib/models/lineage";
 import {
   COUNTRY_REGIONS,
   countryName,
@@ -17,6 +31,7 @@ import {
   type RankingCriterion,
   rankModels,
 } from "../../../lib/models/ranking";
+import { platformFrom } from "../../../lib/models/runtime";
 import {
   applyFilters,
   parseNeed,
@@ -28,9 +43,12 @@ import {
 import { CollapsibleLayout } from "../../components/layout/CollapsibleLayout";
 import { FavoriteStar } from "../favorites/FavoriteStar";
 import { useFavorites } from "../favorites/favorites";
+import { AgentCatalog } from "./AgentCatalog";
 import { getHubOverview, getSpecialtyPool, searchHub } from "./api";
+import { DEVICE_ICONS, DeviceStrip } from "./Devices";
 import { ModelSheet } from "./ModelSheet";
 import "./models-hub.css";
+import "./models-fit.css";
 import { ContextEmpty } from "../../components/layout/ContextEmpty";
 import {
   DistributionMark,
@@ -66,6 +84,13 @@ export function ModelExplorer({ onSwitch }: { onSwitch: () => void }) {
   const [localOnly, setLocalOnly] = useState(false);
   const [remainder, setRemainder] = useState("");
   const [criterion, setCriterion] = useState<RankingCriterion>("balanced");
+  const [lineages, setLineages] = useState<LineageKind[]>([]);
+  // Phones and tablets start filtered to what runs on them; desktops see all.
+  const [device, setDevice] = useState<DeviceId | null>(() =>
+    typeof navigator === "undefined"
+      ? null
+      : deviceFromPlatform(platformFrom(navigator.userAgent)),
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const favorites = useFavorites().filter((f) => f.kind === "model");
 
@@ -107,16 +132,24 @@ export function ModelExplorer({ onSwitch }: { onSwitch: () => void }) {
     return [...seen.values()];
   }, [payloads]);
 
-  const filtered = useMemo(
-    () =>
-      applyFilters(pool, {
-        maxGb,
-        distributions,
-        localFormats: localOnly ? LOCAL_FORMATS : [],
-        origin,
-      }),
-    [pool, maxGb, distributions, localOnly, origin],
-  );
+  const filtered = useMemo(() => {
+    const result = applyFilters(pool, {
+      maxGb,
+      distributions,
+      localFormats: localOnly ? LOCAL_FORMATS : [],
+      origin,
+    });
+    if (!lineages.length && !device) return result;
+    const target = device ? deviceById(device) : null;
+    return {
+      ...result,
+      models: result.models.filter(
+        (m) =>
+          (!lineages.length || lineages.includes(classifyLineage(m).kind)) &&
+          (!target || fitsDevice(m, target)),
+      ),
+    };
+  }, [pool, maxGb, distributions, localOnly, origin, lineages, device]);
   const ranking = useMemo(
     () =>
       rankModels(
@@ -125,6 +158,17 @@ export function ModelExplorer({ onSwitch }: { onSwitch: () => void }) {
         criterion,
         10,
       ),
+    [filtered.models, specialties, criterion],
+  );
+  // Wider ranking (same criterion) to suggest models that fit the user's PC.
+  const alternatives = useMemo(
+    () =>
+      rankModels(
+        filtered.models,
+        specialties.length === 1 ? specialties[0] : null,
+        criterion,
+        40,
+      ).entries.map((e) => e.model),
     [filtered.models, specialties, criterion],
   );
 
@@ -151,12 +195,18 @@ export function ModelExplorer({ onSwitch }: { onSwitch: () => void }) {
   const fetchedAt = payloads[0]?.fetchedAt ?? null;
   const selected =
     ranking.entries.find((e) => e.model.id === selectedId)?.model ??
+    pool.find((m) => m.id === selectedId) ??
     ranking.entries[0]?.model ??
     null;
   const total = ranking.entries.length;
 
   const panel = selected ? (
-    <ModelSheet key={selected.id} model={selected} />
+    <ModelSheet
+      key={selected.id}
+      model={selected}
+      alternatives={alternatives}
+      onSelect={setSelectedId}
+    />
   ) : (
     <ContextEmpty hint="Elige un modelo del ranking para ver su ficha aquí" />
   );
@@ -263,6 +313,42 @@ export function ModelExplorer({ onSwitch }: { onSwitch: () => void }) {
             </button>
           ))}
         </fieldset>
+        <fieldset className="mh-device-filter">
+          <legend>Dispositivo</legend>
+          {DEVICE_TARGETS.map((target) => {
+            const Icon = DEVICE_ICONS[target.id];
+            return (
+              <button
+                key={target.id}
+                type="button"
+                title={`${target.label}: ${target.sizes}`}
+                aria-pressed={device === target.id}
+                onClick={() =>
+                  setDevice(device === target.id ? null : target.id)
+                }
+              >
+                <Icon aria-hidden />
+                {target.short}
+              </button>
+            );
+          })}
+        </fieldset>
+        <fieldset className="mh-lineage-filter">
+          <legend>Linaje</legend>
+          {LINEAGE_ORDER.map((kind) => (
+            <button
+              key={kind}
+              type="button"
+              data-lineage={kind}
+              title={LINEAGE_HINTS[kind]}
+              aria-pressed={lineages.includes(kind)}
+              onClick={() => setLineages((list) => toggle(list, kind))}
+            >
+              <i aria-hidden />
+              {LINEAGE_LABELS[kind]}
+            </button>
+          ))}
+        </fieldset>
         <label className="mh-criterion">
           Criterio
           <select
@@ -279,6 +365,8 @@ export function ModelExplorer({ onSwitch }: { onSwitch: () => void }) {
           </select>
         </label>
       </div>
+
+      {device ? <DeviceStrip device={deviceById(device)} /> : null}
 
       {error ? (
         <EmptyState title="No se pudo consultar Hugging Face">
@@ -313,6 +401,7 @@ export function ModelExplorer({ onSwitch }: { onSwitch: () => void }) {
               {ranking.entries.map((entry, index) => (
                 <li
                   key={entry.model.id}
+                  data-lineage={classifyLineage(entry.model).kind}
                   style={{ "--i": index } as React.CSSProperties}
                 >
                   <button
@@ -399,6 +488,21 @@ export function ModelExplorer({ onSwitch }: { onSwitch: () => void }) {
           </aside>
         </div>
       )}
+
+      <section className="mh-agents" aria-labelledby="mh-agents-title">
+        <header>
+          <h2 id="mh-agents-title">
+            <Bot aria-hidden /> Agentes listos para usar
+          </h2>
+          <p>
+            Programas que orquestan un modelo para programar o automatizar
+            tareas. Los de nube dependen del proveedor (custodia de tus datos);
+            los de código abierto pueden usar un modelo local de este ranking y
+            funcionar offline.
+          </p>
+        </header>
+        <AgentCatalog />
+      </section>
     </CollapsibleLayout>
   );
 }

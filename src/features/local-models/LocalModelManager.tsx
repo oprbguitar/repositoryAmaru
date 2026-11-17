@@ -10,7 +10,8 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { suggestRuntimes } from "../../../lib/models/runtime";
 import {
   ensurePermission,
   pickRootFolder,
@@ -57,6 +58,7 @@ import {
   selectSafetensorsPackage,
 } from "./selection";
 import { deleteInventory, loadRootHandle, saveRootHandle } from "./store";
+import { useHardwareProfile } from "./useHardwareProfile";
 import "./local-models.css";
 
 const FULL = "__full__";
@@ -100,6 +102,9 @@ export function LocalModelManager() {
   const [checks, setChecks] = useState<Record<string, VersionCheck>>({});
   const supported = supportsFolderAccess();
   const jobs = useDownloads();
+  const { profile } = useHardwareProfile();
+  const fromModels = params.get("model");
+  const sectionRef = useRef<HTMLElement>(null);
 
   const refreshLibrary = useCallback(
     async (handle: FileSystemDirectoryHandle) => {
@@ -186,6 +191,8 @@ export function LocalModelManager() {
   // biome-ignore lint/correctness/useExhaustiveDependencies: run once on mount
   useEffect(() => {
     if (initial.current) analyze(initial.current);
+    if (initial.current || window.location.hash === "#descargar")
+      sectionRef.current?.scrollIntoView({ block: "start" });
   }, []);
 
   function packageFor(a: Analysis): ModelPackage | null {
@@ -278,9 +285,27 @@ export function LocalModelManager() {
   const pkg = analysis ? packageFor(analysis) : null;
   const quant = choice && choice !== FULL ? explainQuant(choice) : null;
   const format = FORMAT_TERMS[choice === FULL ? "safetensors" : "gguf"];
+  const runtimes = analysis
+    ? suggestRuntimes({
+        repo: analysis.repo,
+        formats: [choice === FULL ? "safetensors" : "gguf"],
+        pipelineTag: null,
+        quant: choice === FULL ? null : choice,
+        hardware: {
+          platform: profile?.platform ?? null,
+          gpuVendor: profile?.gpuVendor ?? null,
+          vramGib: profile?.vramGib ?? null,
+        },
+      }).slice(0, 3)
+    : [];
 
   return (
-    <section className="lm-manager" aria-labelledby="lm-title">
+    <section
+      ref={sectionRef}
+      id="descargar"
+      className="lm-manager"
+      aria-labelledby="lm-title"
+    >
       <header className="lm-head">
         <div>
           <h2 id="lm-title">
@@ -299,6 +324,14 @@ export function LocalModelManager() {
           </button>
         ) : null}
       </header>
+
+      {fromModels ? (
+        <p className="lm-from" role="status">
+          Llegaste desde <Link to="/models">Modelos</Link> para descargar{" "}
+          <strong className="lm-mono">{fromModels}</strong>. Elige la
+          cuantización y tu carpeta; la ficha técnica completa sigue en Modelos.
+        </p>
+      ) : null}
 
       {!supported ? (
         <p className="lm-note" role="status">
@@ -378,6 +411,23 @@ export function LocalModelManager() {
                       <dd>{quant.quality}</dd>
                       <dt>Recomendado para</dt>
                       <dd>{quant.use}</dd>
+                    </>
+                  ) : null}
+                  {runtimes.length ? (
+                    <>
+                      <dt>Con qué ejecutarlo</dt>
+                      <dd>
+                        <ul className="lm-runtimes">
+                          {runtimes.map((r) => (
+                            <li key={r.id}>
+                              <strong>{r.name}</strong> — {r.reason}
+                              {r.commandText ? (
+                                <code className="lm-mono">{r.commandText}</code>
+                              ) : null}
+                            </li>
+                          ))}
+                        </ul>
+                      </dd>
                     </>
                   ) : null}
                   {pkg ? (

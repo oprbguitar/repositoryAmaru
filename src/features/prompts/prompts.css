@@ -962,8 +962,20 @@
 }
 
 /* --- Prompt maestro: long prompt + simulated result side by side ---------- */
-.pr-layout {
+.pr-layout:not(.pr-layout-2) {
   grid-template-columns: 170px minmax(220px, 0.8fr) minmax(360px, 1.9fr);
+}
+/* Two-column variant (Agentes): list + wide inspector, list stays in view. */
+.pr-layout.pr-layout-2 {
+  grid-template-columns: minmax(260px, 0.85fr) minmax(0, 2.15fr);
+}
+.pr-layout-2 > div:first-child {
+  position: sticky;
+  top: 0;
+  max-height: calc(100dvh - 180px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding-inline-end: var(--space-1);
 }
 .pr-inspector {
   container-type: inline-size;
@@ -1154,13 +1166,22 @@
   }
 }
 @media (max-width: 1280px) {
-  .pr-layout {
+  .pr-layout:not(.pr-layout-2) {
     grid-template-columns: minmax(200px, 0.8fr) minmax(320px, 1.8fr);
+  }
+  .pr-layout.pr-layout-2 {
+    grid-template-columns: minmax(230px, 0.8fr) minmax(0, 1.9fr);
   }
 }
 @media (max-width: 900px) {
-  .pr-layout {
+  .pr-layout,
+  .pr-layout.pr-layout-2 {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .pr-layout-2 > div:first-child {
+    position: static;
+    max-height: none;
+    overflow: visible;
   }
   .pr-master {
     padding: var(--space-3);

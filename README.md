@@ -166,6 +166,47 @@ sequenceDiagram
 
 ---
 
+## Local models: lineage, devices, "does it run on my PC?" and agents
+
+The Hugging Face explorer in **Modelos** (`src/features/models`) adds, all from
+published metadata and never measured:
+
+- **Lineage colours** (`lib/models/lineage.ts`): *Oficial* (curated
+  organisation such as Microsoft, Meta, OpenAI, Google, Alibaba), *Reempaquetado*
+  (third-party quantization, same weights), *Modificado / adaptado* (fine-tune,
+  merge, LoRA), *Sin censura* (publisher declares `uncensored`, `abliterated`…)
+  and *Comunidad*. Shown as a stripe on each ranking row, a filter and a badge in
+  the sheet.
+- **Device filter** (`lib/models/devices.ts`): PC, Android, iPhone/iPad, web
+  browser and compact boards (Raspberry Pi, Jetson), each with an orientative
+  package limit, requirements and apps (Google AI Edge Gallery, PocketPal AI, MLC
+  Chat, Transformers.js…). Phones are preselected from the user agent.
+- **¿Corre en mi PC?** (`LocalFit.tsx`, `fit.ts`): opt-in detection
+  (`useHardwareProfile.ts`, stored only in `localStorage`), editable RAM/VRAM,
+  verdict per GGUF variant using the same rule as *Open y local* (`compat.ts`),
+  the recommended file, runtimes ordered for the user's OS/GPU with ready
+  commands (`lib/models/runtime.ts`) and lighter alternatives from the ranking.
+- **File types**: extension, what it contains and companion files for GGUF,
+  safetensors, MLX, ONNX, PyTorch and OpenVINO; `mmproj` explained.
+- **Download hand-off**: the button reflects real library state (downloading %,
+  paused, stored) and animates the jump to *Open y local → Descargar modelo a mi
+  carpeta*, which shows where the user came from.
+- **Agents** (`lib/models/agents.ts`, `AgentCatalog.tsx`): Claude Code, Gemini
+  CLI, Codex CLI, OpenCode, Aider, Goose, OpenHands and Cline — what they do, how
+  they orchestrate, which models, and whether they work offline (vendor-cloud
+  custody vs local). Also in *Prompts y agentes → Agentes*.
+- **Videos link**: each sheet and agent opens `/videos?q=<family>`.
+
+### YouTube sync troubleshooting
+
+Server-side calls carry no browser referer. A YouTube key restricted to
+"Websites" fails with `403 · API_KEY_HTTP_REFERRER_BLOCKED`; the sync error now
+names the reason and the fix (set *Application restrictions* to *None* and keep
+the API restriction to *YouTube Data API v3*, or allow
+`amaru.andesnova.solutions/*`, which the worker sends as referer). Thematic
+searches only request uploads from the last 45 days so every run brings new
+videos.
+
 ## Keeping the observatory current
 
 Every stream refreshes from its own page — no need to visit an admin screen.

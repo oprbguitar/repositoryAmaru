@@ -1,0 +1,891 @@
+/* 2026-11-16 · Lineage colours, scrollable sheet, PC fit, download hand-off.
+   Tokens from global.css / redesign.css; lineage hues are fixed (not palette
+   tinted) so the legend means the same in every theme, and text mixes toward
+   --text to stay legible in light and dark. */
+
+.mh-results,
+.mh-filters,
+.mh-sheet,
+.mh-agents {
+  --lin-official: #1d4ed8;
+  --lin-repack: #0f766e;
+  --lin-adapted: #b45309;
+  --lin-uncensored: #be123c;
+  --lin-community: #64748b;
+}
+[data-lineage="official"] {
+  --lin: var(--lin-official);
+}
+[data-lineage="repack"] {
+  --lin: var(--lin-repack);
+}
+[data-lineage="adapted"] {
+  --lin: var(--lin-adapted);
+}
+[data-lineage="uncensored"] {
+  --lin: var(--lin-uncensored);
+}
+[data-lineage="community"] {
+  --lin: var(--lin-community);
+}
+.mh-lineage {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-1);
+  border: 1px solid color-mix(in srgb, var(--lin) 45%, transparent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--lin) 12%, transparent);
+  color: color-mix(in srgb, var(--lin) 72%, var(--text));
+  font-size: var(--text-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.mh-lineage i,
+.mh-lineage-filter i {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-pill);
+  background: var(--lin);
+}
+.mh-identity small {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+.mh-ranking li[data-lineage] > button {
+  border-inline-start: 4px solid var(--lin);
+}
+.mh-ranking li[data-lineage="uncensored"] > button {
+  background: color-mix(in srgb, var(--lin) 6%, var(--surface));
+}
+.mh-lineage-filter button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.mh-filters .mh-lineage-filter button[aria-pressed="true"] {
+  border-color: var(--lin);
+  background: color-mix(in srgb, var(--lin) 14%, transparent);
+}
+
+/* Sheet: its own scroll container inside the side column (it was clipped
+   because the panel is not wrapped in .context-panel). */
+.context-slot > .mh-sheet {
+  min-height: 0;
+}
+@media (min-width: 1025px) {
+  .module-layout:has(> .context-slot > .mh-sheet) .context-slot {
+    grid-template-rows: minmax(0, 1fr);
+    overflow: hidden;
+  }
+  .context-slot > .mh-sheet {
+    height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    padding-block-end: var(--space-7);
+  }
+}
+.mh-facts small {
+  display: block;
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.mh-signal-block h3 small {
+  display: block;
+  margin-block-start: 2px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+}
+.mh-sheet-section h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.mh-sheet-section h3 svg {
+  width: 16px;
+  height: 16px;
+}
+.mh-sheet-head[data-lineage] {
+  border-inline-start: 4px solid var(--lin);
+}
+.mh-lineage-note {
+  margin: 0 0 var(--space-3);
+  color: var(--text);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.mh-lineage-note span {
+  display: block;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+.mh-sheet-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}
+.mh-sheet-tools .mh-btn {
+  text-decoration: none;
+}
+
+/* Download hand-off button. */
+.mh-dl-wrap {
+  display: grid;
+  gap: var(--space-2);
+}
+.mh-dl {
+  --pct: 0%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  inline-size: 100%;
+  min-block-size: 52px;
+  padding: var(--space-2) var(--space-3);
+  overflow: hidden;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: var(--bg-deep);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  isolation: isolate;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-med) var(--ease-out);
+}
+.mh-dl:hover {
+  background: var(--accent-strong);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.mh-dl:active {
+  transform: translateY(1px);
+}
+.mh-dl:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.mh-dl-text {
+  display: grid;
+  min-width: 0;
+}
+.mh-dl-text strong {
+  font-size: var(--text-md);
+}
+.mh-dl-text small {
+  opacity: 0.85;
+  font-size: var(--text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mh-dl-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--bg-deep) 18%, transparent);
+}
+.mh-dl-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.mh-dl-tray {
+  position: absolute;
+  inset-inline: 7px;
+  bottom: 5px;
+  height: 2px;
+  border-radius: var(--radius-pill);
+  background: currentColor;
+  opacity: 0.6;
+}
+.mh-dl:hover .mh-dl-icon svg {
+  animation: mh-dl-bob 0.9s var(--ease-out) infinite;
+}
+.mh-dl[data-state="launching"] .mh-dl-icon svg {
+  animation: mh-dl-drop 0.5s var(--ease-out) forwards;
+}
+.mh-dl[data-state="launching"] .mh-dl-tray {
+  animation: mh-dl-tray 0.5s var(--ease-out) forwards;
+}
+/* Downloading: the button itself becomes the progress bar. */
+.mh-dl[data-state="downloading"],
+.mh-dl[data-state="paused"] {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.mh-dl[data-state="downloading"]::before,
+.mh-dl[data-state="paused"]::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: -1;
+  width: var(--pct);
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--accent-quiet) 0 10px,
+    color-mix(in srgb, var(--accent) 22%, var(--accent-quiet)) 10px 20px
+  );
+  background-size: 28px 28px;
+  transition: width var(--dur-med) var(--ease-out);
+}
+.mh-dl[data-state="downloading"]::before {
+  animation: mh-dl-stripes 0.8s linear infinite;
+}
+.mh-dl[data-state="stored"] {
+  border-color: var(--accent-2);
+  background: var(--accent-2-quiet);
+  color: var(--text);
+}
+.mh-dl[data-state="stored"] .mh-dl-icon {
+  color: var(--accent-2);
+}
+.mh-spin {
+  animation: mh-spin 1s linear infinite;
+}
+.mh-dl-where {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+}
+.mh-dl-where svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 1px;
+}
+.mh-dl-where a {
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+@keyframes mh-dl-bob {
+  50% {
+    transform: translateY(2px);
+  }
+}
+@keyframes mh-dl-drop {
+  60% {
+    transform: translateY(6px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+}
+@keyframes mh-dl-tray {
+  60% {
+    transform: scaleX(1.25);
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+@keyframes mh-dl-stripes {
+  to {
+    background-position: 28px 0;
+  }
+}
+@keyframes mh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* PC fit block. */
+.mh-fit {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.mh-fit h3 {
+  margin: 0;
+}
+.mh-fit-intro {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+.mh-fit-intro p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+.mh-hw-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mh-hw-chips li {
+  display: grid;
+  min-width: 0;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+.mh-hw-chips small {
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+}
+.mh-hw-chips strong {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mh-hw-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+.mh-hw-input {
+  display: grid;
+  gap: 2px;
+  flex: 1 1 120px;
+  font-size: var(--text-sm);
+}
+.mh-hw-input > span:first-child {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.mh-hw-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.mh-hw-field input {
+  inline-size: 100%;
+  min-block-size: var(--control-sm);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-family: var(--font-mono);
+}
+.mh-hw-field input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.mh-hw-field em {
+  color: var(--text-muted);
+  font-style: normal;
+  font-size: var(--text-xs);
+}
+.mh-hw-input small {
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+}
+.mh-hw-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.mh-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-1);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--accent-strong);
+  font: inherit;
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+.mh-link-btn svg {
+  width: 13px;
+  height: 13px;
+}
+.mh-link-btn:hover:not(:disabled) {
+  background: var(--accent-quiet);
+}
+.mh-link-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.mh-link-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.mh-verdict,
+.mh-level {
+  --lvl: var(--text-subtle);
+}
+.mh-verdict[data-level="compatible"],
+.mh-level[data-level="compatible"] {
+  --lvl: var(--accent-2);
+}
+.mh-verdict[data-level="limited"],
+.mh-level[data-level="limited"] {
+  --lvl: var(--amber);
+}
+.mh-verdict[data-level="storage-only"],
+.mh-level[data-level="storage-only"] {
+  --lvl: var(--danger);
+}
+.mh-verdict {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border-inline-start: 4px solid var(--lvl);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--lvl) 10%, var(--surface));
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+.mh-verdict small {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+.mh-level {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+.mh-level i {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--lvl);
+}
+.mh-fit-table tr[aria-current="true"] td {
+  background: color-mix(in srgb, var(--accent-2) 10%, transparent);
+  font-weight: 600;
+}
+.mh-h4 {
+  margin: var(--space-1) 0 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.mh-fit-warn {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--amber) 12%, var(--surface));
+  font-size: var(--text-sm);
+}
+.mh-fit-warn a,
+.mh-runtime-actions a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--accent-strong);
+}
+.mh-fit-warn svg,
+.mh-runtime-actions a svg {
+  width: 12px;
+  height: 12px;
+}
+.mh-runtimes {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mh-runtimes li {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  opacity: 0.75;
+}
+.mh-runtimes li[data-fits] {
+  opacity: 1;
+}
+.mh-runtimes li:first-child[data-fits] {
+  border-color: var(--accent);
+}
+.mh-runtime-head {
+  display: grid;
+}
+.mh-runtime-head strong {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.mh-runtime-head small,
+.mh-runtimes p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+.mh-best {
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--accent-quiet);
+  color: var(--accent-strong);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+.mh-warn-text {
+  color: color-mix(in srgb, var(--danger) 80%, var(--text));
+}
+.mh-runtime-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+}
+.mh-runtime-actions code,
+.mh-pack-head code {
+  max-inline-size: 100%;
+  overflow-x: auto;
+  padding: 2px var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+.mh-alts {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mh-alts button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  inline-size: 100%;
+  padding: var(--space-2);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-xs);
+  text-align: start;
+  cursor: pointer;
+}
+.mh-alts button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--surface-2);
+}
+.mh-alts button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Packages: extension + explanation per format. */
+.mh-packages > li {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+}
+.mh-packages > li[data-local] {
+  border-inline-start: 3px solid var(--accent-2);
+}
+.mh-pack-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+}
+.mh-pack-head .mh-mono {
+  margin-inline-start: auto;
+}
+.mh-pack-head small {
+  color: var(--text-muted);
+}
+.mh-pack-what {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+.mh-pack-what em {
+  display: block;
+  font-style: normal;
+  color: var(--text-subtle);
+}
+.mh-variants li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.mh-variants small {
+  color: var(--text-subtle);
+}
+
+/* Agents strip under the ranking. */
+.mh-agents {
+  display: grid;
+  gap: var(--space-3);
+  margin-block-start: var(--space-6);
+  padding-block-start: var(--space-4);
+  border-top: 1px solid var(--line-soft);
+}
+.mh-agents h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-lg);
+}
+.mh-agents h2 svg {
+  width: 18px;
+  height: 18px;
+  color: var(--accent);
+}
+.mh-agents header p {
+  margin: var(--space-1) 0 0;
+  max-inline-size: 80ch;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mh-dl,
+  .mh-dl::before {
+    transition: none;
+  }
+  .mh-dl:hover .mh-dl-icon svg,
+  .mh-dl[data-state="launching"] .mh-dl-icon svg,
+  .mh-dl[data-state="launching"] .mh-dl-tray,
+  .mh-dl[data-state="downloading"]::before,
+  .mh-spin {
+    animation: none;
+  }
+}
+
+/* Device targets: filter, quiet requirements strip, «Dónde funciona». */
+.mh-device-filter button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.mh-device-filter svg {
+  width: 14px;
+  height: 14px;
+}
+.mh-device-strip {
+  margin-block-end: var(--space-3);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  font-size: var(--text-sm);
+}
+.mh-device-strip summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  list-style: none;
+}
+.mh-device-strip summary::-webkit-details-marker {
+  display: none;
+}
+.mh-device-strip summary svg {
+  width: 16px;
+  height: 16px;
+  color: var(--accent);
+}
+.mh-device-strip summary small {
+  margin-inline-start: auto;
+  color: var(--accent-strong);
+  font-size: var(--text-xs);
+}
+.mh-device-strip summary:hover {
+  background: var(--surface-2);
+}
+.mh-device-strip summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.mh-device-strip p {
+  margin: 0;
+  padding: 0 var(--space-3) var(--space-2);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.mh-device-strip ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  padding: 0 var(--space-3) var(--space-3);
+  list-style: none;
+}
+.mh-device-strip li {
+  display: grid;
+}
+.mh-device-strip a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+.mh-device-strip a svg {
+  width: 12px;
+  height: 12px;
+}
+.mh-device-strip li small {
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+}
+.mh-where-runs {
+  display: grid;
+  gap: var(--space-1);
+  margin-block-end: var(--space-3);
+}
+.mh-where-runs > span {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.mh-device-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mh-device-chips li {
+  --st: var(--text-subtle);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--st) 40%, transparent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--st) 10%, transparent);
+  color: color-mix(in srgb, var(--st) 70%, var(--text));
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: help;
+}
+.mh-device-chips li[data-state="ready"] {
+  --st: var(--accent-2);
+}
+.mh-device-chips li[data-state="convert"] {
+  --st: var(--amber);
+}
+.mh-device-chips li[data-state="no"] {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+.mh-device-chips svg {
+  width: 13px;
+  height: 13px;
+}
+/* Every clickable surface in the module shows the hand cursor. */
+.mh-dl,
+.mh-dl *,
+.mh-ranking li > button,
+.mh-alts button,
+.mh-filters button {
+  cursor: pointer;
+}
+.mh-dl[data-state="launching"],
+.mh-dl[data-state="launching"] * {
+  cursor: progress;
+}
+
+/* Never wider than the side column: long commands scroll inside their box. */
+.mh-sheet {
+  grid-template-columns: minmax(0, 1fr);
+  overflow-x: hidden;
+}
+.mh-sheet > *,
+.mh-sheet-head > *,
+.mh-fit > *,
+.mh-runtimes li,
+.mh-runtimes li > * {
+  min-width: 0;
+}
+.mh-runtime-actions code {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+/* Compact first view. */
+.mh-sheet-head {
+  padding: var(--space-3);
+}
+.mh-sheet-head h2 {
+  margin-block: 2px;
+}
+.mh-sheet-marks {
+  margin-block: var(--space-1);
+}
+.mh-lineage-note {
+  margin-block-end: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+.mh-where-runs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  margin-block-end: var(--space-2);
+}
+.mh-dl {
+  min-block-size: 46px;
+  padding-block: var(--space-1);
+}
+.mh-sheet-tools {
+  flex-wrap: nowrap;
+}
+.mh-sheet-tools > * {
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: center;
+  margin: 0;
+}
+.mh-sheet-tools .mh-btn {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
