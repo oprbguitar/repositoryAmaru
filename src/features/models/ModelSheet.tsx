@@ -12,6 +12,7 @@ import { AgentCatalog } from "./AgentCatalog";
 import { getHubModel } from "./api";
 import { DeviceChips } from "./Devices";
 import { DownloadCta, PcFit, videoTopic } from "./LocalFit";
+import { ModelReview } from "./ModelReview";
 import {
   DistributionMark,
   fmtDate,
@@ -102,6 +103,8 @@ export function ModelSheet({
           </Link>
         </div>
       </header>
+
+      <ModelReview model={full} />
 
       <PcFit
         model={full}

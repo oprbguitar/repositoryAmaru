@@ -5,6 +5,7 @@
  *   GET /api/model-hub/search?q=<text>             free-text hub search
  *   GET /api/model-hub/overview                    broad pool (origin + technology)
  *   GET /api/model-hub/model?id=<owner/name>       technical sheet with file sizes
+ *   GET /api/model-hub/review?id=<owner/name>      what it is for, adoption, mentions
  *
  * Everything comes from the public Hub API; HUGGINGFACE_TOKEN (optional, via
  * resolveSecret) only raises rate limits. Responses are cached in KV with a
@@ -24,6 +25,16 @@ import type {
   HubPoolPayload,
   HubSource,
 } from "../../lib/models/hub-payloads";
+import {
+  buildSummaryPrompt,
+  extractCardSections,
+  type HubReviewPayload,
+  mentionTerm,
+  RELATION_LABELS,
+  type ReviewDerivative,
+  type ReviewMention,
+  SUMMARY_SYSTEM_PROMPT,
+} from "../../lib/models/review";
 import {
   type HubQuery,
   isSpecialtyId,
@@ -305,6 +316,194 @@ async function loadDetail(
   };
 }
 
+const REVIEW_FRESH_MS = 24 * 60 * 60 * 1000;
+const SUMMARY_MODEL = "@cf/meta/llama-3.1-8b-instruct-fast";
+/** Site-wide cap of new automatic summaries per day (each is cached 7 days). */
+const SUMMARY_DAILY_CAP = 200;
+const DERIVATIVE_LIMIT = 50;
+
+async function loadDerivatives(
+  id: string,
+  headers: HeadersInit,
+): Promise<ReviewDerivative[]> {
+  const relations = Object.keys(RELATION_LABELS) as Array<
+    ReviewDerivative["relation"]
+  >;
+  const settled = await Promise.allSettled(
+    relations.map(async (relation) => {
+      const params = new URLSearchParams({
+        filter: `base_model:${relation}:${id}`,
+        sort: "downloads",
+        direction: "-1",
+        limit: String(DERIVATIVE_LIMIT),
+      });
+      const list = (await fetchJson(
+        `${HUB}/api/models?${params.toString()}`,
+        headers,
+      )) as Array<{ id?: string; downloads?: number }>;
+      return {
+        relation,
+        label: RELATION_LABELS[relation],
+        count: list.length,
+        capped: list.length >= DERIVATIVE_LIMIT,
+        top: list
+          .slice(0, 3)
+          .flatMap((m) =>
+            m.id ? [{ id: m.id, downloads: finiteNumber(m.downloads) }] : [],
+          ),
+        url: `${HUB}/models?other=base_model:${relation}:${id}`,
+      } satisfies ReviewDerivative;
+    }),
+  );
+  return settled.flatMap((r) =>
+    r.status === "fulfilled" && r.value.count > 0 ? [r.value] : [],
+  );
+}
+
+async function loadMentions(
+  env: ExtraEnv,
+  term: string | null,
+): Promise<ReviewMention[]> {
+  if (!term) return [];
+  const variants = [...new Set([term, term.replace("-", " ")])];
+  const where = variants
+    .map(() => "(title LIKE ? OR summary LIKE ?)")
+    .join(" OR ");
+  const binds = variants.flatMap((v) => [`%${v}%`, `%${v}%`]);
+  const rows = await env.DB.prepare(
+    `SELECT title, original_url, source_name, record_kind, published_at
+       FROM observatory_records
+      WHERE record_kind IN ('news', 'paper', 'repository', 'filing')
+        AND (${where})
+      ORDER BY published_at DESC LIMIT 6`,
+  )
+    .bind(...binds)
+    .all<{
+      title: string;
+      original_url: string;
+      source_name: string;
+      record_kind: string;
+      published_at: string | null;
+    }>()
+    .catch(() => ({ results: [] }));
+  return rows.results.map((row) => ({
+    title: row.title,
+    url: row.original_url,
+    source: row.source_name,
+    kind: row.record_kind,
+    date: row.published_at,
+  }));
+}
+
+async function summarize(
+  env: ExtraEnv,
+  prompt: string,
+): Promise<{ text: string | null; status: HubReviewPayload["summaryStatus"] }> {
+  if (!env.AI) return { text: null, status: "unavailable" };
+  const day = new Date().toISOString().slice(0, 10);
+  const counterKey = `${CACHE_PREFIX}summary-count:${day}`;
+  const used = Number((await env.CACHE.get(counterKey)) ?? 0);
+  if (used >= SUMMARY_DAILY_CAP) return { text: null, status: "daily-limit" };
+  await env.CACHE.put(counterKey, String(used + 1), {
+    expirationTtl: 2 * 24 * 60 * 60,
+  }).catch(() => undefined);
+  try {
+    const result = (await env.AI.run(
+      SUMMARY_MODEL as Parameters<Ai["run"]>[0],
+      {
+        messages: [
+          { role: "system", content: SUMMARY_SYSTEM_PROMPT },
+          { role: "user", content: prompt },
+        ],
+        max_tokens: 320,
+        temperature: 0.2,
+      } as never,
+    )) as { response?: string };
+    const text = String(result?.response ?? "").trim();
+    return text
+      ? { text, status: "ok" }
+      : { text: null, status: "unavailable" };
+  } catch {
+    return { text: null, status: "unavailable" };
+  }
+}
+
+async function loadReview(
+  env: ExtraEnv,
+  id: string,
+): Promise<HubReviewPayload> {
+  const { headers } = await hubHeaders(env);
+  const path = id
+    .split("/")
+    .map((part) => encodeURIComponent(part))
+    .join("/");
+  const [raw, readme, derivatives] = await Promise.all([
+    fetchJson(`${HUB}/api/models/${path}`, headers),
+    fetch(`${HUB}/${path}/resolve/main/README.md`, { headers })
+      .then((response) => (response.ok ? response.text() : ""))
+      .catch(() => ""),
+    loadDerivatives(id, headers),
+  ]);
+  const model = normalizeHubModel(raw);
+  const spaces = Array.isArray((raw as Record<string, unknown>).spaces)
+    ? ((raw as Record<string, unknown>).spaces as unknown[]).filter(
+        (s): s is string => typeof s === "string",
+      )
+    : [];
+  const sections = readme ? extractCardSections(readme) : [];
+  const term = mentionTerm(model?.name ?? id.split("/")[1] ?? id);
+  const mentions = await loadMentions(env, term);
+
+  let summary: HubReviewPayload["summary"] = null;
+  let summaryStatus: HubReviewPayload["summaryStatus"] = "no-card";
+  const sha = String((raw as Record<string, unknown>).sha ?? "nosha");
+  const summaryKey = `${CACHE_PREFIX}summary:${id}:${sha}`;
+  const cachedSummary = (await env.CACHE.get(summaryKey, "json").catch(
+    () => null,
+  )) as HubReviewPayload["summary"];
+  if (cachedSummary) {
+    summary = cachedSummary;
+    summaryStatus = "ok";
+  } else if (sections.length) {
+    const params = model?.parameters
+      ? `${(model.parameters / 1e9).toFixed(1)} mil millones`
+      : null;
+    const result = await summarize(
+      env,
+      buildSummaryPrompt({
+        id,
+        pipelineTag: model?.pipelineTag ?? null,
+        parameters: params,
+        license: model?.license ?? null,
+        sections,
+      }),
+    );
+    summaryStatus = result.status;
+    if (result.text) {
+      summary = {
+        text: result.text,
+        model: SUMMARY_MODEL,
+        generatedAt: new Date().toISOString(),
+      };
+      // Same card revision → same summary; regenerated only when the card changes.
+      await env.CACHE.put(summaryKey, JSON.stringify(summary), {
+        expirationTtl: 30 * 24 * 60 * 60,
+      }).catch(() => undefined);
+    }
+  }
+  return {
+    id,
+    sections,
+    spaces: { total: spaces.length, sample: spaces.slice(0, 5) },
+    derivatives,
+    mentions,
+    mentionTerm: term,
+    summary,
+    summaryStatus,
+    fetchedAt: new Date().toISOString(),
+  };
+}
+
 const VALID_ID = /^[\w.-]+\/[\w.-]+$/;
 
 export const modelHubRouter: ExtraRouter = async (request, env, url) => {
@@ -395,6 +594,29 @@ export const modelHubRouter: ExtraRouter = async (request, env, url) => {
         DETAIL_FRESH_MS,
         force,
         () => loadDetail(env, id),
+      );
+      return respond(result.payload, {
+        stale: result.stale,
+        modelId: id,
+        sourceStatus: result.cached ? "cache" : "live",
+      });
+    }
+    if (route === "review") {
+      const id = url.searchParams.get("id") ?? "";
+      if (!VALID_ID.test(id))
+        return failure(
+          "invalid_model",
+          "Identificador de modelo inválido.",
+          400,
+        );
+      // `refresh` is ignored here: each rebuild spends Workers AI quota, so
+      // the review only refreshes when its 24 h window expires.
+      const result = await withCache(
+        env,
+        `review:${id}`,
+        REVIEW_FRESH_MS,
+        false,
+        () => loadReview(env, id),
       );
       return respond(result.payload, {
         stale: result.stale,

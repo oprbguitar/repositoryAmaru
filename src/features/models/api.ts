@@ -41,3 +41,9 @@ export function getHubModel(id: string) {
     `/api/model-hub/model?id=${encodeURIComponent(id)}`,
   );
 }
+
+export function getHubReview(id: string) {
+  return read<import("../../../lib/models/review").HubReviewPayload>(
+    `/api/model-hub/review?id=${encodeURIComponent(id)}`,
+  );
+}

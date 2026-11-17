@@ -889,3 +889,127 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* «De qué se trata»: grounded review of the model. */
+.mh-review {
+  display: grid;
+  gap: var(--space-2);
+}
+.mh-review h3 {
+  margin: 0;
+}
+.mh-review-summary {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border-inline-start: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.mh-review-summary p {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
+.mh-review-summary small {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+}
+.mh-review-summary small svg {
+  width: 12px;
+  height: 12px;
+  color: var(--accent);
+}
+.mh-review-loading {
+  animation: mh-pulse 1.2s var(--ease-out) infinite alternate;
+}
+.mh-review-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mh-review-stats li {
+  display: grid;
+  min-width: 0;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+.mh-review-stats strong {
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+}
+.mh-review-stats small {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+.mh-review .mh-link-btn {
+  justify-self: start;
+}
+.mh-review-more {
+  display: grid;
+  gap: var(--space-2);
+}
+.mh-review-sections {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+.mh-review-sections dt {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.mh-review-sections dt small {
+  color: var(--text-subtle);
+  font-weight: 400;
+  font-size: var(--text-xs);
+}
+.mh-review-sections dd {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.mh-review-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+.mh-review-list li {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.mh-review-list a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--accent-strong);
+  overflow-wrap: anywhere;
+}
+.mh-review-list a svg {
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+.mh-review-list small {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mh-review-loading {
+    animation: none;
+  }
+}

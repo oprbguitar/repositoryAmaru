@@ -198,6 +198,15 @@ published metadata and never measured:
   in that browser's `localStorage` and sent only to huggingface.co (CORS allows
   `authorization` + `range`). Free community GGUF conversions are suggested as
   an alternative.
+- **De qué se trata** (`lib/models/review.ts`, `ModelReview.tsx`,
+  `GET /api/model-hub/review`): overview, intended use, training, evaluation and
+  declared limits extracted from the author's card; adoption from the Hub
+  (Spaces that use it, quantizations / fine-tunes / LoRA / merges with the most
+  downloaded ones); mentions in the observatory's news, papers and repositories.
+  A 3–4 sentence Spanish summary is generated with Workers AI
+  (`llama-3.1-8b-instruct-fast`) **only from the card text**, labelled as
+  automatic, cached per model revision for 30 days and capped at 200 new
+  summaries per day site-wide.
 - **Agents** (`lib/models/agents.ts`, `AgentCatalog.tsx`): Claude Code, Gemini
   CLI, Codex CLI, OpenCode, Aider, Goose, OpenHands and Cline — what they do, how
   they orchestrate, which models, and whether they work offline (vendor-cloud
