@@ -3,6 +3,7 @@
  * with CORS headers). Parsers are pure and tested; fetchers are thin.
  */
 import { type ModelMetadata, metadataFromTags } from "./alignment";
+import { hfAuthHeaders } from "./hfToken";
 import { parseTree, type RepoFile } from "./selection";
 
 export const HF = "https://huggingface.co";
@@ -103,11 +104,62 @@ export function resolveUrl(repo: string, revision: string, path: string) {
   return `${HF}/${repo}/resolve/${revision}/${encoded}`;
 }
 
+export type GatedAccess =
+  | "open"
+  | "granted"
+  | "needs-token"
+  | "bad-token"
+  | "pending"
+  | "not-accepted"
+  | "unknown";
+
+/**
+ * Reads Hugging Face's answer to a gated file request. The Hub exposes
+ * X-Error-Code / X-Error-Message through CORS: "GatedRepo" plus a message
+ * that says whether the request is still awaiting review.
+ */
+export function classifyAccess(input: {
+  status: number;
+  hasToken: boolean;
+  errorCode: string | null;
+  errorMessage: string | null;
+}): GatedAccess {
+  const { status, hasToken, errorMessage } = input;
+  if (status >= 200 && status < 300) return hasToken ? "granted" : "open";
+  if (status === 401) return hasToken ? "bad-token" : "needs-token";
+  if (status === 403) {
+    if (!hasToken) return "needs-token";
+    return /review|pending|awaiting/i.test(errorMessage ?? "")
+      ? "pending"
+      : "not-accepted";
+  }
+  return "unknown";
+}
+
+/** Probes one byte of a file with the user's token (if any). */
+export async function checkFileAccess(
+  repo: string,
+  revision: string,
+  path: string,
+): Promise<GatedAccess> {
+  const headers = hfAuthHeaders();
+  const response = await fetch(resolveUrl(repo, revision, path), {
+    headers: { ...headers, range: "bytes=0-0" },
+  });
+  response.body?.cancel().catch(() => undefined);
+  return classifyAccess({
+    status: response.status,
+    hasToken: "authorization" in headers,
+    errorCode: response.headers.get("x-error-code"),
+    errorMessage: response.headers.get("x-error-message"),
+  });
+}
+
 async function getJson(url: string, signal?: AbortSignal): Promise<unknown> {
-  const response = await fetch(url, { signal });
+  const response = await fetch(url, { signal, headers: hfAuthHeaders() });
   if (response.status === 401 || response.status === 403)
     throw new Error(
-      "Modelo restringido: acepta sus condiciones en Hugging Face antes de descargarlo.",
+      "Modelo restringido: acepta sus condiciones en Hugging Face y añade tu token de lectura.",
     );
   if (response.status === 404)
     throw new Error("El repositorio no existe en Hugging Face.");

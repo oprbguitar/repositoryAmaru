@@ -5,6 +5,7 @@
  * LFS oid published by Hugging Face, and only then renamed to its real name.
  */
 import { resolveUrl } from "./hf";
+import { hfAuthHeaders } from "./hfToken";
 import {
   type LibraryEntry,
   MANIFEST_NAME,
@@ -302,11 +303,14 @@ async function fetchParallel(
         const offset = from + progress[i];
         const response = await fetch(url, {
           signal: inner.signal,
-          headers: { Range: `bytes=${offset}-${from + length - 1}` },
+          headers: {
+            ...hfAuthHeaders(),
+            Range: `bytes=${offset}-${from + length - 1}`,
+          },
         });
         if (response.status === 401 || response.status === 403)
           throw new FatalDownloadError(
-            "Modelo restringido: acepta sus condiciones en Hugging Face.",
+            "Modelo restringido: acepta sus condiciones en Hugging Face y añade tu token de lectura en «Acceso a modelos restringidos».",
           );
         if (response.status === 404)
           throw new FatalDownloadError(
@@ -539,13 +543,16 @@ export async function runDownload(
     } else if (start < file.size) {
       const response = await fetch(url, {
         signal,
-        headers: start > 0 ? { Range: `bytes=${start}-` } : undefined,
+        headers: {
+          ...hfAuthHeaders(),
+          ...(start > 0 ? { Range: `bytes=${start}-` } : {}),
+        },
       });
       const outcome = interpretRange(response.status, start, file.size);
       if (outcome === "error" || !response.body)
         throw new Error(
           response.status === 401 || response.status === 403
-            ? "Modelo restringido: acepta sus condiciones en Hugging Face."
+            ? "Modelo restringido: acepta sus condiciones en Hugging Face y añade tu token de lectura en «Acceso a modelos restringidos»."
             : `Hugging Face respondió ${response.status} para ${file.path}.`,
         );
       if (outcome === "restart") {

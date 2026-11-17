@@ -87,7 +87,9 @@ export function DownloadCta({ model }: { model: HubModel }) {
     stored: "Ya está en tu biblioteca",
   }[state];
   const sub = {
-    idle: "Elige cuantización y carpeta en el siguiente paso",
+    idle: model.gated
+      ? "Requiere aceptar su licencia en Hugging Face y tu token"
+      : "Elige cuantización y carpeta en el siguiente paso",
     launching: "Preparando el análisis del repositorio",
     downloading: job?.variant ?? "",
     paused: job?.variant ?? "",

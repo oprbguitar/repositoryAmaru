@@ -513,3 +513,117 @@
 .lm-manager {
   scroll-margin-top: var(--space-4);
 }
+
+/* Gated repositories: guided licence + token flow. */
+.lm-gated {
+  display: grid;
+  gap: var(--space-3);
+  margin-block: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--amber) 45%, var(--line));
+  border-inline-start: 4px solid var(--amber);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--amber) 8%, var(--surface));
+}
+.lm-gated[data-ok] {
+  border-color: color-mix(in srgb, var(--accent-2) 45%, var(--line));
+  border-inline-start-color: var(--accent-2);
+  background: color-mix(in srgb, var(--accent-2) 8%, var(--surface));
+}
+.lm-gated header {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+.lm-gated header svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  color: var(--amber);
+}
+.lm-gated[data-ok] header svg {
+  color: var(--accent-2);
+}
+.lm-gated h4 {
+  margin: 0;
+  font-size: var(--text-md);
+}
+.lm-gated header p {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+.lm-gated-steps {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding-inline-start: var(--space-5);
+  font-size: var(--text-sm);
+}
+.lm-gated-steps li {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+}
+.lm-gated-steps a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+.lm-gated-steps a svg {
+  width: 12px;
+  height: 12px;
+}
+.lm-gated-steps small {
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+}
+.lm-gated-form {
+  display: flex;
+  gap: var(--space-2);
+  width: min(100%, 420px);
+}
+.lm-gated-form input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--control-sm);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+.lm-gated-form input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.lm-gated-token {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+.lm-gated .lm-note a {
+  color: var(--accent-strong);
+}
+.lm-spin {
+  animation: lm-spin 1s linear infinite;
+}
+@keyframes lm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lm-spin {
+    animation: none;
+  }
+}

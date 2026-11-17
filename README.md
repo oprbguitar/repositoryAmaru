@@ -191,6 +191,13 @@ published metadata and never measured:
 - **Download hand-off**: the button reflects real library state (downloading %,
   paused, stored) and animates the jump to *Open y local → Descargar modelo a mi
   carpeta*, which shows where the user came from.
+- **Gated repositories** (Meta Llama, Gemma…): *Open y local* probes one byte
+  of a small file with the user's token and tells apart "needs token", "bad
+  token", "awaiting review" and "not accepted". The licence must be accepted by
+  the user on huggingface.co; the user's read token (`hfToken.ts`) is kept only
+  in that browser's `localStorage` and sent only to huggingface.co (CORS allows
+  `authorization` + `range`). Free community GGUF conversions are suggested as
+  an alternative.
 - **Agents** (`lib/models/agents.ts`, `AgentCatalog.tsx`): Claude Code, Gemini
   CLI, Codex CLI, OpenCode, Aider, Goose, OpenHands and Cline — what they do, how
   they orchestrate, which models, and whether they work offline (vendor-cloud

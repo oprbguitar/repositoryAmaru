@@ -11,7 +11,10 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { suggestRuntimes } from "../../../lib/models/runtime";
+import {
+  conversionSearchUrl,
+  suggestRuntimes,
+} from "../../../lib/models/runtime";
 import {
   ensurePermission,
   pickRootFolder,
@@ -27,9 +30,12 @@ import {
   startDownload,
   useDownloads,
 } from "./downloadManager";
+import { GatedAccessPanel } from "./GatedAccessPanel";
 import { explainQuant, FORMAT_TERMS, runtimeMemoryHint } from "./glossary";
 import {
+  checkFileAccess,
   compareRevision,
+  type GatedAccess,
   getCommits,
   getModelInfo,
   getTree,
@@ -72,6 +78,7 @@ type Analysis = {
   files: RepoFile[];
   variants: GgufVariant[];
   hasFull: boolean;
+  gated: boolean;
 };
 
 type VersionCheck = {
@@ -100,6 +107,8 @@ export function LocalModelManager() {
   const [error, setError] = useState<string | null>(null);
   const [library, setLibrary] = useState<LibraryEntry[]>([]);
   const [checks, setChecks] = useState<Record<string, VersionCheck>>({});
+  const [access, setAccess] = useState<GatedAccess>("open");
+  const [checkingAccess, setCheckingAccess] = useState(false);
   const supported = supportsFolderAccess();
   const jobs = useDownloads();
   const { profile } = useHardwareProfile();
@@ -177,12 +186,31 @@ export function LocalModelManager() {
         files,
         variants,
         hasFull,
+        gated: info.meta.gated,
       });
       setChoice(recommendVariant(variants)?.id ?? FULL);
+      if (info.meta.gated) await probeAccess(id, info.sha, files);
+      else setAccess("open");
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
       setBusy(false);
+    }
+  }
+
+  /** One-byte probe of a small file to learn whether this account has access. */
+  async function probeAccess(repoId: string, sha: string, files: RepoFile[]) {
+    const probe =
+      files.find((f) => f.path === "config.json") ??
+      [...files].sort((a, b) => a.size - b.size)[0];
+    if (!probe) return;
+    setCheckingAccess(true);
+    try {
+      setAccess(await checkFileAccess(repoId, sha, probe.path));
+    } catch {
+      setAccess("unknown");
+    } finally {
+      setCheckingAccess(false);
     }
   }
 
@@ -283,6 +311,9 @@ export function LocalModelManager() {
   }
 
   const pkg = analysis ? packageFor(analysis) : null;
+  const accessBlocked = Boolean(
+    analysis?.gated && access !== "granted" && access !== "open",
+  );
   const quant = choice && choice !== FULL ? explainQuant(choice) : null;
   const format = FORMAT_TERMS[choice === FULL ? "safetensors" : "gguf"];
   const runtimes = analysis
@@ -391,6 +422,17 @@ export function LocalModelManager() {
                   ) : null}
                 </select>
               </label>
+              {analysis.gated ? (
+                <GatedAccessPanel
+                  repo={analysis.repo}
+                  access={access}
+                  checking={checkingAccess}
+                  onRecheck={() =>
+                    probeAccess(analysis.repo, analysis.sha, analysis.files)
+                  }
+                  alternativesUrl={conversionSearchUrl(analysis.repo, "gguf")}
+                />
+              ) : null}
               {pkg ? (
                 <p className="lm-note">
                   {pkg.files.length} archivos · {formatBytes(pkg.totalBytes)} ·
@@ -445,11 +487,15 @@ export function LocalModelManager() {
                 <button
                   type="button"
                   className="lm-btn lm-btn-primary"
-                  disabled={!root || !pkg}
+                  disabled={!root || !pkg || accessBlocked}
                   onClick={() => download()}
                 >
                   <Download aria-hidden />
-                  {root ? "Descargar" : "Elige una carpeta primero"}
+                  {!root
+                    ? "Elige una carpeta primero"
+                    : accessBlocked
+                      ? "Completa el acceso para descargar"
+                      : "Descargar"}
                 </button>
                 <span className="lm-note">
                   Puedes lanzar varias descargas y seguir navegando: continúan

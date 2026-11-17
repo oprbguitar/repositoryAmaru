@@ -66,3 +66,36 @@ describe("finalizeName", () => {
     expect([...files.keys()]).toEqual(["a"]);
   });
 });
+
+import { classifyAccess } from "../src/features/local-models/hf";
+import { isHfToken } from "../src/features/local-models/hfToken";
+
+describe("gated access", () => {
+  const base = { errorCode: "GatedRepo", errorMessage: null };
+  it("tells apart missing token, pending review and not accepted", () => {
+    expect(classifyAccess({ ...base, status: 401, hasToken: false })).toBe(
+      "needs-token",
+    );
+    expect(classifyAccess({ ...base, status: 401, hasToken: true })).toBe(
+      "bad-token",
+    );
+    expect(
+      classifyAccess({
+        status: 403,
+        hasToken: true,
+        errorCode: "GatedRepo",
+        errorMessage: "Your request to access model x is awaiting a review",
+      }),
+    ).toBe("pending");
+    expect(classifyAccess({ ...base, status: 403, hasToken: true })).toBe(
+      "not-accepted",
+    );
+    expect(classifyAccess({ ...base, status: 206, hasToken: true })).toBe(
+      "granted",
+    );
+  });
+  it("validates the token shape", () => {
+    expect(isHfToken("hf_abcdefghijklmnopqrstuvwxyz12")).toBe(true);
+    expect(isHfToken("abc")).toBe(false);
+  });
+});
