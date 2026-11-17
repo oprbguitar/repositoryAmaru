@@ -105,6 +105,19 @@ const ES: Record<string, SectionIntro> = {
       "Las proyecciones son referenciales, no consejo de inversión.",
     ],
   },
+  "/in-action": {
+    what: "La IA aplicada a tu profesión: casos reales, cómo resolverlos con IA comercial o local, planes en soles y qué PC necesitas.",
+    tips: [
+      "Escribe qué necesitas o elige tu profesión.",
+      "Sube de nivel: consultar → investigar → automatizar → crear.",
+      "Compara la ruta en la nube con la ruta local y privada.",
+    ],
+    concept: {
+      term: "RAG",
+      meaning:
+        "La IA busca en tus documentos los fragmentos pertinentes antes de responder.",
+    },
+  },
   "/prompts": {
     what: "Aprende a pedirle cosas a la IA: cadenas de prompts, agentes y una IA gratuita para practicar.",
     tips: [
@@ -242,6 +255,19 @@ const EN: Record<string, SectionIntro> = {
       "Quotes refresh every minute.",
       "Forecasts are indicative, not investment advice.",
     ],
+  },
+  "/in-action": {
+    what: "AI applied to your profession: real cases, how to solve them with commercial or local AI, plan prices in soles and the PC you need.",
+    tips: [
+      "Describe what you need or pick your profession.",
+      "Level up: ask → research → automate → build.",
+      "Compare the cloud route with the private local route.",
+    ],
+    concept: {
+      term: "RAG",
+      meaning:
+        "The AI looks up the relevant passages in your documents before answering.",
+    },
   },
   "/prompts": {
     what: "Learn to ask AI for things: prompt chains, agents and a free AI to practise.",

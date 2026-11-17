@@ -4,6 +4,7 @@ import {
   BookOpen,
   Bot,
   Boxes,
+  BriefcaseBusiness,
   Building2,
   GitBranch,
   GitFork,
@@ -96,6 +97,13 @@ export const navigation: ReadonlyArray<NavItem> = [
     group: "understand",
   },
   // Construir — put it to work.
+  {
+    label: "IA en acción",
+    labelKey: "nav.inAction",
+    path: "/in-action",
+    icon: BriefcaseBusiness,
+    group: "build",
+  },
   {
     label: "Prompts y agentes",
     labelKey: "nav.prompts",

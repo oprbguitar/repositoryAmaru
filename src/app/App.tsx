@@ -60,6 +60,9 @@ const ResearchPage = lazy(() =>
 const PromptStudioPage = lazy(() =>
   loaders.prompts().then((module) => ({ default: module.PromptStudioPage })),
 );
+const InActionPage = lazy(() =>
+  loaders.inAction().then((module) => ({ default: module.InActionPage })),
+);
 const VideosPage = lazy(() =>
   loaders.videos().then((module) => ({ default: module.VideosPage })),
 );
@@ -123,6 +126,7 @@ export default function App() {
         <Route path="/markets/*" element={<MarketPage />} />
         <Route path="/admin/*" element={<AdminConsole />} />
         <Route path="/prompts/*" element={<PromptStudioPage />} />
+        <Route path="/in-action/*" element={<InActionPage />} />
         <Route
           path="/local-library"
           element={

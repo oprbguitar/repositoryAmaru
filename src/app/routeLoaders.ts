@@ -39,6 +39,7 @@ export const loaders = {
   providers: once(() => import("../features/observatory/ProvidersPage")),
   research: once(() => import("../features/observatory/ResearchPage")),
   prompts: once(() => import("../features/prompts/PromptStudioPage")),
+  inAction: once(() => import("../features/in-action/InActionPage")),
   videos: once(() => import("../features/videos/VideosPage")),
 } satisfies Record<string, Loader>;
 
@@ -59,6 +60,7 @@ const BY_PATH: Record<string, Loader> = {
   "/providers": loaders.providers,
   "/research": loaders.research,
   "/prompts": loaders.prompts,
+  "/in-action": loaders.inAction,
   "/videos": loaders.videos,
 };
 

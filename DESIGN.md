@@ -14,6 +14,12 @@ Pedido del usuario: la interfaz era difícil de entender para alguien nuevo. Ref
 
 Archivos clave: `src/app/styles/redesign.css` (capa de tokens/estilos del rediseño), `src/components/layout/{theme,navigation,sectionIntros}.ts`, `SectionIntroBar.tsx`, `ContextEmpty.tsx`, `src/features/today/TodayPage.tsx`.
 
+### Módulo «IA en acción» (2026-11-16)
+- **Arquitectura:** buscador natural + rejilla de profesiones por familia → vista *rail de casos + ficha* (canvas + inspector). La ficha compara en paralelo **IA comercial** (borde superior `--accent`) e **IA local** (borde `--accent-2`), con una escalera de 4 niveles que cambia ambas rutas.
+- **Color:** cada familia de profesiones toma un `--bubble-n` (`[data-group]` → `--ia-tint`), solo en el ícono; los acentos siguen reservados a acción/selección.
+- **Precios:** `PriceTag` muestra US$ y S/ con IGV usando el tipo de cambio BCRP; «varía por país» cuando no hay cifra fiable.
+- `design-pick` propuso petróleo + coral con Source Sans; se mantuvo la identidad vigente del observatorio. Detalle funcional en `docs/ia-en-accion.md`.
+
 ---
 
 ## Histórico
