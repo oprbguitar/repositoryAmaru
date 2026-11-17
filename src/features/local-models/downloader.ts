@@ -373,15 +373,21 @@ async function fetchParallel(
   }
 }
 
-async function finalizeName(
+export async function finalizeName(
   parent: FileSystemDirectoryHandle,
   partial: FileSystemFileHandle,
   name: string,
 ): Promise<void> {
   const movable = partial as MovableFile;
   if (movable.move) {
-    await movable.move(name);
-    return;
+    try {
+      await movable.move(name);
+      return;
+    } catch {
+      // Chrome only allows move() on some user-visible folders and platforms
+      // (NotAllowedError "not allowed by the user agent or the platform").
+      // The bytes are already verified, so fall back to copy + delete.
+    }
   }
   const target = await parent.getFileHandle(name, { create: true });
   const writable = await target.createWritable();
@@ -522,6 +528,9 @@ export async function runDownload(
         );
         await writable.close();
         written = file.size;
+        // Checkpoint the finished bytes: if verification or the final rename
+        // fails, «Reanudar» verifies the file on disk instead of refetching.
+        await persist();
       } catch (error) {
         await writable.close().catch(() => undefined);
         await persist();
