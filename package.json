@@ -41,6 +41,7 @@
     "exceljs": "^4.4.0",
     "fast-xml-parser": "^5.10.1",
     "file-type": "^22.0.1",
+    "hash-wasm": "4.12.0",
     "lucide-react": "^1.25.0",
     "mammoth": "^1.12.0",
     "maplibre-gl": "^5.24.0",

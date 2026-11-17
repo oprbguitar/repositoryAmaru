@@ -198,6 +198,15 @@ published metadata and never measured:
   in that browser's `localStorage` and sent only to huggingface.co (CORS allows
   `authorization` + `range`). Free community GGUF conversions are suggested as
   an alternative.
+- **Download engine** (`downloader.ts`, `hash.worker.ts`): follows Hugging
+  Face's redirect once and fetches straight from the signed CDN link
+  (refreshed when it expires); big files go in 16 MB chunks pulled by 8
+  connections (work-stealing, so a slow connection only delays one chunk), up
+  to 3 files of a model at once, with a 16-connection budget shared by every
+  download in the tab. SHA-256 is computed while downloading (WebAssembly,
+  `hash-wasm`, in a worker), so verification is instant; resumed files are
+  re-hashed at the end. Progress per chunk is kept in the manifest (older
+  4-segment progress is re-mapped) and the speed/ETA use the last 5 s.
 - **De qué se trata** (`lib/models/review.ts`, `ModelReview.tsx`,
   `GET /api/model-hub/review`): overview, intended use, training, evaluation and
   declared limits extracted from the author's card; adoption from the Hub
